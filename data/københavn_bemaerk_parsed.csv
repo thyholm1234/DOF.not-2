@@ -1,0 +1,853 @@
+﻿artsnavn;bemaerk_antal
+Hvidhovedet And;1
+Amerikansk Skarveand;1
+Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Sorthalset Svane;1
+Knopsvane;100
+Sortsvane;1
+Pibesvane;1
+Sangsvane;50
+Pibesvane/Sangsvane;25
+Svane sp.;100
+Knortegås;50
+Knortegås, Sortbuget (ssp. nigricans);1
+Knortegås, Mørkbuget x Sortbuget (hybrid);1
+Knortegås x Rødhalset Gås (hybrid);1
+Knortegås, Mørkbuget (ssp. bernicla);50
+Knortegås, Lysbuget (ssp. hrota);1
+Rødhalset Gås;1
+Canadagås;80
+Canadagås x Bramgås (hybrid);1
+Canadagås x Grågås (hybrid);1
+Bramgås;1000
+Bramgås x Dværgcanadagås (hybrid);1
+Bramgås x Dværggås (hybrid);1
+Bramgås x Rødhalset Gås (hybrid);1
+Dværgcanadagås;1
+Rajgås sp.;100
+Indisk Gås;1
+Indisk Gås X Grågås (hybrid);1
+Indisk Gås X Canadagås (hybrid);1
+Indisk Gås X Bramgås (hybrid);1
+Kejsergås;1
+Dværgsnegås x Bramgås (hybrid);1
+Dværgsnegås;1
+Snegås;1
+Snegås x Bramgås (hybrid);1
+Grågås;500
+Grågås x Blisgås (hybrid);1
+Grågås x Bramgås (hybrid);1
+Svanegås;1
+Svanegås x Grågås (hybrid);1
+Tajgasædgås/Tundrasædgås;25
+Dværggås;1
+Blisgås;25
+Blisgås, Grønlandsk (ssp. flavirostris);1
+Blisgås (ssp. albifrons);1
+Blisgås/Dværggås;1
+Blisgås x Bramgås (hybrid);1
+Blisgås x Rødhalset Gås (hybrid);1
+Tundrasædgås;1
+Kortnæbbet Gås;1
+Tajgasædgås;1
+Grå Gås sp.;100
+Gås sp.;1000
+Moskusand;1
+Mandarinand;1
+Brudeand;1
+Magellangås;1
+Nilgås;1
+Gravand;75
+Rustand;1
+Rustand x Gravand (hybrid);1
+Havlit;10
+Stellersand;1
+Kongeederfugl;1
+Ederfugl;500
+Ederfugl, Arktisk (ssp. borealis);1
+Kongeederfugl x Ederfugl (hybrid);1
+Sortand;200
+Tanggås;1
+Amerikansk Sortand;1
+Brilleand;1
+Fløjlsand;5
+Amerikansk Fløjlsand;1
+Asiatisk Fløjlsand;1
+Amerikansk/Asiatisk Fløjlsand;1
+Bøffeland;1
+Hvinand;200
+Lille Skallesluger;10
+Hvinand x Lille Skallesluger (hybrid);1
+Hjelmskallesluger;1
+Toppet Skallesluger;100
+Stor Skallesluger;50
+Toppet Skallesluger/Stor Skallesluger;1
+Skallesluger sp.;50
+Havdykand sp. (Mergini);100
+Andefugl sp.;1000
+Marmorand;1
+Rødhovedet And;1
+Rødhovedet And x Taffeland (hybrid);1
+Hvidøjet And;1
+Hvidøjet And x Troldand (hybrid);1
+Hvidøjet And x Taffeland (hybrid);1
+Taffeland;150
+Taffeland x Troldand (hybrid);1
+Halsbåndstroldand;1
+Halsbåndstroldand x Troldand (hybrid);1
+Troldand;1000
+Troldand/Bjergand;1000
+Troldand x Bjergand (hybrid);1
+Lille Bjergand;1
+Bjergand;15
+Lille Bjergand x Troldand (hybrid);1
+Dykand hybrid;1
+Dykand sp. (Aythya sp.);1
+Sibirisk Krikand;1
+Atlingand;1
+Blåvinget And;1
+Kaneland;1
+Skeand;100
+Skeand x Blåvinget And (hybrid);1
+Skeand x Knarand (hybrid);1
+Skeand x Gråand (hybrid);1
+Segland;1
+Knarand;15
+Pibeand;400
+Pibeand x Gråand (hybrid);1
+Pibeand x Krikand (hybrid);1
+Amerikansk Pibeand;1
+Amerikansk Pibeand x Pibeand (hybrid);1
+Chilepibeand;1
+Pibeand x Knarand (hybrid);1
+Pibeand x Chilepibeand (hybrid);1
+Stenhøne;1
+Pibeand/Spidsand;10
+Gråand;400
+Gråand x Knarand (hybrid);1
+Sortbrun And;1
+Gråand x Ederfugl (hybrid);1
+Gråand x Troldand (hybrid);1
+Gråand x Moskusand (hybrid);1
+Gråand x svømmeand sp. (hybrid);1
+Spidsand;40
+Spidsand x Pibeand (hybrid);1
+Spidsand x Gråand (hybrid);1
+Krikand;100
+Krikand, Amerikansk (ssp. carolinensis);1
+Krikand x Gråand (hybrid);1
+Krikand x Amerikansk Krikand (hybrid);1
+Svømmeand sp.;400
+Tjur;1
+Urfugl;1
+Agerhøne;1
+Kongefasan;1
+Guldfasan;1
+Fasan;50
+Påfugl;1
+Vagtel;1
+Rødhøne;1
+Rødhalset Natravn;1
+Chukarhøne;1
+Lille Flamingo;1
+Flamingo sp.;1
+Chileflamingo;1
+Stor Flamingo;1
+Cariberflamingo;1
+Stor Flamingo/Cariberflamingo;1
+Lille Lappedykker;30
+Nordisk Lappedykker;1
+Nordisk Lappedykker/Sorthalset Lappedykker;1
+Gråstrubet Lappedykker;10
+Toppet Lappedykker;50
+Toppet Lappedykker/Gråstrubet Lappedykker;50
+Sorthalset Lappedykker;1
+Lappedykker sp.;50
+Stortrappe;1
+Østlig Kravetrappe;1
+Dværgtrappe;1
+Skadegøg;1
+Gulnæbbet Gøg;1
+Sortnæbbet Gøg;1
+Gøg;5
+Steppehøne;1
+Sørgedue;1
+Østlig Turteldue;1
+Turteldue;1
+Tyrkerdue;5
+Ringdue;700
+Klippedue (tamdue);125
+Huldue;5
+Due sp.;1000
+Prærietrane;1
+Jomfrutrane;1
+Japansk Trane;1
+Trane x Japansk Trane (hybrid);1
+Trane;10
+Trane sp.;1
+Stork/Trane sp.;1
+Vandrikse;5
+Engsnarre;1
+Plettet Rørvagtel;1
+Rørhøne;15
+Blishøne;800
+Blishøne x Rørhøne (hybrid);1
+Lille Sultanhøne;1
+Sultanhøne;1
+Lille Rørvagtel;1
+Dværgrørvagtel;1
+Rørvagtel sp.;1
+Triel;1
+Klyde;20
+Stylteløber;1
+Strandskade;50
+Strandhjejle;20
+Hjejle;500
+Amerikansk Hjejle;1
+Sibirisk Hjejle;1
+Amerikansk Hjejle/Sibirisk Hjejle;1
+Pomeransfugl;1
+Stor Præstekrave;8
+Stor Præstekrave (ssp. hiaticula);8
+Stor Præstekrave, Tundra (ssp. tundrae);8
+Lille Præstekrave;1
+Vibe;200
+Sporevibe;1
+Steppevibe;1
+Sumpvibe;1
+Kaspisk Præstekrave;1
+Tibetansk Præstekrave;1
+Sibirisk Præstekrave;1
+Ørkenpræstekrave;1
+Ørken-/Tibetansk/Sibirisk Præstekrave;1
+Hvidbrystet Præstekrave;1
+Brokfugl sp.;1
+Bartramsklire;1
+Småspove;5
+Storspove;20
+Spove sp.;20
+Lille Kobbersneppe;25
+Stor Kobbersneppe;1
+Stor Kobbersneppe, Islandsk (ssp. islandica);1
+Stor Kobbersneppe (ssp. limosa);1
+Canadisk Kobbersneppe;1
+Langnæbbet Sneppeklire;1
+Sneppeklire sp.;1
+Enkeltbekkasin;1
+Skovsneppe;1
+Tredækker;1
+Dobbeltbekkasin;20
+Terekklire;1
+Mudderklire;10
+Plettet Mudderklire;1
+Amerikansk Svømmesneppe;1
+Thorshane;1
+Odinshane;1
+Odinshane/Thorshane;1
+Svaleklire;10
+Damklire;1
+Tinksmed;25
+Rødben;40
+Rødben, Islandsk (ssp. robusta);10
+Rødben (ssp. totanus);40
+Sortklire/Rødben;10
+Lille Gulben;1
+Sortklire;10
+Hvidklire;20
+Stor Gulben;1
+Stenvender;1
+Islandsk Ryle;20
+Islandsk Ryle, Sibirisk (ssp. canutus);20
+Islandsk Ryle, Baffinryle (ssp. islandica);20
+Islandsk Ryle/Lille Kobbersneppe;20
+Brushane;15
+Spidshalet Ryle;1
+Kærløber;1
+Krumnæbbet Ryle;5
+Klireryle;1
+Rødhalset Ryle;1
+Temmincksryle;1
+Prærieløber;1
+Sandløber;2
+Almindelig Ryle;500
+Almindelig Ryle, Engryle (ssp. schinzii);1
+Almindelig Ryle, Nordlig (ssp. alpina);500
+Sortgrå Ryle;1
+Bairdsryle;1
+Stribet Ryle;1
+Tyknæbbet Dværgryle;1
+Ryle sp.;500
+Dværgryle;1
+Dværgryle/Temmincksryle;1
+Hvidrygget Ryle;1
+Ørkenløber;1
+Orientbraksvale;1
+Sortvinget Braksvale;1
+Rødvinget Braksvale;1
+Braksvale sp.;1
+Vader sp., Stor;25
+Vader sp., Lille;500
+Almindelig Kjove;1
+Almindelig Kjove/Lille Kjove;1
+Lille Kjove;1
+Mellemkjove;1
+Mellemkjove/Almindelig Kjove;1
+Storkjove;1
+Kjove sp.;1
+Lunde;1
+Tejst;1
+Tejst, Arktisk (ssp. mandtii);1
+Sodfarvet Terne;1
+Tejst, Atlantisk (ssp. arcticus);1
+Tejst, Baltisk (ssp. grylle);1
+Alk;1
+Alk, Nordlig (ssp. torda);1
+Alaskaryle;1
+Alk, Atlantisk (ssp. islandica);1
+Søkonge;1
+Polarlomvie;1
+Lomvie;1
+Lomvie, Nordlig (ssp. aalge);1
+Lomvie, Arktisk (ssp. hyperborea);1
+Lomvie, Britisk (ssp. albionis);1
+Lomvie/Alk;1
+Alkefugl sp.;1
+Brilleterne;1
+Dværgterne;7
+Rovterne;2
+Sandterne;1
+Hvidskægget Terne;1
+Hvidvinget Terne;1
+Sortterne;1
+Moseterne sp.;1
+Splitterne;20
+Aztekerterne;1
+Havterne;25
+Fjordterne;15
+Fjordterne/Havterne;25
+Rosenterne;1
+Terne sp.;25
+Dværgmåge;1
+Rosenmåge;1
+Ride;1
+Sabinemåge;1
+Ismåge;1
+Tyndnæbbet Måge;1
+Bonapartemåge;1
+Hættemåge;800
+Lattermåge;1
+Præriemåge;1
+Stor Sorthovedet Måge;1
+Audouinsmåge;1
+Sorthovedet Måge;1
+Sorthovedet Måge x Hættemåge (hybrid);1
+Ringnæbbet Måge;1
+Stormmåge;1000
+Stormmåge (ssp. canus);1000
+Stormmåge, Russisk (ssp. heinei);1
+Kaspisk Måge;1
+Sølvmåge;125
+Sølvmåge x Kaspisk Måge (hybrid);1
+Sølvmåge x Sildemåge (hybrid);1
+Sølvmåge x Gråmåge (hybrid);1
+Sølvmåge, Britisk (ssp. argenteus);1
+Sølvmåge, Skandinavisk (ssp. argentatus);125
+Middelhavssølvmåge;1
+Armensk Måge;1
+Svartbag;50
+Gråmåge;1
+Sildemåge;2
+Sildemåge, Britisk (ssp. graellsii);1
+Sildemåge, Nordsøsildemåge (ssp. intermedius);2
+Sildemåge, Baltisk (ssp. fuscus);1
+Sildemåge, Sibirisk Måge (ssp. heuglini);1
+Gråvinget Måge;1
+Hvidvinget Måge;1
+Hvidvinget Måge (ssp. glaucoides);1
+Hvidvinget Måge, Baffinmåge (ssp. kumlieni);1
+Hvidvinget Måge, Inuitmåge (ssp. thayeri);1
+Måge sp.;1000
+Rødstrubet Lom;1
+Islom;1
+Hvidnæbbet Lom;1
+Islom/Hvidnæbbet Lom;1
+Stillehavslom;1
+Sortstrubet Lom;1
+Rødstrubet Lom/Sortstrubet Lom;1
+Lom sp.;1
+Sortbrynet Albatros;1
+Albatros sp.;1
+Wilsons Stormsvale;1
+Lille Stormsvale;1
+Stor Stormsvale;1
+Stormsvale sp.;1
+Mallemuk;1
+Madeira/Kap Verde/Desertas Petrel;1
+Scopolis Skråpe;1
+Atlantisk Skråpe;1
+Atlantisk Skråpe/Scopolis Skråpe;1
+Atlantisk/Scopolis/Storskråpe;1
+Amerikansk Sølvmåge;1
+Sodfarvet Skråpe;1
+Storskråpe;1
+Almindelig Skråpe;1
+Middelhavsskråpe/Almindelig Skråpe;1
+Middelhavsskråpe;1
+Middelhavsskråpe, Balearisk (ssp. mauretanicus);1
+Tropeskråpe;1
+Skråpe sp.;1
+Sort Stork;1
+Hvid Stork;1
+Stork sp.;1
+Pragtfregatfugl;1
+Sule;1
+Brun Sule;1
+Dværgskarv;1
+Topskarv;1
+Middelhavsskråpe, Ægæerskråpe (ssp. yelkouan);1
+Makaronesisk Skråpe;1
+Skarv;500
+Skarv, Storskarv (ssp. carbo);10
+Skarv, Mellemskarv (ssp. sinensis);500
+Skarv sp.;1
+Sort Ibis;1
+Eremitibis;1
+Afrikansk Skestork;1
+Skestork;1
+Hellig Ibis;1
+Hvid Pelikan;1
+Rosapelikan;1
+Krøltoppet Pelikan;1
+Pelikan sp.;1
+Rørdrum;1
+Amerikansk Rørdrum;1
+Dværghejre;1
+Silkehejre;1
+Nathejre;1
+Tophejre;1
+Sølvhejre;2
+Kohejre;1
+Hejre sp. (hvid);1
+Purpurhejre;1
+Fiskehejre;30
+Hejre sp.;30
+Natravn;1
+Ørkennatravn;1
+Tornhalesejler;1
+Alpesejler;1
+Orientsejler;1
+Kaffersejler;1
+Lille Sejler;1
+Mursejler;800
+Gråsejler;1
+Sejler sp.;1
+Slørugle;1
+Slørugle, Hvidbrystet (ssp. alba);1
+Slørugle, Mørkbrystet (ssp. guttata);1
+Perleugle;1
+Kirkeugle;1
+Høgeugle;1
+Spurveugle;1
+Dværghornugle;1
+Mosehornugle;1
+Skovhornugle/Mosehornugle;1
+Skovhornugle;1
+Sneugle;1
+Stor Hornugle;1
+Natugle;3
+Ugle sp.;1
+Kalkungrib;1
+Fiskeørn;1
+Blå Glente;1
+Lammegrib;1
+Ådselgrib;1
+Hvepsevåge;5
+Tophvepsevåge;1
+Munkegrib;1
+Gåsegrib;1
+Rüppells Grib;1
+Grib sp.;1
+Slangeørn;1
+Stor Skrigeørn;1
+Lille Skrigeørn/Stor Skrigeørn;1
+Lille Skrigeørn;1
+Dværgørn;1
+Steppeørn;1
+Kejserørn;1
+Gråspætte;1
+Kongeørn;1
+Høgeørn;1
+Ørn sp.;1
+Spurvehøg;50
+Duehøg;1
+Duehøg, Russisk (ssp. buteoides);1
+Høg sp.;1
+Steppehøg;1
+Blå Kærhøg;3
+Amerikansk Kærhøg;1
+Hedehøg;1
+Blå Kærhøg x Steppehøg (hybrid);1
+Steppehøg/Hedehøg;1
+Rørhøg;3
+Kærhøg sp.;5
+Rød Glente;1
+Sort Glente;1
+Sort Glente, Gulnæbbet (ssp. parasitus);1
+Sort Glente/Rød Glente;1
+Sort Glente x Rød Glente (hybrid);1
+Beringhavørn;1
+Havørn;2
+Hvidhovedet Havørn;1
+Fjeldvåge;1
+Musvåge;25
+Musvåge, Steppevåge (ssp. vulpinus);1
+Ørnevåge;1
+Våge sp.;25
+Hærfugl;1
+Ellekrage;1
+Biæder;1
+Grøn Biæder;1
+Isfugl;1
+Vendehals;1
+Grønspætte;1
+Sortspætte;1
+Guldspætte;1
+Tretået Spætte;1
+Mellemflagspætte;1
+Stor Flagspætte;10
+Stor Flagspætte, Nordlig (ssp. major);10
+Stor Flagspætte, Sydlig (ssp. pinetorum);1
+Stor Flagspætte x Hvidrygget Flagspætte (hybrid);1
+Lille Flagspætte;1
+Lille Flagspætte, Nordlig (ssp. minor);1
+Lille Flagspætte, Sydlig (ssp. hortorum);1
+Spætte sp.;10
+Lille Tårnfalk;1
+Tårnfalk;5
+Amerikansk Tårnfalk;1
+Aftenfalk;1
+Dværgfalk;1
+Eleonorafalk;1
+Lærkefalk;1
+Lærkefalk/Aftenfalk;1
+Vandrefalk;1
+Vandrefalk, Sibirisk (ssp. calidus);1
+Lannerfalk;1
+Jagtfalk;1
+Slagfalk;1
+Storfalk sp.;1
+Falk sp.;5
+Nymfeparakit;1
+Munkeparakit;1
+Soldaterara;1
+Stor Alexanderparakit;1
+Alexanderparakit;1
+Undulat;1
+Papegøje sp.;1
+Huskrage;1
+Rødøjet Vireo;1
+Pirol;1
+Stor Tornskade;1
+Stor Tornskade, Ørkentornskade (ssp. pallidirostris);1
+Rosenbrystet Tornskade;1
+Rødhovedet Tornskade;1
+Rødrygget Tornskade;3
+Turkestantornskade;1
+Langhalet Tornskade;1
+Brun Tornskade;1
+Tornskade sp.;1
+Iberisk Blåskade;1
+Skovskade;10
+Husskade;75
+Kalanderlærke;1
+Nøddekrige;1
+Nøddekrige, Tyknæbbet (ssp. caryocatactes);1
+Nøddekrige, Tyndnæbbet (ssp. macrorhynchos);1
+Sibirisk Allike;1
+Allike;500
+Allike, Almindelig (ssp. monedula);500
+Allike, Vestlig (ssp. spermologus);1
+Allike, Halsbåndsallike (ssp. soemmerringii);1
+Råge;250
+Broget Krage;1
+Ravn;5
+Kragefugl sp.;500
+Krage;100
+Krage, Sortkrage (ssp. corone);1
+Krage, Gråkrage (ssp. cornix);80
+Sortkrage x Gråkrage (hybrid);1
+Pungmejse;1
+Blåmejse;30
+Musvit;40
+Sortmejse;5
+Topmejse;1
+Sumpmejse;6
+Fyrremejse;1
+Fyrremejse, Pilemejse (ssp. salicarius);1
+Fyrremejse, Nordlig (ssp. borealis);1
+Sumpmejse/Fyrremejse;1
+Mejse sp.;100
+Skægmejse;10
+Hedelærke;1
+Sanglærke;50
+Toplærke;1
+Bjerglærke;1
+Korttået Lærke;1
+Østlig Kalanderlærke;1
+Lærke sp.;50
+Dværglærke;1
+Cistussanger;1
+Gulbug;3
+Spottesanger;1
+Lille Gulbug;1
+Bleg Gulbug;1
+Sivsanger;1
+Vandsanger;1
+Lille Rørsanger;1
+Buskrørsanger;1
+Kærsanger;5
+Rørsanger;10
+Drosselrørsanger;1
+Stor Græshoppesanger;1
+Stribet Græshoppesanger;1
+Flodsanger;1
+Savisanger;1
+Græshoppesanger;1
+Digesvale;35
+Klippesvale;1
+Landsvale;250
+Landsvale, Libanonlandsvale (ssp. transitiva);1
+Landsvale x Bysvale (hybrid);1
+Bysvale;50
+Rødbrystet Svale;1
+Rødrygget Svale;1
+Amursvale;1
+Svale sp.;250
+Halemejse;20
+Halemejse, Nordlig (ssp. caudatus);20
+Halemejse, Sydlig (ssp. europaeus);20
+Nordlig Halemejse x Sydlig Halemejse (hybrid);20
+Cettisanger;1
+Skovsanger;5
+Bjergløvsanger;1
+Bjergløvsanger/Balkanløvsanger;1
+Hvidbrynet Løvsanger;1
+Himalayasanger;1
+Fuglekongesanger;1
+Schwarz Løvsanger;1
+Sinkiangløvsanger;1
+Tamarisksanger;1
+Brun Løvsanger;1
+Løvsanger;20
+Løvsanger, Almindelig (ssp. trochilus);1
+Løvsanger, Nordlig (ssp. acredula);1
+Gransanger x Løvsanger (hybrid);1
+Iberisk Gransanger;1
+Gransanger;15
+Gransanger, Skandinavisk (ssp. abietinus);1
+Gransanger, Sydlig (ssp. collybita);1
+Gransanger, Sibirisk (ssp. tristis);1
+Grøn Sanger;1
+Østlig Lundsanger;1
+Lundsanger;1
+Nordsanger;1
+Phylloscopus sp.;50
+Havesanger;10
+Munk;20
+Høgesanger;1
+Gærdesanger;10
+Gærdesanger, Sibirisk (ssp. blythi);1
+Gærdesanger, Steppe (ssp. halimodendri);1
+Gærdesanger, Sibirisk/Steppe (ssp. blythi/halimodendri);1
+Asiatisk Ørkensanger;1
+Tornsanger;15
+Sardinsk Sanger;1
+Sortstrubet Sanger;1
+Sorthovedet Sanger;1
+Makisanger;1
+Iberisk Sanger;1
+Rødstrubet Sanger;1
+Rødstrubet Sanger (ssp. cantillans);1
+Rødstrubet Sanger (ssp. albistriata);1
+Rødstrubet Sanger/Iberisk Sanger/Makisanger;1
+Sanger sp.;50
+Silkehale;25
+Rødtoppet Fuglekonge;1
+Fuglekonge;20
+Spætmejse;10
+Spætmejse, Mørkbuget (ssp. caesia);1
+Bynkefugl x Sortstrubet Bynkefugl (hybrid);1
+Spætmejse, Lysbuget (ssp. europaea);1
+Træløber;4
+Træløber, Sydlig (ssp. macrodactyla);1
+Træløber, Nordlig (ssp. familiaris);4
+Korttået Træløber;4
+Træløber/Korttået Træløber;4
+Gærdesmutte;15
+Gærdesmutte, Nordatlantisk (fridariensis/hirtensis/borealis);1
+Ensfarvet Stær;1
+Stær;800
+Rosenstær;1
+Rødvinget Sortstær;1
+Vandstær;1
+Gulddrossel;1
+Olivenskovdrossel;1
+Eremitdrossel;1
+Misteldrossel;5
+Sangdrossel;25
+Vindrossel;60
+Vindrossel, Islandsk (ssp. coburni);1
+Sangdrossel/Vindrossel;60
+Solsort;25
+Sjagger;300
+Sjagger x Solsort (hybrid);1
+Ringdrossel;1
+Sortstrubet Drossel;1
+Brundrossel;1
+Rødstrubet Drossel;1
+Rødstrubet Drossel/Sortstrubet Drossel;1
+Gråstrubet Drossel;1
+Vandredrossel;1
+Drossel sp.;100
+Brun Fluesnapper;1
+Grå Fluesnapper;5
+Rødhals;30
+Nattergal;5
+Sydlig Nattergal;1
+Nattergal/Sydlig Nattergal;1
+Blåhals;1
+Blåhals, Nordlig (ssp. svecica);1
+Blåhals, Sydlig (ssp. cyanecula);1
+Rubinnattergal;1
+Manchurernattergal;1
+Lille Fluesnapper;1
+Tajgafluesnapper;1
+Hvidhalset Fluesnapper;1
+Hvidhalset Fluesnapper x Broget Fluesnapper (hybrid);1
+Broget Fluesnapper;3
+Fluesnapper sp.;1
+Blåstjert;1
+Husrødstjert;1
+Husrødstjert, Tien-Shan (ssp. phoenicuroides);1
+Rødstjert;5
+Stendrossel;1
+Bynkefugl;5
+Sibirisk Bynkefugl;1
+Sibirisk Bynkefugl/Japansk Bynkefugl;1
+Sibirisk Bynkefugl, Kaukasusbynkefugl (ssp. hemprichii);1
+Sibirisk Bynkefugl, Steppebynkefugl (ssp. variegatus);1
+Sibirisk Bynkefugl, Bjergbynkefugl (ssp. stejnegeri);1
+Sibirisk Bynkefugl (ssp. maurus);1
+Sortstrubet Bynkefugl;1
+Sortstrubet Bynkefugl, Atlantisk (ssp. hibernans);1
+Sortstrubet Bynkefugl, Europæisk (ssp. rubicola);1
+Ørkenstenpikker;1
+Vestlig Middelhavsstenpikker/Østlig Middelhavsstenpikker;1
+Vestlig Middelhavsstenpikker;1
+Nonnestenpikker;1
+Østlig Middelhavsstenpikker;1
+Stenpikker;10
+Stenpikker, Grønlandsk (ssp. leucorhoa);1
+Stenpikker (ssp. oenanthe);10
+Isabellastenpikker;1
+Hvidkronet Stenpikker;1
+Alpejernspurv;1
+Sortstrubet Jernspurv;1
+Jernspurv;10
+Sibirisk Jernspurv;1
+Snefinke;1
+Skovspurv;40
+Gråspurv x Skovspurv (hybrid);1
+Gråspurv/Skovspurv;50
+Spansk Spurv;1
+Gråspurv;50
+Bjergvipstjert;1
+Gul Vipstjert;50
+Gul Vipstjert, Gulhovedet (ssp. flavissima);1
+Gul Vipstjert (ssp. flava);50
+Gul Vipstjert, Sorthovedet (ssp. feldegg);1
+Gul Vipstjert, Almindelig x Gulhovedet (hybrid);1
+Gul Vipstjert, Nordlig (ssp. thunbergi);50
+Citronvipstjert;1
+Citronvipstjert x Gul Vipstjert (hybrid);1
+Sibirisk Vipstjert;1
+Hvid Vipstjert;40
+Hvid Vipstjert, Sortrygget Vipstjert (ssp. yarrellii);1
+Hvid Vipstjert (ssp. alba);50
+Vipstjert sp.;1
+Mongolsk Piber;1
+Piber sp.;100
+Markpiber;1
+Storpiber;1
+Skovpiber;50
+Tajgapiber;1
+Rødstrubet Piber;1
+Engpiber;200
+Skærpiber;3
+Bjergpiber/Skærpiber;3
+Bjergpiber;1
+Kvækerfinke;500
+Bogfinke/Kvækerfinke;3000
+Bogfinke;600
+Kernebider;5
+Karmindompap;1
+Langhalet Rosenfinke;1
+Rosenfinke;1
+Krognæb;1
+Dompap;10
+Dompap, Stor (ssp. pyrrhula);10
+Dompap, Lille (ssp. europaea);1
+Ørkendompap;1
+Ørkenfinke;1
+Finke sp.;1000
+Grønirisk;50
+Brunirisk;1
+Bjergirisk;25
+Tornirisk;75
+Tornirisk/Bjergirisk;75
+Gråsisken;25
+Gråsisken, Nordlig (ssp. flammea);25
+Gråsisken, Grønlandsk (ssp. rostrata);1
+Gråsisken, Lille (ssp. cabaret);3
+Gråsisken, Hvidsisken (ssp. exilipes);1
+Hvidvinget Korsnæb;1
+Stor Korsnæb;1
+Lille Korsnæb;10
+Lille Korsnæb/Stor Korsnæb;25
+Korsnæb sp.;25
+Stillits;30
+Kanariefugl;1
+Gulirisk;1
+Grønsisken;200
+Sisken sp.;100
+Snespurv;25
+Lapværling/Snespurv;1
+Lapværling;1
+Rørspurv;20
+Gulbrynet Værling;1
+Gulbrystet Værling;1
+Dværgværling;1
+Pileværling;1
+Hætteværling;1
+Brunhovedet Værling/Hætteværling;1
+Brunhovedet Værling;1
+Bomlærke;1
+Klippeværling;1
+Bjerghortulan;1
+Gulgrå Værling;1
+Hortulan;1
+Gærdeværling;1
+Hvidkindet Værling;1
+Gulspurv;15
+Værling sp.;25
+Mørkøjet Junco;1
+Hvidstrubet Spurv;1
+Hvidkronet Spurv;1
+Stribet Sanger;1
+Gul Sanger;1
+Rosenbrystet Kernebider;1
+Indigofinke;1
+Småfugl sp. (Pibere, Finker, Spurve o.lign.);1000
+Burfugl sp.;1
+Ny fugleart for landet;1
+Hybrid sp.;1

@@ -1,0 +1,835 @@
+artsid;artsnavn;klassifikation
+34130;[Afrikansk Skestork];Alm
+3070;Aftenfalk;SUB
+3670;Agerhøne;Alm
+209;Albatros sp.;SU
+7120;[Alexanderparakit];Alm
+6360;Alk;Alm
+6569;Alkefugl sp.;Alm
+6362;Alk, Atlantisk (ssp. islandica);Alm
+6361;Alk, Nordlig (ssp. torda);Alm
+15600;Allike;Alm
+15601;Allike, Almindelig (ssp. monedula);Alm
+15602;Allike, Halsbåndsallike (ssp. soemmerringii);SU
+15603;Allike, Vestlig (ssp. spermologus);Alm
+5670;Almindelig Kjove;Alm
+5679;Almindelig Kjove/Lille Kjove;Alm
+5120;Almindelig Ryle;Alm
+5123;Almindelig Ryle, Engryle (ssp. schinzii);Alm
+5121;Almindelig Ryle, Nordlig (ssp. alpina);Alm
+460;Almindelig Skråpe;SUB
+10940;Alpejernspurv;SU
+7980;Alpesejler;SU
+2153;Amerikansk Fløjlsand;SU
+4840;Amerikansk Hjejle;SU
+4848;Amerikansk Hjejle/Sibirisk Hjejle;SU
+2615;Amerikansk Kærhøg;SU
+1800;Amerikansk Pibeand;SU
+1808;Amerikansk Pibeand x Pibeand (hybrid);SU
+960;Amerikansk Rørdrum;SU
+2250;Amerikansk Skarveand;SU
+2265;Amerikansk Skarveand x Hvidhovedet And (hybrid);SU
+2132;Amerikansk Sortand;SUB
+5630;Amerikansk Svømmesneppe;SU
+3050;Amerikansk Tårnfalk;SU
+9951;Amursvale;SU
+2269;Andefugl sp.;Alm
+5919;Armensk Måge;SU
+2152;Asiatisk Fløjlsand;SU
+12700;Asiatisk Ørkensanger;SU
+369;Atlantisk/Scopolis/Storskråpe;SU
+362;Atlantisk Skråpe;SU
+360;Atlantisk Skråpe/Scopolis Skråpe;SU
+1910;Atlingand;Alm
+5880;Audouinsmåge;SU
+6120;Aztekerterne;SU
+5060;Bairdsryle;SU
+5440;Bartramsklire;SU
+2450;[Beringhavørn];SU
+8400;Biæder;SUB
+2040;Bjergand;Alm
+18670;Bjerghortulan;SU
+16620;Bjergirisk;Alm
+9780;Bjerglærke;Alm
+13070;Bjergløvsanger;SU
+13079;Bjergløvsanger/Balkanløvsanger;SU
+10140;Bjergpiber;SUB
+10144;Bjergpiber/Skærpiber;Alm
+10190;Bjergvipstjert;Alm
+12550;Bleg Gulbug;SU
+1590;Blisgås;Alm
+1599;Blisgås/Dværggås;Alm
+1592;Blisgås, Grønlandsk (ssp. flavirostris);SUB
+1591;Blisgås (ssp. albifrons);Alm
+1594;Blisgås x Bramgås (hybrid);Alm
+1595;Blisgås x Rødhalset Gås (hybrid);Alm
+4290;Blishøne;Alm
+4298;Blishøne x Rørhøne (hybrid);Alm
+11060;Blåhals;Alm
+11061;Blåhals, Nordlig (ssp. svecica);SUB
+11062;Blåhals, Sydlig (ssp. cyanecula);Alm
+14620;Blåmejse;Alm
+11130;Blåstjert;SU
+1920;Blåvinget And;SU
+2350;Blå Glente;SU
+2610;Blå Kærhøg;Alm
+2619;Blå Kærhøg x Steppehøg (hybrid);Alm
+16360;Bogfinke;Alm
+16388;Bogfinke/Kvækerfinke;Alm
+18820;Bomlærke;Alm
+5810;Bonapartemåge;SU
+4689;Braksvale sp.;SU
+1670;Bramgås;Alm
+1677;Bramgås x Dværgcanadagås (hybrid);Alm
+1678;Bramgås x Dværggås (hybrid);Alm
+1679;Bramgås x Rødhalset Gås (hybrid);Alm
+2140;Brilleand;SUB
+6220;Brilleterne;SU
+13490;Broget Fluesnapper;Alm
+15700;[Broget Krage];SU
+4939;Brokfugl sp.;Alm
+1770;[Brudeand];Alm
+11962;Brundrossel;SU
+18800;Brunhovedet Værling;SU
+18809;Brunhovedet Værling/Hætteværling;SU
+16500;[Brunirisk];Alm
+13340;Brun Fluesnapper;SU
+13030;Brun Løvsanger;SUB
+700;Brun Sule;SU
+15130;Brun Tornskade;SU
+5170;Brushane;Alm
+24997;Burfugl sp.;Alm
+12480;Buskrørsanger;SUB
+11370;Bynkefugl;Alm
+10010;Bysvale;Alm
+2160;[Bøffeland];SU
+1660;Canadagås;Alm
+1664;Canadagås x Bramgås (hybrid);Alm
+1669;Canadagås x Grågås (hybrid);Alm
+5330;Canadisk Kobbersneppe;SU
+1471;[Cariberflamingo];Alm
+12200;Cettisanger;SU
+1475;[Chileflamingo];Alm
+25800;[Chilepibeand];Alm
+3550;[Chukarhøne];Alm
+12260;Cistussanger;SU
+10180;Citronvipstjert;SUB
+10181;Citronvipstjert x Gul Vipstjert (hybrid);Alm
+5470;Damklire;SUB
+9810;Digesvale;Alm
+5190;Dobbeltbekkasin;Alm
+17100;Dompap;Alm
+17102;Dompap, Lille (ssp. europaea);Alm
+17101;Dompap, Stor (ssp. pyrrhula);Alm
+12530;Drosselrørsanger;SUB
+12069;Drossel sp.;Alm
+2670;Duehøg;Alm
+2672;Duehøg, Russisk (ssp. buteoides);SU
+7069;Due sp.;Alm
+1665;[Dværgcanadagås];Alm
+3090;Dværgfalk;Alm
+1600;Dværggås;SUB
+980;Dværghejre;SU
+7390;Dværghornugle;SU
+5780;Dværgmåge;Alm
+5010;Dværgryle;Alm
+5018;Dværgryle/Temmincksryle;Alm
+4110;Dværgrørvagtel;SU
+820;Dværgskarv;SU
+1640;Dværgsnegås;SU
+1645;Dværgsnegås x Bramgås (hybrid);SU
+6240;Dværgterne;Alm
+4420;Dværgtrappe;SU
+18740;Dværgværling;SUB
+2980;Dværgørn;SU
+2058;Dykand hybrid;Alm
+2059;Dykand sp. (Aythya sp.);Alm
+2060;Ederfugl;Alm
+2063;Ederfugl, Arktisk (ssp. borealis);SU
+3110;Eleonorafalk;SU
+8410;Ellekrage;SU
+10110;Engpiber;Alm
+4210;Engsnarre;Alm
+5180;Enkeltbekkasin;Alm
+15830;Ensfarvet Stær;SU
+11760;Eremitdrossel;SU
+1370;[Eremitibis];SU
+3219;Falk sp.;Alm
+3940;Fasan;Alm
+16389;Finke sp.;Alm
+1220;Fiskehejre;Alm
+3010;Fiskeørn;Alm
+2900;Fjeldvåge;Alm
+6150;Fjordterne;Alm
+6159;Fjordterne/Havterne;Alm
+1489;Flamingo sp.;Alm
+12370;Flodsanger;SUB
+13559;Fluesnapper sp.;Alm
+2150;Fløjlsand;Alm
+13140;Fuglekonge;Alm
+12980;Fuglekongesanger;SUB
+14420;Fyrremejse;Alm
+14421;Fyrremejse, Nordlig (ssp. borealis);SU
+14423;Fyrremejse, Pilemejse (ssp. salicarius);Alm
+13110;Gransanger;Alm
+13113;Gransanger, Sibirisk (ssp. tristis);SUB
+13114;Gransanger, Skandinavisk (ssp. abietinus);Alm
+13111;Gransanger, Sydlig (ssp. collybita);Alm
+13119;Gransanger x Løvsanger (hybrid);Alm
+1730;Gravand;Alm
+2559;Grib sp.;SU
+12360;Græshoppesanger;Alm
+16490;Grønirisk;Alm
+16540;Grønsisken;Alm
+8560;Grønspætte;Alm
+8390;Grøn Biæder;SU
+12910;Grøn Sanger;SU
+1860;Gråand;Alm
+1867;Gråand x Ederfugl (hybrid);Alm
+1895;Gråand x Knarand (hybrid);Alm
+1866;Gråand x Moskusand (hybrid);Alm
+1869;Gråand x svømmeand sp. (hybrid);Alm
+1868;Gråand x Troldand (hybrid);Alm
+1610;Grågås;Alm
+1615;Grågås x Blisgås (hybrid);Alm
+1619;Grågås x Bramgås (hybrid);Alm
+5990;Gråmåge;SUB
+7960;Gråsejler;SU
+16630;Gråsisken;Alm
+16632;Gråsisken, Grønlandsk (ssp. rostrata);SU
+16640;Gråsisken, Hvidsisken (ssp. exilipes);SUB
+16635;Gråsisken, Lille (ssp. cabaret);Alm
+16634;Gråsisken, Nordlig (ssp. flammea);Alm
+15910;Gråspurv;Alm
+15988;Gråspurv/Skovspurv;Alm
+15989;Gråspurv x Skovspurv (hybrid);Alm
+11950;Gråstrubet Drossel;SU
+100;Gråstrubet Lappedykker;Alm
+5960;Gråvinget Måge;SU
+13350;Grå Fluesnapper;Alm
+1659;Grå Gås sp.;Alm
+18710;Gulbrynet Værling;SU
+18760;Gulbrystet Værling;SU
+12590;Gulbug;Alm
+11700;Gulddrossel;SU
+3960;[Guldfasan];Alm
+8500;Guldspætte;SU
+18650;Gulgrå Værling;SU
+16400;Gulirisk;SUB
+7280;Gulnæbbet Gøg;SU
+18570;Gulspurv;Alm
+17330;Gul Sanger;SU
+10170;Gul Vipstjert;Alm
+10179;Gul Vipstjert, Almindelig x Gulhovedet (hybrid);Alm
+10172;Gul Vipstjert, Gulhovedet (ssp. flavissima);SUB
+10173;Gul Vipstjert, Nordlig (ssp. thunbergi);Alm
+10174;Gul Vipstjert, Sorthovedet (ssp. feldegg);SU
+10171;Gul Vipstjert (ssp. flava);Alm
+12740;Gærdesanger;Alm
+12747;Gærdesanger, Sibirisk/Steppe (ssp. blythi/halimodendri);SU
+12742;Gærdesanger, Sibirisk (ssp. blythi);SU
+12739;Gærdesanger, Steppe (ssp. halimodendri);SU
+10660;Gærdesmutte;Alm
+10669;Gærdesmutte, Nordatlantisk (fridariensis/hirtensis/borealis);SU
+18580;Gærdeværling;SU
+7240;Gøg;Alm
+2510;Gåsegrib;SU
+1709;Gås sp.;Alm
+14370;Halemejse;Alm
+14371;Halemejse, Nordlig (ssp. caudatus);Alm
+14374;Halemejse, Sydlig (ssp. europaeus);Alm
+2000;Halsbåndstroldand;SU
+2005;Halsbåndstroldand x Troldand (hybrid);SU
+2268;Havdykand sp. (Mergini);Alm
+12760;Havesanger;Alm
+2120;Havlit;Alm
+6160;Havterne;Alm
+2430;Havørn;Alm
+2630;Hedehøg;Alm
+9740;Hedelærke;Alm
+1259;Hejre sp.;Alm
+1219;Hejre sp. (hvid);Alm
+1420;[Hellig Ibis];SU
+13005;Himalayasanger;SU
+4850;Hjejle;Alm
+2190;[Hjelmskallesluger];SU
+18660;Hortulan;SUB
+6680;Huldue;Alm
+11210;Husrødstjert;Alm
+11215;Husrødstjert, Tien-Shan (ssp. phoenicuroides);SU
+15490;Husskade;Alm
+2310;Hvepsevåge;Alm
+13000;Hvidbrynet Løvsanger;SUB
+4770;Hvidbrystet Præstekrave;SUB
+13480;Hvidhalset Fluesnapper;SUB
+13489;Hvidhalset Fluesnapper x Broget Fluesnapper (hybrid);Alm
+2260;Hvidhovedet And;SU
+2440;[Hvidhovedet Havørn];SU
+18560;Hvidkindet Værling;SU
+5480;Hvidklire;Alm
+18390;Hvidkronet Spurv;SU
+11570;Hvidkronet Stenpikker;SU
+50;Hvidnæbbet Lom;SUB
+5050;Hvidrygget Ryle;SU
+6260;Hvidskægget Terne;SU
+18400;Hvidstrubet Spurv;SU
+16650;Hvidvinget Korsnæb;SUB
+5980;Hvidvinget Måge;SUB
+5982;Hvidvinget Måge, Baffinmåge (ssp. kumlieni);SU
+5983;Hvidvinget Måge, Inuitmåge (ssp. thayeri);SU
+5981;Hvidvinget Måge (ssp. glaucoides);SUB
+6280;Hvidvinget Terne;SUB
+2020;Hvidøjet And;SUB
+2029;Hvidøjet And x Taffeland (hybrid);Alm
+2028;Hvidøjet And x Troldand (hybrid);Alm
+880;[Hvid Pelikan];SU
+1340;Hvid Stork;Alm
+10200;Hvid Vipstjert;Alm
+10202;Hvid Vipstjert, Sortrygget Vipstjert (ssp. yarrellii);SUB
+10201;Hvid Vipstjert (ssp. alba);Alm
+2180;Hvinand;Alm
+2189;Hvinand x Lille Skallesluger (hybrid);Alm
+24998;Hybrid sp.;Alm
+8460;Hærfugl;SUB
+5820;Hættemåge;Alm
+18810;Hætteværling;SU
+12730;Høgesanger;SUB
+7500;Høgeugle;SU
+2990;Høgeørn;SU
+2749;Høg sp.;Alm
+15470;[Iberisk Blåskade];Alm
+13116;Iberisk Gransanger;SU
+12656;Iberisk Sanger;SU
+18920;[Indigofinke];SU
+1620;Indisk Gås;Alm
+1627;Indisk Gås X Bramgås (hybrid);Alm
+1626;Indisk Gås X Canadagås (hybrid);Alm
+1625;Indisk Gås X Grågås (hybrid);Alm
+11440;Isabellastenpikker;SU
+8310;Isfugl;Alm
+4960;Islandsk Ryle;Alm
+4969;Islandsk Ryle/Lille Kobbersneppe;Alm
+4962;Islandsk Ryle, Baffinryle (ssp. islandica);Alm
+4961;Islandsk Ryle, Sibirisk (ssp. canutus);Alm
+40;Islom;SUB
+49;Islom/Hvidnæbbet Lom;Alm
+6040;Ismåge;SU
+3180;Jagtfalk;SU
+4380;[Japansk Trane];Alm
+10840;Jernspurv;Alm
+4410;Jomfrutrane;SU
+7990;Kaffersejler;SU
+2270;[Kalkungrib];Alm
+16420;[Kanariefugl];Alm
+1930;[Kaneland];Alm
+16790;Karmindompap;Alm
+5930;Kaspisk Måge;Alm
+4800;Kaspisk Præstekrave;SU
+1650;[Kejsergås];Alm
+2950;Kejserørn;SU
+17170;Kernebider;Alm
+7570;Kirkeugle;SUB
+5709;Kjove sp.;Alm
+6650;Klippedue (tamdue);Alm
+9910;Klippesvale;SU
+18600;Klippeværling;SU
+5150;Klireryle;SU
+4560;Klyde;Alm
+1820;Knarand;Alm
+1520;Knopsvane;Alm
+1680;Knortegås;Alm
+1682;Knortegås, Lysbuget (ssp. hrota);Alm
+1681;Knortegås, Mørkbuget (ssp. bernicla);Alm
+1688;Knortegås, Mørkbuget x Sortbuget (hybrid);Alm
+1683;Knortegås, Sortbuget (ssp. nigricans);SUB
+1689;Knortegås x Rødhalset Gås (hybrid);Alm
+1110;Kohejre;SUB
+2070;Kongeederfugl;SUB
+2078;Kongeederfugl x Ederfugl (hybrid);Alm
+3930;[Kongefasan];Alm
+2960;Kongeørn;SUB
+16689;Korsnæb sp.;Alm
+1580;Kortnæbbet Gås;Alm
+9680;Korttået Lærke;SU
+14870;Korttået Træløber;Alm
+15670;Krage;Alm
+15749;Kragefugl sp.;Alm
+15673;Krage, Gråkrage (ssp. cornix);Alm
+15671;Krage, Sortkrage (ssp. corone);Alm
+1840;Krikand;Alm
+1845;Krikand, Amerikansk (ssp. carolinensis);SUB
+1844;Krikand x Amerikansk Krikand (hybrid);Alm
+1843;Krikand x Gråand (hybrid);Alm
+16990;Krognæb;SU
+5090;Krumnæbbet Ryle;Alm
+890;Krøltoppet Pelikan;SU
+16380;Kvækerfinke;Alm
+2649;Kærhøg sp.;Alm
+5140;Kærløber;SUB
+12500;Kærsanger;Alm
+2460;[Lammegrib];SU
+9920;Landsvale;Alm
+9923;Landsvale, Libanonlandsvale (ssp. transitiva);SU
+10018;Landsvale x Bysvale (hybrid);Alm
+17040;[Langhalet Rosenfinke];SU
+15170;Langhalet Tornskade;SU
+5270;Langnæbbet Sneppeklire;SU
+3140;[Lannerfalk];SU
+139;Lappedykker sp.;Alm
+18470;Lapværling;SUB
+18479;Lapværling/Snespurv;Alm
+5760;Lattermåge;SU
+2050;Lille Bjergand;SU
+2051;Lille Bjergand x Troldand (hybrid);SU
+8870;Lille Flagspætte;Alm
+8871;Lille Flagspætte, Nordlig (ssp. minor);Alm
+8876;Lille Flagspætte, Sydlig (ssp. hortorum);Alm
+1480;[Lille Flamingo];Alm
+13430;Lille Fluesnapper;SUB
+5510;Lille Gulben;SU
+12560;Lille Gulbug;SU
+5680;Lille Kjove;SUB
+5340;Lille Kobbersneppe;Alm
+16660;Lille Korsnæb;Alm
+16669;Lille Korsnæb/Stor Korsnæb;Alm
+70;Lille Lappedykker;Alm
+4690;Lille Præstekrave;Alm
+12470;Lille Rørsanger;SU
+4100;Lille Rørvagtel;SU
+8000;Lille Sejler;SU
+2200;Lille Skallesluger;Alm
+2920;Lille Skrigeørn;SUB
+2929;Lille Skrigeørn/Stor Skrigeørn;SUB
+520;Lille Stormsvale;SUB
+4250;Lille Sultanhøne;SU
+3030;Lille Tårnfalk;SU
+6340;Lomvie;Alm
+6369;Lomvie/Alk;Alm
+6343;Lomvie, Arktisk (ssp. hyperborea);SU
+6342;Lomvie, Britisk (ssp. albionis);Alm
+6341;Lomvie, Nordlig (ssp. aalge);Alm
+59;Lom sp.;Alm
+6540;Lunde;SUB
+12930;Lundsanger;SUB
+3100;Lærkefalk;Alm
+3109;Lærkefalk/Aftenfalk;Alm
+9799;Lærke sp.;Alm
+13120;Løvsanger;Alm
+13121;Løvsanger, Almindelig (ssp. trochilus);Alm
+13122;Løvsanger, Nordlig (ssp. acredula);Alm
+259;Madeira/Kap Verde/Desertas Petrel;SU
+1695;[Magellangås];Alm
+12655;Makisanger;SU
+220;Mallemuk;Alm
+11020;Manchurernattergal;SU
+1780;Mandarinand;Alm
+10050;Markpiber;SUB
+1950;[Marmorand];SU
+14669;Mejse sp.;Alm
+8830;Mellemflagspætte;SUB
+5660;Mellemkjove;SUB
+5669;Mellemkjove/Almindelig Kjove;Alm
+462;Middelhavsskråpe;SU
+459;Middelhavsskråpe/Almindelig Skråpe;Alm
+455;Middelhavsskråpe, Balearisk (ssp. mauretanicus);SU
+5915;Middelhavssølvmåge;SUB
+12020;Misteldrossel;Alm
+10040;Mongolsk Piber;SU
+7680;Mosehornugle;Alm
+6289;Moseterne sp.;Alm
+1750;[Moskusand];Alm
+5560;Mudderklire;Alm
+12770;Munk;Alm
+2550;[Munkegrib];SU
+7085;[Munkeparakit];Alm
+7950;Mursejler;Alm
+14640;Musvit;Alm
+2870;Musvåge;Alm
+2872;Musvåge, Steppevåge (ssp. vulpinus);SU
+18420;Mørkøjet Junco;SU
+6049;Måge sp.;Alm
+1040;Nathejre;SU
+7780;Natravn;Alm
+11030;Nattergal;Alm
+11039;Nattergal/Sydlig Nattergal;Alm
+7610;Natugle;Alm
+1700;Nilgås;Alm
+11470;Nonnestenpikker;SU
+110;Nordisk Lappedykker;Alm
+119;Nordisk Lappedykker/Sorthalset Lappedykker;Alm
+14378;Nordlig Halemejse x Sydlig Halemejse (hybrid);Alm
+12950;Nordsanger;SU
+40010;[Nymfeparakit];Alm
+99999;Ny fugleart for landet;SU
+15570;Nøddekrige;SUB
+15571;Nøddekrige, Tyknæbbet (ssp. caryocatactes);SUB
+15572;Nøddekrige, Tyndnæbbet (ssp. macrorhynchos);SUB
+5640;Odinshane;SUB
+5649;Odinshane/Thorshane;Alm
+11770;Olivenskovdrossel;SU
+4660;Orientbraksvale;SU
+7970;Orientsejler;SU
+7149;Papegøje sp.;Alm
+919;Pelikan sp.;SU
+7700;Perleugle;SUB
+13129;Phylloscopus sp.;Alm
+1790;Pibeand;Alm
+1799;Pibeand/Spidsand;Alm
+1798;Pibeand x Chilepibeand (hybrid);Alm
+1794;Pibeand x Gråand (hybrid);Alm
+1797;Pibeand x Knarand (hybrid);Alm
+1793;Pibeand x Krikand (hybrid);Alm
+10159;Piber sp.;Alm
+1530;Pibesvane;Alm
+1539;Pibesvane/Sangsvane;Alm
+18730;Pileværling;SU
+15080;Pirol;SUB
+5570;Plettet Mudderklire;SU
+4080;Plettet Rørvagtel;SUB
+6350;Polarlomvie;SU
+4820;Pomeransfugl;SUB
+930;Pragtfregatfugl;SU
+5160;Prærieløber;SU
+5770;Præriemåge;SU
+4360;Prærietrane;SU
+14900;Pungmejse;SUB
+1240;Purpurhejre;SU
+35670;[Påfugl];Alm
+1699;Rajgås sp.;Alm
+15720;Ravn;Alm
+6020;Ride;Alm
+11860;Ringdrossel;Alm
+6700;Ringdue;Alm
+5890;Ringnæbbet Måge;SU
+900;[Rosapelikan];Alm
+18870;Rosenbrystet Kernebider;SU
+15190;Rosenbrystet Tornskade;SU
+16890;[Rosenfinke];Alm
+6010;Rosenmåge;SU
+15840;Rosenstær;SUB
+6140;Rosenterne;SU
+6060;Rovterne;Alm
+11050;Rubinnattergal;SU
+2530;[Rüppells Grib];Alm
+1710;Rustand;Alm
+1714;Rustand x Gravand (hybrid);Alm
+5129;Ryle sp.;Alm
+5460;Rødben;Alm
+5462;Rødben, Islandsk (ssp. robusta);Alm
+5461;Rødben (ssp. totanus);Alm
+32450;Rødbrystet Svale;SU
+10990;Rødhals;Alm
+1690;Rødhalset Gås;SUB
+5000;Rødhalset Ryle;SU
+1960;Rødhovedet And;SUB
+1969;Rødhovedet And x Taffeland (hybrid);Alm
+15230;Rødhovedet Tornskade;SU
+3580;[Rødhøne];Alm
+9950;Rødrygget Svale;SUB
+15150;Rødrygget Tornskade;Alm
+11220;Rødstjert;Alm
+20;Rødstrubet Lom;Alm
+29;Rødstrubet Lom/Sortstrubet Lom;Alm
+10120;Rødstrubet Piber;SUB
+12654;Rødstrubet Sanger;SU
+12650;Rødstrubet Sanger/Iberisk Sanger/Makisanger;SU
+12653;Rødstrubet Sanger (ssp. albistriata);SU
+12651;Rødstrubet Sanger (ssp. cantillans);SU
+13150;Rødtoppet Fuglekonge;Alm
+4650;Rødvinget Braksvale;SU
+33810;[Rødvinget Sortstær];Alm
+16330;Rødøjet Vireo;SU
+2390;Rød Glente;Alm
+950;Rørdrum;Alm
+2600;Rørhøg;Alm
+4240;Rørhøne;Alm
+12510;Rørsanger;Alm
+18770;Rørspurv;Alm
+4169;Rørvagtel sp.;Alm
+15630;Råge;Alm
+5790;Sabinemåge;SUB
+4970;Sandløber;Alm
+6050;Sandterne;SUB
+12000;Sangdrossel;Alm
+12009;Sangdrossel/Vindrossel;Alm
+13168;Sanger sp.;Alm
+9760;Sanglærke;Alm
+1540;Sangsvane;Alm
+12610;Sardinsk Sanger;SU
+12380;Savisanger;SUB
+13010;Schwarz Løvsanger;SU
+361;Scopolis Skråpe;SU
+1810;[Segland];Alm
+8009;Sejler sp.;Alm
+15610;Sibirisk Allike;SU
+11399;Sibirisk Bynkefugl;SU
+11392;Sibirisk Bynkefugl, Bjergbynkefugl (ssp. stejnegeri);SU
+11397;Sibirisk Bynkefugl, Kaukasusbynkefugl (ssp. hemprichii);SU
+11394;Sibirisk Bynkefugl (ssp. maurus);SU
+11396;Sibirisk Bynkefugl, Steppebynkefugl (ssp. variegatus);SU
+4845;Sibirisk Hjejle;SU
+10860;Sibirisk Jernspurv;SU
+1830;Sibirisk Krikand;SU
+4786;Sibirisk Præstekrave;SU
+26643;Sibirisk Vipstjert;SU
+5910;Sildemåge;Alm
+5911;Sildemåge, Baltisk (ssp. fuscus);SUB
+5912;Sildemåge, Britisk (ssp. graellsii);Alm
+5913;Sildemåge, Nordsøsildemåge (ssp. intermedius);Alm
+5922;Sildemåge, Sibirisk Måge (ssp. heuglini);SU
+10480;Silkehale;Alm
+1190;Silkehejre;SUB
+13050;Sinkiangløvsanger;SU
+16649;Sisken sp.;Alm
+12430;Sivsanger;Alm
+11980;Sjagger;Alm
+11989;Sjagger x Solsort (hybrid);Alm
+7160;Skadegøg;SU
+2239;Skallesluger sp.;Alm
+720;Skarv;Alm
+722;Skarv, Mellemskarv (ssp. sinensis);Alm
+849;Skarv sp.;Alm
+721;Skarv, Storskarv (ssp. carbo);Alm
+1940;Skeand;Alm
+1946;Skeand x Blåvinget And (hybrid);SU
+1948;Skeand x Gråand (hybrid);Alm
+1947;Skeand x Knarand (hybrid);Alm
+1440;Skestork;Alm
+7670;Skovhornugle;Alm
+7679;Skovhornugle/Mosehornugle;Alm
+10090;Skovpiber;Alm
+13080;Skovsanger;Alm
+15390;Skovskade;Alm
+5290;Skovsneppe;Alm
+15980;Skovspurv;Alm
+499;Skråpe sp.;Alm
+13640;Skægmejse;Alm
+10135;Skærpiber;Alm
+3160;Slagfalk;SU
+2560;Slangeørn;SU
+7350;Slørugle;Alm
+7351;Slørugle, Hvidbrystet (ssp. alba);SU
+7352;Slørugle, Mørkbrystet (ssp. guttata);Alm
+19999;Småfugl sp. (Pibere, Finker, Spurve o.lign.);Alm
+5380;Småspove;Alm
+16110;Snefinke;SU
+1630;[Snegås];Alm
+1639;Snegås x Bramgås (hybrid);Alm
+5289;Sneppeklire sp.;SU
+18500;Snespurv;Alm
+7490;Sneugle;SU
+430;Sodfarvet Skråpe;SUB
+7087;[Soldaterara];Alm
+11870;Solsort;Alm
+2130;Sortand;Alm
+1870;Sortbrun And;SU
+140;Sortbrynet Albatros;SU
+5100;Sortgrå Ryle;Alm
+120;Sorthalset Lappedykker;Alm
+1526;[Sorthalset Svane];Alm
+5750;Sorthovedet Måge;Alm
+5758;Sorthovedet Måge x Hættemåge (hybrid);Alm
+12670;Sorthovedet Sanger;SU
+5450;Sortklire;Alm
+5459;Sortklire/Rødben;Alm
+15679;Sortkrage x Gråkrage (hybrid);Alm
+14610;Sortmejse;Alm
+7270;Sortnæbbet Gøg;SU
+8630;Sortspætte;Alm
+11390;Sortstrubet Bynkefugl;Alm
+11393;Sortstrubet Bynkefugl, Atlantisk (ssp. hibernans);Alm
+11391;Sortstrubet Bynkefugl, Europæisk (ssp. rubicola);Alm
+11972;Sortstrubet Drossel;SU
+10900;Sortstrubet Jernspurv;SU
+30;Sortstrubet Lom;Alm
+12690;Sortstrubet Sanger;SU
+1525;Sortsvane;Alm
+6270;Sortterne;Alm
+4670;Sortvinget Braksvale;SU
+2380;Sort Glente;SUB
+2388;Sort Glente/Rød Glente;Alm
+2382;[Sort Glente, Gulnæbbet (ssp. parasitus)];SU
+2389;Sort Glente x Rød Glente (hybrid);Alm
+1360;Sort Ibis;SUB
+1310;Sort Stork;SUB
+15920;Spansk Spurv;SU
+1890;Spidsand;Alm
+1894;Spidsand x Gråand (hybrid);Alm
+1893;Spidsand x Pibeand (hybrid);Alm
+5080;Spidshalet Ryle;SU
+6110;Splitterne;Alm
+4870;[Sporevibe];SU
+12600;Spottesanger;SU
+5439;Spove sp.;Alm
+2690;Spurvehøg;Alm
+7510;Spurveugle;SU
+14790;Spætmejse;Alm
+14791;Spætmejse, Lysbuget (ssp. europaea);Alm
+14793;Spætmejse, Mørkbuget (ssp. caesia);Alm
+9019;Spætte sp.;Alm
+2090;Stellersand;SU
+11620;Stendrossel;SU
+11460;Stenpikker;Alm
+11462;Stenpikker, Grønlandsk (ssp. leucorhoa);Alm
+11461;Stenpikker (ssp. oenanthe);Alm
+5610;Stenvender;Alm
+2620;Steppehøg;SUB
+2629;Steppehøg/Hedehøg;Alm
+6630;Steppehøne;SU
+4910;Steppevibe;SU
+2945;Steppeørn;SU
+33;Stillehavslom;SU
+16530;Stillits;Alm
+3189;Storfalk sp.;Alm
+5690;Storkjove;Alm
+4419;Stork/Trane sp.;Alm
+1359;Stork sp.;Alm
+5900;Stormmåge;Alm
+5902;Stormmåge, Russisk (ssp. heinei);SUB
+5901;Stormmåge (ssp. canus);Alm
+639;Stormsvale sp.;Alm
+10020;Storpiber;SUB
+400;Storskråpe;SU
+5410;Storspove;Alm
+4460;Stortrappe;SU
+7135;[Stor Alexanderparakit];Alm
+8760;Stor Flagspætte;Alm
+8761;Stor Flagspætte, Nordlig (ssp. major);Alm
+8764;Stor Flagspætte, Sydlig (ssp. pinetorum);Alm
+8769;Stor Flagspætte x Hvidrygget Flagspætte (hybrid);SU
+1472;[Stor Flamingo];SU
+1470;Stor Flamingo/Cariberflamingo;Alm
+12390;Stor Græshoppesanger;SU
+5500;Stor Gulben;SU
+7440;Stor Hornugle;Alm
+5320;Stor Kobbersneppe;Alm
+5322;Stor Kobbersneppe, Islandsk (ssp. islandica);Alm
+5321;Stor Kobbersneppe (ssp. limosa);Alm
+16680;Stor Korsnæb;SUB
+4700;Stor Præstekrave;Alm
+4701;Stor Præstekrave (ssp. hiaticula);Alm
+4702;Stor Præstekrave, Tundra (ssp. tundrae);Alm
+2230;Stor Skallesluger;Alm
+2930;Stor Skrigeørn;SU
+5730;Stor Sorthovedet Måge;SU
+550;Stor Stormsvale;SUB
+15200;Stor Tornskade;Alm
+15195;Stor Tornskade, Ørkentornskade (ssp. pallidirostris);SU
+4860;Strandhjejle;Alm
+4500;Strandskade;Alm
+12350;Stribet Græshoppesanger;SU
+5070;Stribet Ryle;SUB
+17530;Stribet Sanger;SU
+4550;Stylteløber;SUB
+15820;Stær;Alm
+710;Sule;Alm
+4270;[Sultanhøne];Alm
+14400;Sumpmejse;Alm
+14409;Sumpmejse/Fyrremejse;Alm
+4920;Sumpvibe;SU
+5530;Svaleklire;Alm
+10019;Svale sp.;Alm
+1560;[Svanegås];Alm
+1569;Svanegås x Grågås (hybrid);Alm
+1559;Svane sp.;Alm
+6000;Svartbag;Alm
+1949;Svømmeand sp.;Alm
+11040;Sydlig Nattergal;SUB
+6470;Søkonge;SUB
+1210;Sølvhejre;Alm
+5920;Sølvmåge;Alm
+5928;Sølvmåge, Britisk (ssp. argenteus);Alm
+5921;Sølvmåge, Skandinavisk (ssp. argentatus);Alm
+5999;Sølvmåge x Gråmåge (hybrid);Alm
+5935;Sølvmåge x Kaspisk Måge (hybrid);Alm
+5918;Sølvmåge x Sildemåge (hybrid);Alm
+6950;Sørgedue;SU
+1980;Taffeland;Alm
+1989;Taffeland x Troldand (hybrid);Alm
+13432;Tajgafluesnapper;SU
+10080;Tajgapiber;SU
+1571;Tajgasædgås;Alm
+1570;Tajgasædgås/Tundrasædgås;Alm
+6380;Tejst;Alm
+6386;Tejst, Arktisk (ssp. mandtii);SU
+6385;Tejst, Atlantisk (ssp. arcticus);Alm
+6381;Tejst, Baltisk (ssp. grylle);Alm
+5020;Temmincksryle;Alm
+5550;Terekklire;SU
+6259;Terne sp.;Alm
+5650;Thorshane;SUB
+4780;Tibetansk Præstekrave;SU
+5540;Tinksmed;Alm
+3350;[Tjur];Alm
+1080;Tophejre;SU
+2320;Tophvepsevåge;SU
+9720;Toplærke;SUB
+14540;Topmejse;Alm
+90;Toppet Lappedykker;Alm
+99;Toppet Lappedykker/Gråstrubet Lappedykker;Alm
+2210;Toppet Skallesluger;Alm
+2218;Toppet Skallesluger/Stor Skallesluger;Alm
+800;Topskarv;SUB
+7920;Tornhalesejler;SU
+16600;Tornirisk;Alm
+16609;Tornirisk/Bjergirisk;Alm
+12750;Tornsanger;Alm
+15249;Tornskade sp.;Alm
+4330;Trane;Alm
+4409;Trane sp.;Alm
+4385;Trane x Japansk Trane (hybrid);Alm
+5200;Tredækker;SUB
+8980;Tretået Spætte;SU
+4590;Triel;SU
+2030;Troldand;Alm
+2038;Troldand/Bjergand;Alm
+2039;Troldand x Bjergand (hybrid);Alm
+490;Tropeskråpe;SU
+14860;Træløber;Alm
+14869;Træløber/Korttået Træløber;Alm
+14861;Træløber, Nordlig (ssp. familiaris);Alm
+14863;Træløber, Sydlig (ssp. macrodactyla);Alm
+1574;Tundrasædgås;Alm
+15140;Turkestantornskade;SU
+6870;Turteldue;SUB
+4980;Tyknæbbet Dværgryle;SU
+5850;Tyndnæbbet Måge;SU
+6840;Tyrkerdue;Alm
+3040;Tårnfalk;Alm
+7719;Ugle sp.;Alm
+40000;[Undulat];Alm
+3320;Urfugl;SU
+5659;Vader sp., Lille;Alm
+5658;Vader sp., Stor;Alm
+3700;Vagtel;Alm
+12030;Vandredrossel;SU
+3200;Vandrefalk;Alm
+3205;Vandrefalk, Sibirisk (ssp. calidus);SU
+4070;Vandrikse;Alm
+12420;Vandsanger;SU
+10500;Vandstær;Alm
+8480;Vendehals;Alm
+11481;Vestlig Middelhavsstenpikker;SU
+11480;Vestlig Middelhavsstenpikker/Østlig Middelhavsstenpikker;SU
+4930;Vibe;Alm
+12010;Vindrossel;Alm
+12012;Vindrossel, Islandsk (ssp. coburni);SUB
+10239;Vipstjert sp.;Alm
+18819;Værling sp.;Alm
+2919;Våge sp.;Alm
+500;Wilsons Stormsvale;SU
+16760;Ørkendompap;SU
+16740;[Ørkenfinke];Alm
+4640;Ørkenløber;SU
+7810;Ørkennatravn;SU
+4790;Ørkenpræstekrave;SU
+11490;Ørkenstenpikker;SU
+4795;Ørken-/Tibetansk/Sibirisk Præstekrave;SU
+2880;Ørnevåge;SU
+2979;Ørn sp.;Alm
+9620;Østlig Kalanderlærke;SU
+4445;Østlig Kravetrappe;SU
+12920;Østlig Lundsanger;SU
+11482;Østlig Middelhavsstenpikker;SU
+6890;Østlig Turteldue;SU
+2470;Ådselgrib;SU

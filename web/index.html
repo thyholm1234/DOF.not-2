@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seneste observation</title>
+  <meta name="theme-color" content="#0b3d91" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f7f7f7; color:#222; }
+    h1 { margin-top: 0; }
+    .card { background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: 160px 1fr; gap:8px 16px; }
+    .label { color:#666; }
+    .value { font-weight: 600; }
+    .muted { color:#777; font-size: 0.95em; }
+    pre { background:#111; color:#eee; padding:12px; border-radius:8px; overflow:auto; }
+    a { color:#0066cc; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <h1>Seneste observation</h1>
+  <div id="summary" class="card"></div>
+  <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div>
+
+  <h2>Notifikationspræferencer</h2>
+  <div id="prefs-matrix"></div>
+  <button id="subscribe-btn">Abonnér</button>
+  <button id="unsubscribe-btn">Afmeld</button>
+  <button id="debug-push-btn">Send debug push</button>
+
+  <script src="app.js"></script>
+</body>
+</html>
