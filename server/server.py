@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import json
 import os
@@ -29,6 +29,13 @@ def db_init():
                 deviceid TEXT,
                 subscription TEXT,
                 PRIMARY KEY (userid, deviceid)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_prefs (
+                user_id TEXT PRIMARY KEY,
+                prefs TEXT,
+                ts INTEGER
             )
         """)
 db_init()
@@ -77,20 +84,8 @@ async def api_unsubscribe(request: Request):
 
 # Stier
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web"))
-payload_dir = os.path.join(web_dir, 'payload')
-index_html_path = os.path.join(web_dir, 'index.html')
-latest_symlink_path = os.path.join(payload_dir, 'latest.json')  # almindelig fil, ikke symlink
-
-# Servér ikon-mappe og payload-mappe statisk
-app.mount("/icons", StaticFiles(directory=os.path.join(web_dir, "icons")), name="icons")
-
-payload_dir = os.path.join(os.path.dirname(__file__), "..", "web", "payload")
-os.makedirs(payload_dir, exist_ok=True)
-app.mount("/payload", StaticFiles(directory=payload_dir), name="payload")
-
-obs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
-app.mount("/obs", StaticFiles(directory=obs_dir), name="obs")
-
+payload_dir = os.path.join(web_dir, "payload")
+latest_symlink_path = os.path.join(web_dir, "payload", "latest.json")
 
 def _parse_dt_from_row(row: dict) -> datetime:
     time_keys = ["Obstidtil", "Obstidfra", "Turtidtil", "Turtidfra"]
@@ -158,7 +153,7 @@ def _load_latest_payload():
     except Exception:
         return None
 
-@app.post("/update")
+@app.post("/api/update")
 async def update_data(request: Request):
     payload = await request.json()  # Liste af observationer
     _save_payload(payload)
@@ -195,6 +190,26 @@ async def update_data(request: Request):
                     print(f"Push-fejl til {userid}/{deviceid}: {ex}")
     return {"ok": True}
 
+@app.get("/api/threads/{day}")
+async def api_threads_index(day: str):
+    """Returner index.json for en given dag."""
+    index_path = os.path.join(web_dir, "obs", day, "index.json")
+    if not os.path.isfile(index_path):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    with open(index_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return JSONResponse(data)
+
+@app.get("/api/thread/{day}/{thread_id}")
+async def api_thread(day: str, thread_id: str):
+    """Returner thread.json for en given dag og tråd-id."""
+    thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+    if not os.path.isfile(thread_path):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    with open(thread_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return JSONResponse(data)
+
 @app.get("/api/payload")
 async def api_payload():
     data = _load_latest_payload()
@@ -207,22 +222,6 @@ async def api_latest():
     data = _load_latest_payload()
     latest = _latest_from_data(data) if data is not None else {}
     return JSONResponse(latest)
-
-@app.get("/", response_class=HTMLResponse)
-async def read_index():
-    if os.path.exists(index_html_path):
-        return FileResponse(index_html_path, media_type="text/html")
-    data = _load_latest_payload()
-    latest = _latest_from_data(data) if data is not None else {}
-    return HTMLResponse(f"""
-    <html>
-        <head><title>Seneste observation</title></head>
-        <body>
-            <h1>Seneste observation</h1>
-            <pre>{json.dumps(latest, indent=4, ensure_ascii=False)}</pre>
-        </body>
-    </html>
-    """)
 
 @app.get("/obs/{day}/threads/{thread_id}")
 async def get_thread_short(day: str, thread_id: str):
@@ -244,19 +243,6 @@ async def api_subscribe(request: Request):
             (userid, deviceid, json.dumps(subscription))
         )
     return {"ok": True}
-
-@app.get("/manifest.webmanifest")
-async def manifest():
-    return FileResponse(os.path.join(web_dir, "manifest.webmanifest"),
-                        media_type="application/manifest+json")
-
-@app.get("/sw.js")
-async def sw():
-    return FileResponse(os.path.join(web_dir, "sw.js"), media_type="application/javascript")
-
-@app.get("/index.html")
-async def index_html():
-    return FileResponse(index_html_path, media_type="text/html")
 
 @app.post("/api/debug-push")
 async def debug_push(request: Request):
@@ -324,6 +310,8 @@ def should_notify(prefs, afdeling, kategori):
     if valg == "Bemærk":
         return kategori in ("SU", "SUB", "Bemærk")
     return False
+
+app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
 if __name__ == "__main__":
     import uvicorn

@@ -17,7 +17,7 @@ BASE_URL = (
 )
 
 # Server endpoint der modtager JSON-array af ændrede observationer (hver med alle 38 kolonner + 'kategori')
-SERVER_URL = "http://localhost:8001/update"
+SERVER_URL = "http://localhost:8001/api/update"
 STATE_FILE = "/state/state.json"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")  # NYT
 WATCH_STATE_FILE = os.path.join(os.path.dirname(__file__), "state", "watch_state.json")  # NYT: separat state til watcher
@@ -117,12 +117,6 @@ def slugify(s):
     return s.strip('-')
 
 def save_threads_and_index(rows: List[Dict[str, str]], day: str):
-    """
-    Gemmer tråde og index for SU/SUB-arter for en given dag.
-    - Opretter kun tråde for rækker med kategori SU eller SUB.
-    - Gemmer alle events for hver tråd i threads/{slug}/thread.json.
-    - Gemmer et samlet index i index.json.
-    """
     import os
     import json
 
@@ -147,6 +141,25 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
         # Find seneste og første observation i tråden
         latest = max(obs_list, key=_parse_dt_from_row)
         earliest = min(obs_list, key=_parse_dt_from_row)
+
+        # Antal individer (sum af Antal)
+        total_antal = sum(parse_float(row.get("Antal")) for row in obs_list)
+
+        # Antal observationer (unikt observer-navn)
+        observers = set(
+            f"{row.get('Fornavn','').strip()} {row.get('Efternavn','').strip()}"
+            for row in obs_list
+        )
+        num_observationer = len([o for o in observers if o.strip()])
+
+        # Klokkeslet fra seneste observation: Obstidfra > Turtidfra > Obstidtil > Turtidtil
+        klokkeslet = (
+            (latest.get("Obstidfra") or "").strip()
+            or (latest.get("Turtidfra") or "").strip()
+            or (latest.get("Obstidtil") or "").strip()
+            or (latest.get("Turtidtil") or "").strip()
+        )
+
         # Byg index-entry
         index_entry = {
             "day": day,
@@ -161,6 +174,9 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             "last_ts_obs": latest.get("Dato"),
             "last_adf": latest.get("Adfbeskrivelse"),
             "last_observer": f"{latest.get('Fornavn','')} {latest.get('Efternavn','')}".strip(),
+            "antal_individer": int(total_antal),
+            "antal_observationer": num_observationer,
+            "klokkeslet": klokkeslet,
         }
         index.append(index_entry)
         # Gem hele tråden

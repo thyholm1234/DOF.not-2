@@ -34,7 +34,7 @@
 
   async function loadThreads() {
     const day = getDayFromUrl();
-    const indexUrl = `./obs/${day}/index.json`;
+    const indexUrl = `/api/threads/${day}`;
     const $cards = document.getElementById('threads-cards') || document.getElementById('threads-list');
     const $status = document.getElementById('threads-status');
     if (!$cards) {
@@ -72,13 +72,17 @@
       card.tabIndex = 0;
       card.onclick = () => {
         // Åbn tråden i ny fane eller modal
-        window.open(`./obs/${day}/threads/${t.thread_id}/thread.json`, '_blank');
+        window.location.href = `traad.html?date=${day}&id=${t.thread_id}`;
         // Eller: window.location.href = `thread.html?date=${day}&id=${t.thread_id}`;
       };
 
       card.appendChild(el('div', catClass(t.last_kategori), String(t.last_kategori || '').toUpperCase()));
       card.appendChild(el('div', 'art', t.art || ''));
       card.appendChild(el('div', 'lok', t.lok || ''));
+      card.appendChild(el('div', 'region', `Lokalafdeling: ${t.region || ''}`));
+      card.appendChild(el('div', 'antal-individer', `Antal individer: ${t.antal_individer ?? ''}`));
+      card.appendChild(el('div', 'antal-observationer', `Antal observationer: ${t.antal_observationer ?? ''}`));
+      card.appendChild(el('div', 'klokkeslet', `Klokkeslet: ${t.klokkeslet || ''}`));
       card.appendChild(el('div', 'antal', `Sidste adfærd: ${t.last_adf || ''}`));
       card.appendChild(el('div', 'observer', t.last_observer || ''));
       card.appendChild(el('div', 'age', fmtAge(t.last_ts_obs)));

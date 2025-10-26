@@ -19,17 +19,15 @@ function renderPrefsMatrix(prefs) {
   document.getElementById("prefs-matrix").appendChild(table);
 }
 
-async function loadPrefs(userid) {
-  const res = await fetch(`/api/prefs?userid=${encodeURIComponent(userid)}`);
-  return await res.json();
-}
 
-async function savePrefs(userid, deviceid, prefs) {
-  await fetch("/api/prefs", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({userid, deviceid, prefs})
-  });
+
+async function loadPrefs() {
+  const user_id = getOrCreateUserId();
+  const url = `/api/prefs/user?user_id=${encodeURIComponent(user_id)}`;
+  const res = await fetch(url, { cache: 'no-cache' });
+  if (!res.ok) return {};
+  const data = await res.json();
+  return data.prefs || {};
 }
 
 async function loadLatest() {
@@ -51,8 +49,8 @@ function renderSummary(latest) {
       <div class="label">Lokalitet:</div><div class="value">${latest.Loknavn || ""}</div>
       <div class="label">Antal:</div><div class="value">${latest.Antal || ""}</div>
       <div class="label">Kategori:</div><div class="value">${latest.kategori || ""}</div>
+      <div class="muted">Obsid: ${latest.Obsid || ""}</div>
     </div>
-    <div class="muted">Obsid: ${latest.Obsid || ""}</div>
   `;
   document.getElementById("payload").textContent = JSON.stringify(latest, null, 2);
 }
@@ -131,7 +129,16 @@ function urlBase64ToUint8Array(base64String) {
 document.addEventListener("DOMContentLoaded", async () => {
   const userid = localStorage.getItem("userid") || "user-" + Math.random().toString(36).slice(2);
   localStorage.setItem("userid", userid);
-  const deviceid = "device-" + Math.random().toString(36).slice(2);
+
+  // FEJL: deviceid genereres altid på ny
+  // const deviceid = "device-" + Math.random().toString(36).slice(2);
+
+  // KORREKT: deviceid gemmes og genbruges
+  let deviceid = localStorage.getItem("deviceid");
+  if (!deviceid) {
+    deviceid = "device-" + Math.random().toString(36).slice(2);
+    localStorage.setItem("deviceid", deviceid);
+  }
 
   let prefs = await loadPrefs(userid);
   renderPrefsMatrix(prefs);

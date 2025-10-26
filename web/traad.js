@@ -9,7 +9,10 @@
   function fmtAge(iso) {
     if (!iso) return '';
     const now = Date.now();
-    const t = new Date(iso).includes('T') ? new Date(iso).getTime() : new Date(iso + "T00:00:00").getTime();
+    const isoStr = String(iso);
+    const t = isoStr.includes('T')
+      ? new Date(isoStr).getTime()
+      : new Date(isoStr + "T00:00:00").getTime();
     const diff = Math.max(0, now - t);
     const min = Math.floor(diff / 60000);
     if (min < 1) return 'nu';
@@ -29,21 +32,20 @@
     const day = getParam('date');
     const id = getParam('id');
     const $status = document.getElementById('thread-status');
-    const $panel = document.getElementById('thread-panel');
     const $title = document.getElementById('thread-title');
-    const $sub = document.getElementById('thread-sub');
-    const $list = document.getElementById('thread-events');
+    const $meta = document.getElementById('thread-meta');
+    const $events = document.getElementById('thread-events');
+
     if (!day || !id) {
       $status.textContent = "Ingen tråd valgt.";
-      $panel.style.display = "none";
       return;
     }
-    const url = `./obs/${day}/threads/${id}/thread.json`;
+
+    const url = `/api/thread/${day}/${id}`;
     $status.textContent = "Henter tråd...";
-    $panel.style.display = "";
     $title.textContent = "";
-    $sub.textContent = "";
-    $list.innerHTML = "";
+    $meta.textContent = "";
+    $events.innerHTML = "";
 
     let data;
     try {
@@ -52,7 +54,6 @@
       data = await r.json();
     } catch (e) {
       $status.textContent = "Kunne ikke hente tråd.";
-      $panel.style.display = "none";
       return;
     }
     $status.textContent = "";
@@ -60,21 +61,25 @@
     // Vis tråd-header
     const thread = data.thread || {};
     $title.textContent = `${thread.art || ''} — ${thread.lok || ''}`;
-    $sub.innerHTML = `
+    $meta.innerHTML = `
       <span class="${catClass(thread.last_kategori)}">${String(thread.last_kategori || '').toUpperCase()}</span>
       ${thread.region || ''} • ${thread.last_observer || ''} • ${fmtAge(thread.last_ts_obs)}
     `;
 
     // Vis alle events i tråden
     const events = data.events || [];
+    if (!events.length) {
+      $events.innerHTML = "<div class='card'>Ingen observationer i denne tråd.</div>";
+      return;
+    }
     for (const ev of events) {
-      const li = el('li', 'thread-event');
-      li.appendChild(el('div', 'dato', ev.Dato || ''));
-      li.appendChild(el('div', 'antal', `Antal: ${ev.Antal || ''}`));
-      li.appendChild(el('div', 'adf', ev.Adfbeskrivelse || ''));
-      li.appendChild(el('div', 'obsnavn', `${ev.Fornavn || ''} ${ev.Efternavn || ''}`));
-      li.appendChild(el('div', 'lok', ev.Loknavn || ''));
-      $list.appendChild(li);
+      const card = el('div', 'card thread-event');
+      card.appendChild(el('div', 'label', `Dato: ${ev.Dato || ''}`));
+      card.appendChild(el('div', 'label', `Antal: ${ev.Antal || ''}`));
+      card.appendChild(el('div', 'label', `Adfærd: ${ev.Adfbeskrivelse || ''}`));
+      card.appendChild(el('div', 'label', `Observatør: ${ev.Fornavn || ''} ${ev.Efternavn || ''}`));
+      card.appendChild(el('div', 'label', `Lokalitet: ${ev.Loknavn || ''}`));
+      $events.appendChild(card);
     }
   }
 
