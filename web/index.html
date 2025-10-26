@@ -8,6 +8,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="/manifest.webmanifest">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <style>
@@ -33,6 +38,8 @@
   <button id="subscribe-btn">Abonnér</button>
   <button id="unsubscribe-btn">Afmeld</button>
   <button id="debug-push-btn">Send debug push</button>
+
+  <div id="debug-info" style="font-size:small;color:#888"></div>
 
   <h1>Dagens tråde</h1>
   <div id="threads-status"></div>
