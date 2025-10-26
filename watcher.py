@@ -56,6 +56,7 @@ def build_bemaerk_maps() -> Dict[str, Dict[str, int]]:
         pattern = os.path.join(DATA_DIR, "*_bemaerk_parsed.csv")
         for fp in glob.glob(pattern):
             slug = os.path.basename(fp).replace("_bemaerk_parsed.csv", "")
+            # print(f"[watcher][bemaerk] Indlæser: {fp} (region: {slug})")  # DEBUG
             thresholds: Dict[str, int] = {}
             with open(fp, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f, delimiter=";")
@@ -66,6 +67,7 @@ def build_bemaerk_maps() -> Dict[str, Dict[str, int]]:
                         continue
                     try:
                         thresholds[an] = int(t)
+                        # print(f"  - {an}: {t}")  # DEBUG
                     except ValueError:
                         continue
             region_maps[slug] = thresholds
@@ -77,8 +79,10 @@ KLASS_MAP = load_klassifikation_map()
 BEMAERK_BY_REGION = build_bemaerk_maps()
 
 def to_region_slug(dept: str) -> str:
-    """Normaliser DOF_afdeling til fil-slug (små bogstaver, uden mellemrum)."""
-    return (dept or "").strip().lower().replace(" ", "")
+    s = (dept or "").strip()
+    if s.lower().startswith("dof "):
+        s = s[4:]
+    return slugify(s)
 
 def compute_kategori(row: Dict[str, str]) -> str:
     """Returnér 'SU'/'SUB'/'bemaerk'/'alm' for en observation."""
@@ -99,8 +103,12 @@ def compute_kategori(row: Dict[str, str]) -> str:
 def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     for r in rows:
         r["kategori"] = compute_kategori(r)
+        obsid = r.get("Obsid", "").strip()
+        if obsid:
+            r["url"] = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+        else:
+            r["url"] = ""
     return rows
-# --- SLUT NYT ---
 
 def slugify(s):
     s = s.lower()
@@ -109,12 +117,22 @@ def slugify(s):
     return s.strip('-')
 
 def save_threads_and_index(rows: List[Dict[str, str]], day: str):
+    """
+    Gemmer tråde og index for SU/SUB-arter for en given dag.
+    - Opretter kun tråde for rækker med kategori SU eller SUB.
+    - Gemmer alle events for hver tråd i threads/{slug}/thread.json.
+    - Gemmer et samlet index i index.json.
+    """
+    import os
+    import json
+
     base_dir = os.path.join("web", "obs", day)
     threads_dir = os.path.join(base_dir, "threads")
     os.makedirs(threads_dir, exist_ok=True)
     threads = {}
+
+    # Saml SU/SUB-rækker i tråde
     for row in rows:
-        # Kun SU/SUB
         if row.get("kategori") not in ("SU", "SUB"):
             continue
         art = (row.get("Artnavn") or "").strip()
@@ -126,9 +144,11 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
 
     index = []
     for thread_id, obs_list in threads.items():
-        # Sortér på dato+tid for at finde seneste obs
+        # Find seneste og første observation i tråden
         latest = max(obs_list, key=_parse_dt_from_row)
-        index.append({
+        earliest = min(obs_list, key=_parse_dt_from_row)
+        # Byg index-entry
+        index_entry = {
             "day": day,
             "thread_id": thread_id,
             "art": latest.get("Artnavn"),
@@ -137,16 +157,18 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             "region": latest.get("DOF_afdeling"),
             "status": "active",
             "last_kategori": latest.get("kategori"),
-            "first_ts_obs": min(obs_list, key=_parse_dt_from_row).get("Dato"),
+            "first_ts_obs": earliest.get("Dato"),
             "last_ts_obs": latest.get("Dato"),
             "last_adf": latest.get("Adfbeskrivelse"),
             "last_observer": f"{latest.get('Fornavn','')} {latest.get('Efternavn','')}".strip(),
-        })
+        }
+        index.append(index_entry)
+        # Gem hele tråden
         thread_dir = os.path.join(threads_dir, thread_id)
         os.makedirs(thread_dir, exist_ok=True)
         with open(os.path.join(thread_dir, "thread.json"), "w", encoding="utf-8") as f:
             json.dump({
-                "thread": index[-1],
+                "thread": index_entry,
                 "events": obs_list
             }, f, ensure_ascii=False, indent=2)
 
@@ -218,7 +240,7 @@ def parse_rows_from_text(text: str) -> List[Dict[str, str]]:
 def send_update(rows: List[Dict[str, str]]) -> None:
     """Send en batch som JSON-array til serveren."""
     try:
-        resp = requests.post(SERVER_URL, json=rows, timeout=15)
+        resp = requests.post(SERVER_URL, json=rows, timeout=50)
         resp.raise_for_status()
     except Exception as e:
         print(f"[watcher] Fejl ved POST: {e}")
@@ -487,7 +509,6 @@ def run_once() -> None:
         print(f"[watcher] Ændringer: {len(batch)} rækker sendt.")
     else:
         print("[watcher] Ingen ændringer.")
-
 
 def main():
     parser = argparse.ArgumentParser(description="DOF watcher")

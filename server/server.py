@@ -48,6 +48,14 @@ def set_prefs(userid, deviceid, prefs):
 async def app_js():
     return FileResponse(os.path.join(web_dir, "app.js"), media_type="application/javascript")
 
+@app.get("/threads.js")
+async def threads_js():
+    return FileResponse(os.path.join(web_dir, "threads.js"), media_type="application/javascript")
+
+@app.get("/thread.js")
+async def threads_js():
+    return FileResponse(os.path.join(web_dir, "threads.js"), media_type="application/javascript")
+
 @app.post("/api/prefs")
 async def api_set_prefs(request: Request):
     data = await request.json()
@@ -68,14 +76,21 @@ async def api_unsubscribe(request: Request):
     return {"ok": True}
 
 # Stier
-web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'web'))
+web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web"))
 payload_dir = os.path.join(web_dir, 'payload')
 index_html_path = os.path.join(web_dir, 'index.html')
 latest_symlink_path = os.path.join(payload_dir, 'latest.json')  # almindelig fil, ikke symlink
 
 # Servér ikon-mappe og payload-mappe statisk
 app.mount("/icons", StaticFiles(directory=os.path.join(web_dir, "icons")), name="icons")
+
+payload_dir = os.path.join(os.path.dirname(__file__), "..", "web", "payload")
+os.makedirs(payload_dir, exist_ok=True)
 app.mount("/payload", StaticFiles(directory=payload_dir), name="payload")
+
+obs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
+app.mount("/obs", StaticFiles(directory=obs_dir), name="obs")
+
 
 def _parse_dt_from_row(row: dict) -> datetime:
     time_keys = ["Obstidtil", "Obstidfra", "Turtidtil", "Turtidfra"]
@@ -146,6 +161,7 @@ def _load_latest_payload():
 @app.post("/update")
 async def update_data(request: Request):
     payload = await request.json()  # Liste af observationer
+    _save_payload(payload)
     # Hent alle brugere med prefs og subscription
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
@@ -165,7 +181,7 @@ async def update_data(request: Request):
                 push_payload = {
                     "title": title,
                     "body": body,
-                    "url": "https://dofbasen.dk"
+                    "url": obs.get("url", "https://dofbasen.dk")
                 }
                 try:
                     webpush(
@@ -277,7 +293,7 @@ async def debug_push(request: Request):
     payload = {
         "title": title,
         "body": body,
-        "url": "https://dofbasen.dk"
+        "url": obs.get("url", "https://dofbasen.dk")
     }
 
     # Send push
