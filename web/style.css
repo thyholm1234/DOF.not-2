@@ -1,0 +1,421 @@
+/* ===== Theme-variabler (fra style2.css) ===== */
+:root {
+  --bg-page: #ffffff;
+  --card-bg: #fff;
+  --card-border: #d0d0d0;
+  --text-main: #2a3b5c;
+  --text-meta: #555;
+  --text-muted: #777;
+  --link: #0b62d6;
+  --col-accent: #1f6feb;
+  --col-success: #2ea043;
+  --col-danger: #d32f2f;
+  --col-su: #d32f2f;
+  --col-sub: #2e7d32;
+  --col-alm: #000;
+  --badge-bg: #eeeeee;
+  --badge-fg: #111;
+  --badge-region-bg: #e6f2ff;
+  --badge-region-fg: #003366;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #0b1220;
+    --card-bg: #0f172a;
+    --card-border: #273244;
+    --text-main: #dbe1ea;
+    --text-meta: #9aa7b6;
+    --text-muted: #a5b4c8;
+    --link: #6aa6ff;
+    --badge-bg: #263146;
+    --badge-fg: #dbe1ea;
+    --badge-region-bg: #10253d;
+    --badge-region-fg: #bcd9ff;
+    --col-alm: #fff;
+  }
+}
+
+/* ===== Base ===== */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  margin: 20px;
+  background: var(--bg-page);
+  color: var(--text-main);
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: clamp(28px, 2.6vw + 8px, 44px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+/* ===== Kort/card look ===== */
+.card, .thread-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: border-color .15s, box-shadow .15s;
+}
+.thread-card:hover {
+  border-color: var(--col-accent);
+  box-shadow: 0 0 0 3px rgba(31,111,235,.08);
+  cursor: pointer;
+}
+
+/* ===== Grid layout ===== */
+.grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 8px 16px;
+}
+
+/* ===== Label/value/muted ===== */
+.label {
+  color: var(--text-meta);
+}
+.value {
+  font-weight: 600;
+}
+.muted {
+  color: var(--text-muted);
+  font-size: 0.95em;
+}
+
+/* ===== Pre/code ===== */
+pre {
+  background: #111;
+  color: #eee;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+}
+
+/* ===== Links ===== */
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ===== Prefs-table ===== */
+.prefs-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 12px;
+  background: transparent;
+}
+.prefs-table tbody tr {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.prefs-table td {
+  padding: 12px;
+  text-align: center;
+}
+.prefs-table td.afd {
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.prefs-table thead th {
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  background: var(--bg-page);
+}
+
+/* ===== Badge (kategori/region) ===== */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.2;
+  border: 1px solid var(--card-border);
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+}
+.badge.region {
+  background: var(--badge-region-bg);
+  color: var(--badge-region-fg);
+}
+.badge.cat-su  { background: var(--col-su); color: #fff; border-color: var(--col-su);}
+.badge.cat-sub { background: var(--col-sub); color: #fff; border-color: var(--col-sub);}
+.badge.cat-alm { background: var(--col-alm); color: #fff; border-color: var(--col-alm);}
+.badge.cat-bemaerk { background: #92400e; color: #fff; border-color: #92400e; }
+
+/* ===== Thread cards (threads.js) ===== */
+.thread-card .art,
+.thread-card .lok,
+.thread-card .region,
+.thread-card .antal-individer,
+.thread-card .antal-observationer,
+.thread-card .klokkeslet,
+.thread-card .antal,
+.thread-card .observer,
+.thread-card .age {
+  margin-bottom: 4px;
+  font-size: 1em;
+}
+.thread-card .age {
+  color: var(--text-muted);
+  font-size: 0.95em;
+}
+
+/* ===== Custom radio style ===== */
+.prefs-table input[type="radio"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--card-border);
+  border-radius: 50%;
+  background: var(--card-bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  margin: 0 2px;
+  vertical-align: middle;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.prefs-table input[type="radio"]:checked {
+  border-color: var(--col-accent);
+  background: var(--col-accent);
+}
+
+.prefs-table input[type="radio"]:checked::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 3px auto;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.prefs-table input[type="radio"]:focus {
+  box-shadow: 0 0 0 2px var(--col-accent, #1f6feb);
+  border-color: var(--col-accent, #1f6feb);
+}
+
+/* ===== Header og brand ===== */
+header.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 12px 20px;
+  margin: 0 auto 24px auto;
+  max-width: 1000px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--card-border);
+}
+
+header.wrap h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+header.wrap .brand {
+  color: var(--text-main);
+  text-decoration: none;
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+  transition: color 0.15s;
+}
+header.wrap .brand:hover {
+  color: var(--col-accent);
+  text-decoration: underline;
+}
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar a,
+.toolbar button {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  font-size: 1.5rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+}
+
+.toolbar a:hover,
+.toolbar button:hover,
+.toolbar a:focus,
+.toolbar button:focus {
+  background: var(--badge-bg);
+  color: var(--col-accent);
+  outline: none;
+}
+
+#settings-icon,
+#notify-icon,
+#theme-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Responsiv header */
+@media (max-width: 600px) {
+  header.wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 6px;
+    border-radius: 0 0 12px 12px;
+  }
+  .toolbar {
+    margin-top: 8px;
+    gap: 4px;
+  }
+  header.wrap h1, header.wrap .brand {
+    font-size: 1.3rem;
+  }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .card, .thread-card {
+    padding: 10px;
+    border-radius: 8px;
+  }
+  .prefs-table,
+  .prefs-table td,
+  .prefs-table th {
+    font-size: min(3.5vw, 12px);
+    padding: min(2vw, 6px) min(2vw, 6px);
+  }
+  .prefs-table td.afd {
+    font-size: min(3.5vw, 12px);
+    padding-left: min(2vw, 6px);
+  }
+}
+
+/* ===== Card-top layout ===== */
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.card-top .left, .card-top .right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== Title layout ===== */
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.title-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== Art-navn farve efter kategori ===== */
+.art-name.cat-su      { color: var(--col-su, #d32f2f); font-weight: 700; }
+.art-name.cat-sub     { color: var(--col-sub, #2e7d32); font-weight: 700; }
+.art-name.cat-bemærk,
+.art-name.cat-bemaerk { color: #92400e; font-weight: 700; }
+.art-name.cat-alm     { color: var(--text-muted); font-weight: 700; }
+
+/* ===== Count badge ===== */
+.count {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin-right: 4px;
+  min-width: 1.8em;
+  text-align: right;
+}
+.count.cat-su      { color: var(--col-su, #d32f2f);}
+.count.cat-sub     { color: var(--col-sub, #2e7d32);}
+.count.cat-bemærk,
+.count.cat-bemaerk { color: #92400e;}
+.count.cat-alm     { color: var(--text-muted);}
+
+/* ===== Event count badge ===== */
+.badge.event-count {
+  background: #fffbe6;
+  color: #b26a00;
+  border-color: #ffe58f;
+}
+.badge.event-count.warn {
+  background: #fffbe6;
+  color: #b26a00;
+  border-color: #ffe58f;
+}
+
+/* ===== Info row ===== */
+.info {
+  display: flex;
+  gap: 16px;
+  color: var(--text-meta);
+  font-size: 0.98em;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+/* ===== Utility ===== */
+.wrap {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-inline: 12px;
+  padding-block: 8px 12px;
+  box-sizing: border-box;
+}
+
+/* Giv index samme bredde som header */
+#threads-cards, #threads-list {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto 24px auto;
+  padding-inline: 12px;
+  box-sizing: border-box;
+}
+
+.page-title {
+  text-align: left;
+  margin-left: 0;
+  margin-right: 0;
+}

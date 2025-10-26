@@ -7,11 +7,12 @@ const kategorier = ["Ingen", "SU", "SUB", "Bemærk"];
 
 function renderPrefsMatrix(prefs) {
   const table = document.createElement("table");
+  table.className = "prefs-table"; // Tilføj denne linje
   table.innerHTML = `<tr><th>Lokalafdeling</th>${kategorier.map(k => `<th>${k}</th>`).join("")}</tr>`;
   afdelinger.forEach(afd => {
     const sel = prefs[afd] || "Ingen";
     table.innerHTML += `<tr>
-      <td>${afd}</td>
+      <td class="afd">${afd}</td>
       ${kategorier.map(k => `<td><input type="radio" name="prefs_${afd}" value="${k}" ${sel===k?"checked":""}></td>`).join("")}
     </tr>`;
   });

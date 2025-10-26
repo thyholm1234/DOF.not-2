@@ -20,9 +20,6 @@
 <header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
     <div class="toolbar">
-    <a id="settings-link" href="./settings.html" aria-label="Indstillinger" title="Indstillinger">
-        <span id="settings-icon">⚙️</span>
-    </a>
     <button id="notify-toggle" aria-label="Notifikationer">
       <span id="notify-icon">🔔</span>
     </button>
@@ -32,16 +29,22 @@
   </div>
   </header>
 <body>
+  
+  <h2>Notifikationspræferencer</h2>
+  <button id="subscribe-btn">Abonnér</button>
+  <button id="unsubscribe-btn">Afmeld</button>
+  
+  <div id="prefs-matrix"></div>
+  
+  <h1>DEBUG</h1>
+  <button id="debug-push-btn">Send debug push</button>
+  <div id="debug-info" style="font-size:small;color:#888"></div>
+  <div id="summary" class="card"></div>
+  <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div>
 
-  <div class="wrap">
-  <h1 class="page-title">Dagens observationer</h1>
-  <div id="threads-status"></div>
-  <div id="threads-cards"></div>
-  </div>
   
   <script src="threads.js"></script>
-  
   <script src="app.js"></script>
-    
+
   </body>
 </html>

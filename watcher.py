@@ -143,7 +143,7 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
         earliest = min(obs_list, key=_parse_dt_from_row)
 
         # Antal individer (sum af Antal)
-        total_antal = sum(parse_float(row.get("Antal")) for row in obs_list)
+        total_antal = max((parse_float(row.get("Antal")) for row in obs_list), default=0)
 
         # Antal observationer (unikt observer-navn)
         observers = set(
