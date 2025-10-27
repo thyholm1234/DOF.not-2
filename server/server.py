@@ -6,8 +6,13 @@ import os
 import glob
 import datetime
 from fastapi.staticfiles import StaticFiles
-from pywebpush import webpush
+from pywebpush import webpush, WebPushException
 import unicodedata
+import re
+import html
+import urllib.request
+from urllib.parse import urljoin, urlparse, parse_qs
+from fastapi import Query
 
 VAPID_PRIVATE_KEY = "An73heQXWe62IL_wrlyz6N102d_9yH-tZKCohrDNRTY"
 VAPID_PUBLIC_KEY = "BHU3aBbXkYu7_KGJtKMEWCPU43gF1b6L0DKGVv-n_5-iybitwM5dodQdR2GkIec8OOWcJlwCEMSMzpfRX_RBUkA"
@@ -112,6 +117,27 @@ def _parse_dt_from_row(row: dict) -> datetime:
             return datetime.datetime.strptime(date_str, "%d-%m-%Y")
         except Exception:
             return datetime.datetime.min
+        
+def get_species_filters_for_user(user_id: str) -> dict:
+    prefs = get_prefs(user_id)
+    return prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}        
+
+def should_include_obs(obs, species_filters):
+    artnavn = (obs.get("Artnavn") or "").strip().lower()
+    # Ekskluderede arter har altid højeste prioritet
+    if artnavn in [a.lower() for a in species_filters.get("exclude", [])]:
+        return False
+    # Minimumsantal (hvis sat)
+    min_count = species_filters.get("counts", {}).get(artnavn)
+    if min_count is not None:
+        try:
+            antal = int(obs.get("Antal") or 0)
+            if antal < int(min_count):
+                return False
+        except Exception:
+            return False
+    # Hvis ikke ekskluderet og evt. antal opfyldt, så inkluder
+    return True
 
 def _latest_from_data(data):
     if isinstance(data, list) and data:
@@ -166,6 +192,97 @@ def normalize(s):
     s = unicodedata.normalize("NFKD", s)
     return s
 
+_IMG_URL_RE = re.compile(
+    r"""(?:"|')(?P<u>(?:https?:)?//dofbasen\.dk/image_proxy\.php\?[^"']+|/image_proxy\.php\?[^"']+)["']""",
+    re.IGNORECASE,
+)
+
+def _fetch_html(url: str, timeout: float = 10.0) -> str:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (DOF.not server) AppleWebKit/537.36 Chrome/119 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        raw = resp.read()
+        ctype = resp.headers.get("Content-Type", "")
+
+    # Try charset from header, then meta, then fallbacks
+    m = re.search(r"charset=([\w\-]+)", ctype, re.I)
+    enc = m.group(1) if m else None
+    if not enc:
+        m2 = re.search(rb"<meta[^>]+charset=['\"]?([\w\-]+)", raw, re.I)
+        enc = (m2.group(1).decode("ascii", "ignore") if m2 else None)
+    for candidate in [enc, "windows-1252", "iso-8859-1", "utf-8"]:
+        try:
+            return raw.decode(candidate or "utf-8", errors="strict")
+        except Exception:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+def _image_proxy_to_service_url(u: str, base: str = "https://dofbasen.dk") -> str | None:
+    """
+    Map image_proxy.php?… → https://service.dofbasen.dk/media/image/o/<filename>.jpg
+    Handles HTML entities (&amp;) and stray %3B in query delimiters.
+    """
+    if not u:
+        return None
+    s = html.unescape(str(u))
+    # Fix cases like ?mode=o&amp%3Bpic=... (remove encoded ';' after & or ?)
+    s = re.sub(r'([?&])%3B', r'\1', s, flags=re.IGNORECASE)
+    absu = urljoin(base, s)
+    pu = urlparse(absu)
+    if not pu.path.lower().endswith("/image_proxy.php"):
+        return None
+    qs = parse_qs(pu.query, keep_blank_values=True)
+    # keys may be like 'pic' or weirdly prefixed; normalize
+    pic = None
+    for k, vals in qs.items():
+        kk = k.lower().lstrip(' ;')
+        if kk == "pic" and vals:
+            pic = vals[0]
+            break
+    if not pic:
+        return None
+    filename = str(pic).split("/")[-1]
+    if not filename:
+        return None
+    return f"https://service.dofbasen.dk/media/image/o/{filename}"
+
+def _extract_service_image_urls(html_text: str) -> list[str]:
+    seen = set()
+    out: list[str] = []
+    for m in _IMG_URL_RE.finditer(html_text or ""):
+        raw_u = m.group("u")
+        svc = _image_proxy_to_service_url(raw_u)
+        if not svc:
+            continue
+        key = svc.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(svc)
+    return out
+
+@app.get("/api/obs/images")
+def api_obs_images(
+    obsid: str = Query(..., min_length=3, description="DOFbasen observation id"),
+    url: str | None = Query(None, description="Optional override URL")
+):
+    """
+    Returnér alle fuld-størrelse billed-URL'er som:
+    https://service.dofbasen.dk/media/image/o/<filnavn>.jpg
+    """
+    src = url or f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+    try:
+        html_page = _fetch_html(src, timeout=10.0)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
+    images = _extract_service_image_urls(html_page)
+    return {"obsid": obsid, "source": src, "count": len(images), "images": images}
+
 @app.post("/api/update")
 async def update_data(request: Request):
     payload = await request.json()  # Liste af observationer
@@ -179,13 +296,12 @@ async def update_data(request: Request):
     for user_id, device_id, prefs_json, sub_json in rows:
         prefs = json.loads(prefs_json)
         sub = json.loads(sub_json)
+        species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
         for obs in payload:
             afd = obs.get("DOF_afdeling")
             kat = obs.get("kategori")
-            print(f"DEBUG: afd={afd}, kat={kat}, prefs={prefs.get(afd)}")
-            if should_notify(prefs, afd, kat):
-                print(f"NOTIFY: {user_id} / {device_id} / {afd} / {kat}")
-                # Byg push payload
+            if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
+                # ... send push ...
                 title = f"{obs.get('Antal','?')} {obs.get('Artnavn','')}, {obs.get('Loknavn','')}"
                 body = f"{obs.get('Adfbeskrivelse','')}, {obs.get('Fornavn','')} {obs.get('Efternavn','')}"
                 push_payload = {
@@ -196,13 +312,27 @@ async def update_data(request: Request):
                 try:
                     webpush(
                         subscription_info=sub,
-                        data=json.dumps(push_payload, ensure_ascii=False),
+                        data=json.dumps(push_payload),
                         vapid_private_key=VAPID_PRIVATE_KEY,
-                        vapid_claims={"sub": "mailto:cvh.privat@gmail.com"},
-                        ttl=86600 # 24 timer
+                        vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+                        ttl=3600
                     )
-                except Exception as ex:
-                    print(f"Push-fejl til {user_id}/{device_id}: {ex}")
+                except WebPushException as ex:
+                    if ex.response and ex.response.status_code == 410:
+                        print(f"Sletter abonnement for {user_id}/{device_id} pga. 410 Gone")
+                        with sqlite3.connect(DB_PATH) as conn:
+                            conn.execute(
+                                "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
+                                (user_id, device_id)
+                            )
+                            # Hvis du også vil slette brugerens præferencer for denne device, kan du gøre det her:
+                            # conn.execute(
+                            #     "DELETE FROM user_prefs WHERE user_id=?",
+                            #     (user_id,)
+                            # )
+                            conn.commit()
+                    else:
+                        print(f"Push-fejl til {user_id}/{device_id}: {ex}")
     return {"ok": True}
 
 @app.get("/api/threads/{day}")
@@ -224,6 +354,23 @@ async def api_thread(day: str, thread_id: str):
     with open(thread_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return JSONResponse(data)
+
+@app.get("/api/prefs/user/species")
+async def get_species_filters(user_id: str):
+    prefs = get_prefs(user_id)
+    # Returner kun artsfilter-delen hvis den findes, ellers tomt format
+    return JSONResponse(prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}})
+
+@app.post("/api/prefs/user/species")
+async def set_species_filters(request: Request):
+    data = await request.json()
+    user_id = data.get("user_id")
+    filters = data
+    # Hent eksisterende prefs og opdater artsfilter-delen
+    prefs = get_prefs(user_id)
+    prefs["species_filters"] = filters
+    set_prefs(user_id, prefs)
+    return {"ok": True}
 
 @app.get("/api/payload")
 async def api_payload():

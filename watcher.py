@@ -105,7 +105,15 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     for r in rows:
         r["kategori"] = compute_kategori(r)
         obsid = r.get("Obsid", "").strip()
-        if obsid:
+        art = (r.get("Artnavn") or "").strip()
+        loknr = (r.get("Loknr") or "").strip()
+        kat = r["kategori"]
+        # Brug observationens dato, ikke today_date_str()
+        obsdate = (r.get("Dato") or "").strip()
+        # Formatér dato til DD-MM-YYYY hvis nødvendigt
+        if kat in ("SU", "SUB") and art and loknr and obsdate:
+            r["url"] = f"https://dofnot2.chfotofilm.dk/traad.html?date={obsdate}&id={slugify(art)}-{loknr}"
+        elif obsid:
             r["url"] = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
         else:
             r["url"] = ""
@@ -205,6 +213,11 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             or (latest.get("Obstidtil") or "").strip()
             or (latest.get("Turtidtil") or "").strip()
         )
+
+        # Tilføj obsidbirthtime til hver observation i events
+        for obs in obs_list:
+            oid = obs.get("Obsid", "").strip()
+            obs["obsidbirthtime"] = obsid_birthtimes.get(oid, "")
 
         # Byg index-entry
         index_entry = {

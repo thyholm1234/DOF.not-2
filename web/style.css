@@ -114,24 +114,58 @@ a:hover {
 .prefs-table tbody tr {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
-  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 12px;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.prefs-table tbody tr:hover {
+  border-color: var(--col-accent);
+  box-shadow: 0 0 0 3px rgba(31,111,235,.08);
 }
 .prefs-table td {
-  padding: 12px;
+  padding: 16px 12px;
+  font-size: 1.05em;
+  background: none;
+  border: none;
   text-align: center;
+  vertical-align: middle;
 }
-.prefs-table td.afd {
-  font-weight: 600;
-  text-align: left;
-  white-space: nowrap;
+.prefs-table td:not(.afd) {
+  background: inherit;
+  border-radius: 4px;
+  border: none;
+  text-align: center;
+  vertical-align: middle;
+  padding: 10px 12px;
 }
-.prefs-table thead th {
-  padding: 8px 12px;
+.prefs-table th {
+  background: #e0e0e0;
+  border-radius: 4px;
+  border: none; /* Fjern border på th */
+  color: var(--text-main);
   font-weight: 700;
-  font-size: 14px;
   text-align: center;
-  background: var(--bg-page);
+  padding: 10px 12px;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.prefs-table td.afd {
+  text-align: left;
+  font-weight: 600;
+  padding-left: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .prefs-table td:not(.afd) {
+    background: inherit;
+    border: none
+  }
+  .prefs-table th {
+    background: #232b3a;
+    border: none;
+    color: var(--text-main);
+  }
 }
 
 /* ===== Badge (kategori/region) ===== */
@@ -185,7 +219,8 @@ a:hover {
   position: relative;
   cursor: pointer;
   outline: none;
-  margin: 0 2px;
+  margin: 0 auto;
+  display: inline-block;
   vertical-align: middle;
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
@@ -208,6 +243,78 @@ a:hover {
 .prefs-table input[type="radio"]:focus {
   box-shadow: 0 0 0 2px var(--col-accent, #1f6feb);
   border-color: var(--col-accent, #1f6feb);
+}
+
+/* Custom radio style for prefs-table */
+.prefs-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.radio-container {
+  display: inline-block;
+  position: relative;
+  padding-left: 0;
+  margin-bottom: 0;
+  cursor: pointer;
+  user-select: none;
+  height: 25px;
+  width: 25px;
+}
+
+.custom-radio {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 25px;
+  width: 25px;
+  margin: 0;
+}
+
+.radiomark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.13);
+  border: 2px solid var(--card-border, #d0d0d0);
+}
+
+.radio-container:hover .radiomark {
+  background-color: #e3f0fd;
+}
+
+.custom-radio:checked ~ .radiomark {
+  background-color: #2196F3;
+  border-color: #2196F3;
+  box-shadow: 0 3px 7px rgba(33, 150, 243, 0.18);
+}
+
+.radiomark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 7px;
+  top: 7px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 6px #2196F3;
+}
+
+.custom-radio:checked ~ .radiomark:after {
+  display: block;
+  animation: radioAnim 0.2s forwards;
+}
+
+@keyframes radioAnim {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
 }
 
 /* ===== Header og brand ===== */
@@ -328,10 +435,16 @@ header.wrap .brand:hover {
   align-items: center;
   margin-bottom: 4px;
 }
-.card-top .left, .card-top .right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+
+.card-top .left {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.card-top .right {
+  flex: 0 0 auto;
+  text-align: right;
+  min-width: 60px;
 }
 
 /* ===== Title layout ===== */
@@ -375,9 +488,9 @@ header.wrap .brand:hover {
 
 /* ===== Event count badge ===== */
 .badge.event-count {
-  background: #fffbe6;
-  color: #b26a00;
-  border-color: #ffe58f;
+  background: #10253D;
+  color: #BCD9FF;
+  border-color: #273244;
 }
 .badge.event-count.warn {
   background: #fffbe6;
@@ -431,6 +544,13 @@ header.wrap .brand:hover {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 10px;
+}
+
+.twostate#btn-zero {
+  white-space: nowrap;
 }
 
 /* Knapper: grøn for default (is-on), rød for off */
@@ -452,4 +572,210 @@ header.wrap .brand:hover {
 }
 .twostate:focus {
   outline: 2px solid var(--col-accent, #1f6feb);
+}
+
+/* Gør tabelrækker til kort */
+.prefs-table tbody tr {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 12px;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.prefs-table tbody tr:hover {
+  border-color: var(--col-accent);
+  box-shadow: 0 0 0 3px rgba(31,111,235,.08);
+}
+
+.prefs-table td {
+  padding: 16px 12px;
+  font-size: 1.05em;
+  background: none;
+  border: none;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.prefs-table thead th {
+  background: var(--bg-page);
+  font-size: 1.1em;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--card-border);
+}
+
+/* Fjern border mellem rækker */
+.prefs-table {
+  border-collapse: separate;
+  border-spacing: 0 14px;
+  background: transparent;
+}
+
+/* Gør checkbox og input større og mere moderne */
+.prefs-table input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--col-accent);
+  cursor: pointer;
+}
+
+.prefs-table input[type="text"].gte-input {
+  width: 60px;
+  font-size: 1.1em;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1.5px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-main);
+  text-align: right;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.prefs-table input[type="text"].gte-input:focus {
+  border-color: var(--col-accent);
+}
+
+/* Gør knapper mere moderne */
+button, .prefs-table button {
+  background: var(--col-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 4px 8px 0;
+  transition: background 0.15s, color 0.15s;
+}
+button:hover, .prefs-table button:hover {
+  background: #174ea6;
+}
+
+/* Søgning og filter */
+#arts-search {
+  font-size: 1.1em;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--card-border);
+  margin-bottom: 12px;
+  width: 220px;
+  background: var(--card-bg);
+  color: var(--text-main);
+}
+#arts-search:focus {
+  border-color: var(--col-accent);
+}
+
+/* Label for "Vis kun filtrerede" */
+label[for="show-only-filtered"] {
+  font-size: 1em;
+  margin-left: 12px;
+  color: var(--text-meta);
+}
+
+.prefs-table.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(0.7);
+}
+
+/* ===== Custom checkbox style ===== */
+/* --- Custom checkbox style --- */
+.checkbox-container {
+  display: inline-block;
+  position: relative;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.custom-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #e0e0e0; /* lidt mørkere end kortet i light */
+  border-radius: 4px;
+  border: 2px solid #111;    /* sort border i light */
+  transition: background-color 0.3s, border-color 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.custom-checkbox:checked ~ .checkmark {
+  background-color: #2EA043;
+  box-shadow: 0 3px 7px rgba(33, 150, 243, 0.3);
+  border-color: #2EA043;
+}
+
+.custom-checkbox:checked ~ .checkmark:after {
+  display: block;
+  animation: checkAnim 0.2s forwards;
+}
+
+/* DARK MODE: hvid border og mørkere baggrund */
+@media (prefers-color-scheme: dark) {
+  .checkmark {
+    background-color: #232b3a; /* lidt mørkere end kortet i dark */
+    border: 2px solid #fff;    /* hvid border i dark */
+  }
+}
+
+@keyframes checkAnim {
+  0% { height: 0; }
+  100% { height: 10px; }
+}
+
+/* ===== Obs-row ===== */
+.obs-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 0.5em;
+  background: var(--card-bg);
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  padding: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.card-top, .info, .note-row, .img-row, .obs-hr {
+  grid-column: 1 / span 2;
+}
+.note-row, .img-row {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+.note-text {
+  word-break: break-word;
+}
+.obs-hr {
+  border: none;
+  border-top: 1px solid var(--card-border, #ccc);
+  margin: 10px 0 0 0;
+  width: 100%;
+  grid-column: 1 / span 2;
 }

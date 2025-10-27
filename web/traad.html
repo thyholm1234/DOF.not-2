@@ -4,26 +4,17 @@
   <meta charset="utf-8">
   <title>Tråd</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <style>
-    .card { background:#fff; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:6px; background:#eee; margin-right:8px; font-size:0.95em; }
-    .cat-su { background:#e74c3c; color:#fff; }
-    .cat-sub { background:#f39c12; color:#fff; }
-    .cat-bemaerk { background:#2980b9; color:#fff; }
-    .thread-header { margin-bottom: 24px; }
-    .thread-title { font-size: 1.3em; font-weight: bold; }
-    .thread-meta { color: #555; margin-bottom: 8px; }
-    .thread-event { margin-bottom: 12px; }
-    .thread-event .label { color: #888; font-size: 0.95em; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="thread-header card">
-    <div id="thread-title" class="thread-title"></div>
-    <div id="thread-meta" class="thread-meta"></div>
-  </div>
-  <div id="thread-events"></div>
-  <div id="thread-status"></div>
+  <main class="wrap">
+    <div class="thread-header card">
+      <div id="thread-title" class="thread-title"></div>
+      <div id="thread-meta" class="thread-meta"></div>
+    </div>
+    <div id="thread-events"></div>
+    <div id="thread-status"></div>
+  </main>
   <script src="traad.js"></script>
 </body>
 </html>

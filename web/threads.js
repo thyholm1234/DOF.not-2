@@ -68,7 +68,10 @@
       if (kat === "Ingen") return false;
       if (kat === "SU" && t.last_kategori !== "SU") return false;
       if (kat === "SUB" && !["SU", "SUB"].includes(t.last_kategori)) return false;
-      if (kat === "Bemærk" && !["SU", "SUB", "Bemærk", "bemaerk"].includes((t.last_kategori||"").toLowerCase())) return false;
+      if (kat === "Bemærk") {
+        // Vis altid SU og SUB og Bemærk
+        if (!["SU", "SUB", "Bemærk", "bemaerk"].includes((t.last_kategori||"").toUpperCase())) return false;
+      }
     }
     // Kun SU hvis valgt
     if (frontState.onlySU && t.last_kategori !== "SU") return false;
@@ -131,7 +134,9 @@
       title.appendChild(titleLeft);
 
       const titleRight = el('div', 'title-right');
-      titleRight.appendChild(el('span', 'badge event-count warn', `${t.antal_observationer ?? 0} obs`));
+      const obsCount = Number(t.antal_observationer ?? 0);
+      const obsBadgeClass = obsCount > 1 ? 'badge event-count warn' : 'badge event-count';
+      titleRight.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
       title.appendChild(titleRight);
 
       article.appendChild(title);

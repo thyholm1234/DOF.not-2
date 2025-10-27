@@ -17,34 +17,40 @@
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/style.css">
 </head>
-<header class="wrap">
+<body>
+  <header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
     <div class="toolbar">
-    <button id="notify-toggle" aria-label="Notifikationer">
-      <span id="notify-icon">🔔</span>
-    </button>
-    <button id="theme-toggle" aria-label="Skift tema">
-      <span id="theme-icon">☀️</span>
-    </button>
-  </div>
+      <button id="notify-toggle" aria-label="Notifikationer">
+        <span id="notify-icon">🔔</span>
+      </button>
+      <button id="theme-toggle" aria-label="Skift tema">
+        <span id="theme-icon">☀️</span>
+      </button>
+    </div>
   </header>
-<body>
-  
-  <h2>Notifikationspræferencer</h2>
-  <button id="subscribe-btn">Abonnér</button>
-  <button id="unsubscribe-btn">Afmeld</button>
-  
-  <div id="prefs-matrix"></div>
-  
-  <h1>DEBUG</h1>
-  <button id="debug-push-btn">Send debug push</button>
-  <div id="debug-info" style="font-size:small;color:#888"></div>
-  <div id="summary" class="card"></div>
-  <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div>
+  <main class="wrap">
 
-  
-  <script src="threads.js"></script>
+    <h2>Mit abonnement</h2>
+    <p class="sub">Her administrerer du dit abonnement.</p>
+    <button id="subscribe-btn">Abonnér</button>
+    <button id="unsubscribe-btn">Afmeld</button>
+
+    <h2>Mine præferencer</h2>
+    <p class="sub">Her vælger du, hvilke observationer du ønsker notifikationer for. SUB indeholder SU osv.</p>
+    <p class="sub">Vælg præcis ét valg pr. lokalafdeling: Ingen, SU, SUB eller Bemærkelsesværdig.</p>
+    <p class="sub">Siden gemmer automatisk dine præferencer.</p>
+    <p><a href="./advanced.html">⚙️ Avanceret filtrering (arter)</a></p>
+    
+    <div id="prefs-matrix"></div>
+
+    <!--- <h1>DEBUG</h1>
+    <button id="debug-push-btn">Send debug push</button>
+    <div id="debug-info" style="font-size:small;color:#888"></div>
+    <div id="summary" class="card"></div>
+    <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div> --->
+    
+  </main>
   <script src="app.js"></script>
-
-  </body>
+</body>
 </html>

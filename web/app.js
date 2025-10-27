@@ -1,34 +1,57 @@
 const afdelinger = [
-  "DOF Bornholm", "DOF Fyn", "DOF København", "DOF Nordjylland", "DOF Nordsjælland",
-  "DOF Nordvestjylland", "DOF Storstrøm", "DOF Sydvestjylland", "DOF Sydøstjylland",
-  "DOF Sønderjylland", "DOF Vestjylland", "DOF Vestsjælland", "DOF Østjylland"
+  "DOF København",
+  "DOF Nordsjælland",
+  "DOF Vestsjælland",
+  "DOF Storstrøm",
+  "DOF Bornholm",
+  "DOF Fyn",
+  "DOF Sønderjylland",
+  "DOF Sydvestjylland",
+  "DOF Sydøstjylland",
+  "DOF Vestjylland",
+  "DOF Østjylland",
+  "DOF Nordvestjylland",
+  "DOF Nordjylland"
 ];
 const kategorier = ["Ingen", "SU", "SUB", "Bemærk"];
 
 function renderPrefsMatrix(prefs) {
   const table = document.createElement("table");
-  table.className = "prefs-table"; // Tilføj denne linje
-  table.innerHTML = `<tr><th>Lokalafdeling</th>${kategorier.map(k => `<th>${k}</th>`).join("")}</tr>`;
+  table.className = "prefs-table";
+  // Render header (kolonnetitler) som første række
+  table.innerHTML = `<thead><tr>
+    <th class="afd">Lokalafdeling</th>
+    ${kategorier.map(k => `<th>${k}</th>`).join("")}
+  </tr></thead><tbody></tbody>`;
+  const tbody = table.querySelector("tbody");
+  // Render rækker
   afdelinger.forEach(afd => {
     const sel = prefs[afd] || "Ingen";
-    table.innerHTML += `<tr>
+    const row = document.createElement("tr");
+    row.innerHTML = `
       <td class="afd">${afd}</td>
-      ${kategorier.map(k => `<td><input type="radio" name="prefs_${afd}" value="${k}" ${sel===k?"checked":""}></td>`).join("")}
-    </tr>`;
+      ${kategorier.map(k => `
+        <td>
+          <label class="radio-container">
+            <input type="radio" name="prefs_${afd}" value="${k}" ${sel===k ? "checked" : ""} class="custom-checkbox">
+            <span class="checkmark"></span>
+          </label>
+        </td>
+      `).join("")}
+    `;
+    tbody.appendChild(row);
   });
   document.getElementById("prefs-matrix").innerHTML = "";
   document.getElementById("prefs-matrix").appendChild(table);
 
-  // Tilføj eventlisteners til alle radio-knapper
+  // Event listeners
   table.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', async () => {
-      // Saml alle prefs
       const newPrefs = {};
       afdelinger.forEach(afd => {
         const checked = table.querySelector(`input[name="prefs_${afd}"]:checked`);
         newPrefs[afd] = checked ? checked.value : "Ingen";
       });
-      // Gem prefs til serveren
       await fetch("/api/prefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -137,6 +160,17 @@ async function subscribeUser(userid, deviceid) {
   }
 }
 
+function setPrefsTableEnabled(enabled) {
+  const table = document.querySelector('.prefs-table');
+  if (table) {
+    if (enabled) {
+      table.classList.remove('disabled');
+    } else {
+      table.classList.add('disabled');
+    }
+  }
+}
+
 // Hjælpefunktion til VAPID-nøgle
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -175,6 +209,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     alert("Du er nu afmeldt!");
   };
+
+  document.getElementById("subscribe-btn").onclick = async () => {
+  await subscribeUser(userid, deviceid);
+  localStorage.setItem("isSubscribed", "1");
+  setPrefsTableEnabled(true);
+};
+
+document.getElementById("unsubscribe-btn").onclick = async () => {
+  await fetch("/api/unsubscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userid, device_id: deviceid })
+  });
+  alert("Du er nu afmeldt!");
+  localStorage.setItem("isSubscribed", "0");
+  setPrefsTableEnabled(false);
+};
+
+// Ved load:
+setPrefsTableEnabled(localStorage.getItem("isSubscribed") === "1");
 
   // Hent og vis seneste observation
   const latest = await loadLatest();

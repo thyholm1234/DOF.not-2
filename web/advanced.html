@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seneste observation</title>
+  <meta name="theme-color" content="#0b3d91" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<header class="wrap">
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
+    <div class="toolbar">
+    <a id="settings-link" href="./settings.html" aria-label="Indstillinger" title="Indstillinger">
+        <span id="settings-icon">⚙️</span>
+    </a>
+    <button id="notify-toggle" aria-label="Notifikationer">
+      <span id="notify-icon">🔔</span>
+    </button>
+    <button id="theme-toggle" aria-label="Skift tema">
+      <span id="theme-icon">☀️</span>
+    </button>
+  </div>
+  </header>
+  <body>
+    <main class="wrap" style="max-width: 700px;">
+      <h2>Avanceret artsfiltrering</h2>
+      <div style="margin-bottom: 12px;">
+        <input id="arts-search" placeholder="Søg art..." type="text">
+        <label for="show-only-filtered"><input type="checkbox" id="show-only-filtered"> Vis kun filtrerede</label>
+        <button id="reset-filters">Nulstil</button>
+        <button id="export-filters">Eksportér</button>
+        <input type="file" id="import-filters" style="display:none;">
+        <button onclick="document.getElementById('import-filters').click()">Importér</button>
+        <button id="save-filters">Gem</button>
+      </div>
+      <div class="prefs-table-wrapper">
+        <table class="prefs-table">
+          <thead>
+            <tr><th>Art</th><th>Ekskluder</th><th>Min. antal</th></tr>
+          </thead>
+          <tbody id="arts-table"></tbody>
+        </table>
+      </div>
+    </main>
+    <script src="advanced.js"></script>
+  </body>
+</html>
