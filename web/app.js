@@ -38,6 +38,17 @@ function renderPrefsMatrix(prefs) {
   });
 }
 
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme || systemTheme();
+    // toggle explicitly between light/dark and persist that choice
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+}
+
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
   if (!userid) {

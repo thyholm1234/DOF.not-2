@@ -199,7 +199,7 @@ async def update_data(request: Request):
                         data=json.dumps(push_payload, ensure_ascii=False),
                         vapid_private_key=VAPID_PRIVATE_KEY,
                         vapid_claims={"sub": "mailto:cvh.privat@gmail.com"},
-                        ttl=60
+                        ttl=86600 # 24 timer
                     )
                 except Exception as ex:
                     print(f"Push-fejl til {user_id}/{device_id}: {ex}")

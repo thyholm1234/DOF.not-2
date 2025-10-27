@@ -34,31 +34,72 @@
     return q.get('date') || todayDMYLocal();
   }
 
-  async function loadThreads() {
-    const day = getDayFromUrl();
-    const indexUrl = `/api/threads/${day}`;
-    const $cards = document.getElementById('threads-cards') || document.getElementById('threads-list');
-    const $status = document.getElementById('threads-status');
+  function fmtAgeFromKlokkeslet(klokkeslet, day, obsidbirthtime) {
+    // Brug obsidbirthtime hvis klokkeslet mangler eller er tomt
+    const k = klokkeslet || obsidbirthtime;
+    if (!k) return '';
+    const [dd, mm, yyyy] = (day || todayDMYLocal()).split('-');
+    const [h, m] = k.split(':').map(Number);
+    const obsDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd), h, m);
+    const now = new Date();
+    let diff = (now - obsDate) / 60000; // minutter
+    if (diff < 1) return 'nu';
+    if (diff < 60) return `${Math.floor(diff)} min`;
+    const hDiff = Math.floor(diff / 60);
+    if (hDiff === 1) return '1 time';
+    if (hDiff < 24) return `${hDiff} timer`;
+    const dDiff = Math.floor(hDiff / 24);
+    return `${dDiff} d`;
+  }
+
+  let userPrefs = {};
+  let allThreads = [];
+  let frontState = {
+    usePrefs: true,
+    onlySU: false,
+    includeZero: true,
+    sortMode: "nyeste"
+  };
+
+  function shouldShowThread(t) {
+    // Filtrér efter brugerpræferencer hvis valgt
+    if (frontState.usePrefs && userPrefs && t.region && userPrefs[t.region]) {
+      const kat = userPrefs[t.region];
+      if (kat === "Ingen") return false;
+      if (kat === "SU" && t.last_kategori !== "SU") return false;
+      if (kat === "SUB" && !["SU", "SUB"].includes(t.last_kategori)) return false;
+      if (kat === "Bemærk" && !["SU", "SUB", "Bemærk", "bemaerk"].includes((t.last_kategori||"").toLowerCase())) return false;
+    }
+    // Kun SU hvis valgt
+    if (frontState.onlySU && t.last_kategori !== "SU") return false;
+    // Skjul 0-obs hvis valgt (både antal_observationer og antal_individer)
+    const antalObs = Number(t.antal_observationer) || 0;
+    const antalInd = Number(t.antal_individer) || 0;
+    if (!frontState.includeZero && (antalObs < 1 || antalInd < 1)) return false;
+    return true;
+  }
+
+  function renderThreads() {
+    const $cards = document.getElementById('threads-cards');
     if (!$cards) return;
     $cards.innerHTML = '';
-    if ($status) $status.textContent = 'Henter tråde…';
+    let threads = allThreads.filter(shouldShowThread);
 
-    let threads = [];
-    try {
-      const r = await fetch(indexUrl, { cache: 'no-store' });
-      if (r.ok) threads = await r.json();
-      else if ($status) $status.textContent = `Kunne ikke hente tråde (HTTP ${r.status})`;
-    } catch (e) {
-      if ($status) $status.textContent = 'Fejl ved hentning af tråde.';
-      return;
+    // Sortering
+    if (frontState.sortMode === "nyeste") {
+      threads.sort((a, b) => {
+        // Sammenlign dag først, derefter klokkeslet eller obsidbirthtime
+        const dagA = a._dofnot_dag || a.day || todayDMYLocal();
+        const dagB = b._dofnot_dag || b.day || todayDMYLocal();
+        if (dagA !== dagB) return dagB.localeCompare(dagA, 'da');
+        // Brug klokkeslet hvis muligt, ellers obsidbirthtime
+        const klA = (a.klokkeslet || a.obsidbirthtime || "00:00").padStart(5, "0");
+        const klB = (b.klokkeslet || b.obsidbirthtime || "00:00").padStart(5, "0");
+        return klB.localeCompare(klA, 'da');
+      });
+    } else if (frontState.sortMode === "alfabet") {
+      threads.sort((a, b) => (a.art || '').localeCompare(b.art || '', 'da'));
     }
-    if (!Array.isArray(threads) || !threads.length) {
-      if ($status) $status.textContent = 'Ingen tråde fundet for denne dag.';
-      return;
-    }
-    if ($status) $status.textContent = '';
-
-    threads.sort((a, b) => (b.last_ts_obs || '').localeCompare(a.last_ts_obs || '')).reverse();
 
     for (const t of threads) {
       // <article>
@@ -66,7 +107,7 @@
       article.tabIndex = 0;
       article.style.cursor = 'pointer';
       article.onclick = () => {
-        window.location.href = `traad.html?date=${day}&id=${t.thread_id}`;
+        window.location.href = `traad.html?date=${encodeURIComponent(t._dofnot_dag || getDayFromUrl())}&id=${t.thread_id}`;
       };
 
       // card-top
@@ -77,7 +118,7 @@
       cardTop.appendChild(left);
 
       const right = el('div', 'right');
-      right.appendChild(regionBadge(fmtAge(t.last_ts_obs)));
+      right.appendChild(regionBadge(fmtAgeFromKlokkeslet(t.klokkeslet, t.day, t.obsidbirthtime)));
       cardTop.appendChild(right);
 
       article.appendChild(cardTop);
@@ -105,6 +146,118 @@
       $cards.appendChild(article);
     }
   }
+  
 
-  document.addEventListener('DOMContentLoaded', loadThreads);
+  function setFrontState(key, value) {
+    frontState[key] = value;
+    updateFrontControls();
+    renderThreads();
+  }
+
+  function updateFrontControls() {
+    const fc = document.getElementById('front-controls');
+    if (fc) {
+      // SUB er default (grøn), SU er grøn når filtreret
+      const suLabel = frontState.onlySU ? "SU" : "SUB";
+      fc.innerHTML = `
+        <button type="button" class="twostate${frontState.usePrefs ? ' is-on' : ''}" id="btn-prefs">Bruger</button>
+        <button type="button" class="twostate${!frontState.onlySU ? ' is-on' : ''}" id="btn-su">${suLabel}</button>
+        <button type="button" class="twostate${frontState.includeZero ? ' is-on' : ''}" id="btn-zero">0-obs</button>
+        <button type="button" class="twostate${frontState.sortMode === 'nyeste' ? ' is-on' : ''}" id="btn-sort">${frontState.sortMode === 'nyeste' ? 'Nyeste' : 'Alfabet'}</button>
+      `;
+      fc.querySelector('#btn-prefs').onclick = () => setFrontState('usePrefs', !frontState.usePrefs);
+      fc.querySelector('#btn-su').onclick = () => setFrontState('onlySU', !frontState.onlySU);
+      fc.querySelector('#btn-zero').onclick = () => setFrontState('includeZero', !frontState.includeZero);
+      fc.querySelector('#btn-sort').onclick = () => setFrontState('sortMode', frontState.sortMode === 'nyeste' ? 'alfabet' : 'nyeste');
+    }
+  }
+
+  function saveFrontState() {
+    localStorage.setItem('frontState', JSON.stringify(frontState));
+  }
+  
+  function loadFrontState() {
+    const s = localStorage.getItem('frontState');
+    if (s) {
+      try {
+        const obj = JSON.parse(s);
+        Object.assign(frontState, obj);
+      } catch (e) {}
+    }
+  }
+
+  function setFrontState(key, value) {
+    frontState[key] = value;
+    saveFrontState(); // <-- tilføj denne linje
+    updateFrontControls();
+    renderThreads();
+  }
+
+  async function loadThreads() {
+    const day = getDayFromUrl();
+    const now = new Date();
+    let threads = [];
+
+    // Tjek om vi er mellem 00:00 og 03:00
+    const hour = now.getHours();
+    let fetchDays = [day];
+    if (hour >= 0 && hour < 3) {
+      // Find gårsdagens dato i DD-MM-YYYY
+      const yesterday = new Date(now.getTime() - 86400000);
+      const dd = String(yesterday.getDate()).padStart(2, '0');
+      const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const yyyy = yesterday.getFullYear();
+      const yday = `${dd}-${mm}-${yyyy}`;
+      fetchDays = [yday, day];
+    }
+
+    const $cards = document.getElementById('threads-cards') || document.getElementById('threads-list');
+    const $status = document.getElementById('threads-status');
+    if (!$cards) return;
+    $cards.innerHTML = '';
+    if ($status) $status.textContent = 'Henter tråde…';
+
+    try {
+      // Hent alle relevante dage og kombiner
+      let all = [];
+      for (const d of fetchDays) {
+        const r = await fetch(`/api/threads/${d}`, { cache: 'no-store' });
+        if (r.ok) {
+          const arr = await r.json();
+          if (Array.isArray(arr)) {
+            // Marker hvilken dag tråden kommer fra
+            arr.forEach(t => t._dofnot_dag = d);
+            all = all.concat(arr);
+          }
+        }
+      }
+      // Fjern dubletter baseret på thread_id (seneste vinder)
+      const seen = new Map();
+      for (const t of all) seen.set(t.thread_id, t);
+      threads = Array.from(seen.values());
+    } catch (e) {
+      if ($status) $status.textContent = 'Fejl ved hentning af tråde.';
+      return;
+    }
+    if (!Array.isArray(threads) || !threads.length) {
+      if ($status) $status.textContent = 'Ingen tråde fundet for denne dag.';
+      return;
+    }
+    if ($status) $status.textContent = '';
+
+    allThreads = threads;
+    renderThreads();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    loadFrontState(); // <-- tilføj denne linje
+    // Hent brugerpræferencer
+    try {
+      const res = await fetch('/api/prefs?user_id=' + encodeURIComponent(localStorage.getItem('userid')));
+      if (res.ok) userPrefs = await res.json();
+    } catch (e) {}
+
+    updateFrontControls();
+    await loadThreads();
+  });
 })();

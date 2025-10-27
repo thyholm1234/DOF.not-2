@@ -9,6 +9,7 @@ import re
 import requests
 from datetime import datetime
 from typing import List, Dict, Tuple, Set
+from collections import defaultdict
 
 # DOF "excel"-endpoint. Dato indsættes dynamisk i DD-MM-YYYY
 BASE_URL = (
@@ -22,7 +23,7 @@ STATE_FILE = "/state/state.json"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")  # NYT
 WATCH_STATE_FILE = os.path.join(os.path.dirname(__file__), "state", "watch_state.json")  # NYT: separat state til watcher
 
-# De 38 faste kolonner som skal sendes 1:1 i JSON
+# De 38 faste kolonner som skal
 COLUMNS = [
     "Dato", "Turtidfra", "Turtidtil", "Loknr", "Loknavn", "Artnr", "Artnavn", "Latin", "Sortering",
     "Antal", "Koen", "Adfkode", "Adfbeskrivelse", "Alderkode", "Dragtkode", "Dragtbeskrivelse",
@@ -116,6 +117,26 @@ def slugify(s):
     s = re.sub(r'[^a-z0-9]+', '-', s)
     return s.strip('-')
 
+def group_and_sum_by_observer(obs_list):
+    """Returnér én række pr. Observatør x Art x Loknr, hvor Antal er summen."""
+    grouped = defaultdict(lambda: None)
+    for row in obs_list:
+        key = (
+            row.get("Fornavn", "").strip(),
+            row.get("Efternavn", "").strip(),
+            row.get("Artnavn", "").strip(),
+            row.get("Loknr", "").strip(),
+        )
+        if grouped[key] is None:
+            grouped[key] = dict(row)
+            grouped[key]["Antal"] = parse_float(row.get("Antal"))
+        else:
+            grouped[key]["Antal"] += parse_float(row.get("Antal"))
+    # Konverter Antal til string igen for konsistens
+    for row in grouped.values():
+        row["Antal"] = str(int(row["Antal"])) if row["Antal"].is_integer() else str(row["Antal"])
+    return list(grouped.values())
+
 def save_threads_and_index(rows: List[Dict[str, str]], day: str):
     import os
     import json
@@ -136,14 +157,39 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
         thread_id = f"{slugify(art)}-{loknr}"
         threads.setdefault(thread_id, []).append(row)
 
+    # Indlæs obsid_birthtimes
+    birthtimes_path = os.path.join("web", "obsid_birthtimes.json")
+    if os.path.exists(birthtimes_path):
+        with open(birthtimes_path, "r", encoding="utf-8") as f:
+            obsid_birthtimes = json.load(f)
+    else:
+        obsid_birthtimes = {}
+
     index = []
     for thread_id, obs_list in threads.items():
+        # Find obsid'er for SU/SUB i denne tråd
+        obsids = [row.get("Obsid", "").strip() for row in obs_list if row.get("kategori") in ("SU", "SUB")]
+        obsidbirthtime = None
+        for oid in obsids:
+            if oid and oid in obsid_birthtimes:
+                obsidbirthtime = obsid_birthtimes[oid]
+                break  # Tag den første du finder
+
         # Find seneste og første observation i tråden
         latest = max(obs_list, key=_parse_dt_from_row)
         earliest = min(obs_list, key=_parse_dt_from_row)
 
         # Antal individer (sum af Antal)
-        total_antal = max((parse_float(row.get("Antal")) for row in obs_list), default=0)
+        obs_by_observer = defaultdict(float)
+        for row in obs_list:
+            key = (
+                row.get("Fornavn", "").strip(),
+                row.get("Efternavn", "").strip(),
+                row.get("Artnavn", "").strip(),
+                row.get("Loknr", "").strip(),
+            )
+            obs_by_observer[key] += parse_float(row.get("Antal"))
+        total_antal = max(obs_by_observer.values(), default=0)
 
         # Antal observationer (unikt observer-navn)
         observers = set(
@@ -177,16 +223,19 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             "antal_individer": int(total_antal),
             "antal_observationer": num_observationer,
             "klokkeslet": klokkeslet,
+            "obsidbirthtime": obsidbirthtime or "",
         }
         index.append(index_entry)
         # Gem hele tråden
         thread_dir = os.path.join(threads_dir, thread_id)
         os.makedirs(thread_dir, exist_ok=True)
+        thread_data = {
+            "thread": index_entry,
+            "events": obs_list,
+            "obsidbirthtime": obsidbirthtime or "",
+        }
         with open(os.path.join(thread_dir, "thread.json"), "w", encoding="utf-8") as f:
-            json.dump({
-                "thread": index_entry,
-                "events": obs_list
-            }, f, ensure_ascii=False, indent=2)
+            json.dump(thread_data, f, ensure_ascii=False, indent=2)
 
     # Gem index
     with open(os.path.join(base_dir, "index.json"), "w", encoding="utf-8") as f:
@@ -195,6 +244,19 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
 def today_date_str() -> str:
     # Lokal tid, format DD-MM-YYYY
     return datetime.now().strftime("%d-%m-%Y")
+
+def build_obsid_birthtimes(rows: List[Dict[str, str]], prev_birthtimes: dict) -> Dict[str, str]:
+    """Returnér obsid -> første systemtid (HH:MM) for SU/SUB."""
+    birthtimes = dict(prev_birthtimes)  # behold eksisterende
+    now = datetime.now().strftime("%H:%M")
+    for row in rows:
+        if row.get("kategori") not in ("SU", "SUB"):
+            continue
+        obsid = (row.get("Obsid") or "").strip()
+        if not obsid or obsid in birthtimes:
+            continue
+        birthtimes[obsid] = now
+    return birthtimes
 
 
 def fetch_excel_text() -> str:
@@ -446,6 +508,20 @@ def run_once() -> None:
     # berig med kategori for SU/SUB/bemaerk/alm
     enriched_all = enrich_with_kategori(normalized_rows)
 
+    birthtimes_path = os.path.join("web", "obsid_birthtimes.json")
+    if os.path.exists(birthtimes_path):
+        with open(birthtimes_path, "r", encoding="utf-8") as f:
+            obsid_birthtimes = json.load(f)
+    else:
+        obsid_birthtimes = {}
+
+    # Opdater med evt. nye obsid'er (brug systemtid)
+    obsid_birthtimes = build_obsid_birthtimes(enriched_all, obsid_birthtimes)
+
+    # Gem birthtimes
+    with open(birthtimes_path, "w", encoding="utf-8") as f:
+        json.dump(obsid_birthtimes, f, ensure_ascii=False, indent=2)
+
     today = today_date_str()
     save_threads_and_index(enriched_all, today)
 
@@ -468,12 +544,18 @@ def run_once() -> None:
                 r2["statechanged"] = 1
                 batch_by_obsid[oid] = r2
         if batch_by_obsid:
-            send_update(list(batch_by_obsid.values()))
-            print(f"[watcher] Første sync: {len(batch_by_obsid)} SU/SUB rækker sendt.")
+            batch = group_and_sum_by_observer(list(batch_by_obsid.values()))
+        else:
+            batch = []
+
+        # gem ny state
         save_state(new_state)
-        if not batch_by_obsid:
-            print("[watcher] Første sync gemt (ingen POST).")
-        return
+
+        if batch:
+            send_update(batch)
+            print(f"[watcher] Ændringer: {len(batch)} rækker sendt.")
+        else:
+            print("[watcher] Ingen ændringer.")
 
     # 1) state-ændringer (nye keys eller ændret antal)
     changed_keys = get_changed_keys(old_state, new_state)
