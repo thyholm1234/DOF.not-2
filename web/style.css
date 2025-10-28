@@ -615,6 +615,13 @@ header.wrap .brand:hover {
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border 0.15s;
 }
+
+@media (max-width: 600px) {
+  .twostate {
+    padding: 7px 12px !important;
+  }
+}
+
 .twostate.is-on {
   background: #e8f5e9;
   color: #1b5e20;

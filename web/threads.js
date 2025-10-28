@@ -59,7 +59,8 @@
     onlySU: false,
     includeZero: true,
     sortMode: "nyeste",
-    dayMode: "today" // "today" eller "yesterday"
+    dayMode: "today", // "today" eller "yesterday"
+    prioritizeComments: false // <-- NYT: tilføj denne linje
   };
 
   function shouldShowThread(t) {
@@ -87,10 +88,32 @@
   const $cards = document.getElementById('threads-cards');
   if (!$cards) return;
   $cards.innerHTML = '';
-  let threads = allThreads.filter(shouldShowThread);
+  // Filtrér kun tråde fra den aktuelle dag!
+  let threads = allThreads.filter(
+    t => (t._dofnot_dag === frontState.currentDay) && shouldShowThread(t)
+  );
 
   // Sortering
-  if (frontState.sortMode === "nyeste") {
+  if (frontState.prioritizeComments) {
+    // Ryk tråde med indlæg op, men bevar nuværende sortering indenfor grupperne
+    threads.sort((a, b) => {
+      const aHasComments = (a.comment_count || 0) > 0 ? 0 : 1;
+      const bHasComments = (b.comment_count || 0) > 0 ? 0 : 1;
+      if (aHasComments !== bHasComments) return aHasComments - bHasComments;
+      // Bevar eksisterende sortering
+      if (frontState.sortMode === "nyeste") {
+        const dagA = a._dofnot_dag || a.day || todayDMYLocal();
+        const dagB = b._dofnot_dag || b.day || todayDMYLocal();
+        if (dagA !== dagB) return dagB.localeCompare(dagA, 'da');
+        const klA = (a.klokkeslet || a.obsidbirthtime || "00:00").padStart(5, "0");
+        const klB = (b.klokkeslet || b.obsidbirthtime || "00:00").padStart(5, "0");
+        return klB.localeCompare(klA, 'da');
+      } else if (frontState.sortMode === "alfabet") {
+        return (a.art || '').localeCompare(b.art || '', 'da');
+      }
+      return 0;
+    });
+  } else if (frontState.sortMode === "nyeste") {
     threads.sort((a, b) => {
       const dagA = a._dofnot_dag || a.day || todayDMYLocal();
       const dagB = b._dofnot_dag || b.day || todayDMYLocal();
@@ -158,12 +181,17 @@
   
 
   function setFrontState(key, value) {
+  // Hvis man har klikket på "I dag"/"I går", så lås dagMode og tillad kun filtrering/sortering på den hentede dag
+    const wasDayMode = key === "dayMode";
     frontState[key] = value;
     saveFrontState();
     updateFrontControls();
-    if (key === "dayMode") {
+
+    // "I dag"/"I går" bestemmer ALTID hvilke tråde der vises (henter fra server)
+    if (wasDayMode) {
       loadThreads();
     } else {
+      // Andre filtre må kun ændre visning af allerede hentede tråde
       renderThreads();
     }
   }
@@ -179,6 +207,7 @@
         <button type="button" class="twostate${frontState.includeZero ? ' is-on' : ''}" id="btn-zero">0-obs</button>
         <button type="button" class="twostate${frontState.sortMode === 'nyeste' ? ' is-on' : ''}" id="btn-sort">${frontState.sortMode === 'nyeste' ? 'Nyeste' : 'Alfabet'}</button>
         <button type="button" class="twostate${frontState.dayMode === 'today' ? ' is-on' : ''}" id="btn-day">${frontState.dayMode === 'today' ? 'I dag' : 'I går'}</button>
+        <button type="button" class="twostate${!frontState.prioritizeComments ? ' is-on' : ' is-off'}" id="btn-comments">Indlæg</button>
       `;
       fc.querySelector('#btn-prefs').onclick = () => setFrontState('usePrefs', !frontState.usePrefs);
       fc.querySelector('#btn-su').onclick = () => setFrontState('onlySU', !frontState.onlySU);
@@ -187,6 +216,7 @@
       fc.querySelector('#btn-day').onclick = () => {
         setFrontState('dayMode', frontState.dayMode === 'today' ? 'yesterday' : 'today');
       };
+      fc.querySelector('#btn-comments').onclick = () => setFrontState('prioritizeComments', !frontState.prioritizeComments);
     }
   }
 
@@ -216,7 +246,9 @@
       const yyyy = yesterday.getFullYear();
       day = `${dd}-${mm}-${yyyy}`;
     }
-    // ... resten af funktionen uændret, brug kun én dag:
+    frontState.currentDay = day; // <-- tilføj denne linje!
+    saveFrontState(); // så den også gemmes
+    // ...resten af funktionen uændret, brug kun én dag:
     const $cards = document.getElementById('threads-cards') || document.getElementById('threads-list');
     const $status = document.getElementById('threads-status');
     if (!$cards) return;
@@ -232,8 +264,8 @@
         }
       }
       if (!Array.isArray(threads) || !threads.length) {
-        if ($status) $status.textContent = 'Ingen tråde fundet for denne dag.';
-        // Vis evt. en tom-liste her, hvis du ønsker det
+        if ($status) $status.textContent = '';
+        $cards.innerHTML = ''; // Tøm listen hvis ingen tråde
         return;
       }
       if ($status) $status.textContent = '';
