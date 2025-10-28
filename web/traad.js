@@ -58,6 +58,14 @@
       }
       $status.textContent = "";
 
+      function linkify(text) {
+        // Find alle http(s)://... links og lav dem til klikbare links
+        return text.replace(
+          /(https?:\/\/[^\s<]+)/g,
+          url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
+        );
+      }
+
       // Vis tråd-header som h2: Antal + Artnavn // Lok
       const thread = data.thread || {};
       const antal = thread.antal_individer != null ? thread.antal_individer : '';
@@ -141,6 +149,26 @@
               <span class="art-name ${catClass(ev.kategori).replace('badge ', '')}">${ev.Artnavn || ''}</span>
           `;
           const right = el('div', 'right');
+
+          // Nål-badge kun hvis obs-koordinater findes
+          let pinBadge = '';
+          if (ev.obs_breddegrad && ev.obs_laengdegrad) {
+            const lat = ev.obs_breddegrad.replace(',', '.');
+            const lng = ev.obs_laengdegrad.replace(',', '.');
+            if (!isNaN(Number(lat)) && !isNaN(Number(lng))) {
+              const gmaps = `https://maps.google.com/?q=${lat},${lng}`;
+              pinBadge = `<a href="${gmaps}" target="_blank" class="badge badge-pin" title="Vis på Google Maps">Nål</a>`;
+            }
+          }
+          if (pinBadge) {
+            // Indsæt badge som HTML
+            right.innerHTML = pinBadge;
+            const badgeLink = right.querySelector('.badge-pin');
+            if (badgeLink) {
+              badgeLink.addEventListener('click', e => e.stopPropagation());
+            }
+          }
+
           const time = ev.Obstidfra || ev.Turtidfra || ev.obsidbirthtime || '';
           if (time) {
               const timeBadge = el('span', 'badge', time);
@@ -180,7 +208,7 @@
               obsRow.appendChild(noteRow);
           }
 
-          // Billeder: Hver får egen række med badge
+                // Billeder: Hver får egen række med badge
           if (ev.Obsid) {
               fetch(`/api/obs/images?obsid=${encodeURIComponent(ev.Obsid)}`)
                   .then(r => r.json())
@@ -243,84 +271,115 @@
       }
 
       // Efter events vises
-      // Kommentarsporet i et card
-      const commentsCard = document.createElement('div');
-      commentsCard.className = "card";
-      commentsCard.id = "comments-section";
-      commentsCard.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'>Indlæser...</div>";
-      $events.parentNode.appendChild(commentsCard);
 
-      // Hent og vis kommentarer (uændret)
+      // Kommentar input i separat card (ALTID vis)
+      const formCard = document.createElement('div');
+      formCard.className = "card";
+      formCard.id = "comment-form";
+      formCard.innerHTML = `
+        <div class="comment-input-row">
+          <textarea id="comment-input" rows="2" style="width:98%" placeholder="Skriv en kommentar..."></textarea>
+          <div class="send-btn-row">
+            <button id="comment-send-btn">Send</button>
+          </div>
+        </div>
+      `;
+      $events.parentNode.appendChild(formCard);
+
+      // Kommentarsporet i et card (kun hvis der er kommentarer)
       async function loadComments() {
           const res = await fetch(`/api/thread/${day}/${id}/comments`);
           const comments = await res.json();
-          const $list = document.getElementById('comments-list');
+          let commentsCard = document.getElementById('comments-section');
           if (!comments.length) {
-              $list.innerHTML = "<em>Ingen kommentarer endnu.</em>";
+              // Fjern kommentarkortet hvis det findes
+              if (commentsCard) commentsCard.remove();
               return;
           }
+          // Hvis kortet ikke findes (fx efter første kommentar), opret det igen
+          if (!commentsCard) {
+              commentsCard = document.createElement('div');
+              commentsCard.className = "card";
+              commentsCard.id = "comments-section";
+              commentsCard.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'></div>";
+              // Indsæt før formCard
+              formCard.parentNode.insertBefore(commentsCard, formCard);
+          }
+          const $list = commentsCard.querySelector('#comments-list');
           $list.innerHTML = "";
           comments.forEach(c => {
               const row = document.createElement('div');
               row.className = "comment-row";
               row.innerHTML = `
                   <div class="comment-title"><b>${c.navn}</b>, <span class="comment-time">${c.ts.split(' ')[1]}</span></div>
-                  <div class="comment-body">${c.body}</div>
+                  <div class="comment-body">${linkify(c.body)}</div>
                   <div class="comment-thumbs">👍 <span>${c.thumbs || 0}</span></div>
               `;
-              // Eksempel på thumbs-up-knap i din kommentar-rendering:
               row.querySelector('.comment-thumbs').onclick = async () => {
-                const userid = getOrCreateUserId ? getOrCreateUserId() : localStorage.getItem("userid");
-                await fetch(`/api/thread/${day}/${id}/comments/thumbsup`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ts: c.ts, user_id: userid })
-                });
-                await loadComments();
+                  const userid = getOrCreateUserId ? getOrCreateUserId() : localStorage.getItem("userid");
+                  await fetch(`/api/thread/${day}/${id}/comments/thumbsup`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ts: c.ts, user_id: userid })
+                  });
+                  await loadComments();
               };
               $list.appendChild(row);
           });
       }
       await loadComments();
 
-      // Kommentar input i separat card
-      const formCard = document.createElement('div');
-      formCard.className = "card";
-      formCard.id = "comment-form";
-      formCard.innerHTML = `
-          <textarea id="comment-input" rows="2" style="width:98%" placeholder="Skriv en kommentar..."></textarea>
-          <button id="comment-send-btn">Send</button>
-      `;
-      commentsCard.parentNode.appendChild(formCard);
-
       // Send kommentar (uændret)
       document.getElementById('comment-send-btn').onclick = async () => {
-          const body = document.getElementById('comment-input').value.trim();
-          if (!body) return;
-          // Hent navn fra server (eller localStorage hvis du ønsker det)
-          let navn = "";
-          try {
-              const userid = getOrCreateUserId ? getOrCreateUserId() : localStorage.getItem("userid");
-              const deviceid = localStorage.getItem("deviceid");
-              const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
-              if (res.ok) {
-                  const userinfo = await res.json();
-                  navn = userinfo.navn || "";
-              }
-          } catch {}
-          if (!navn) navn = "Ukendt";
-          await fetch(`/api/thread/${day}/${id}/comments`, {
+        const body = document.getElementById('comment-input').value.trim();
+        if (!body) return;
+
+        // Hent brugerinfo
+        const userid = getOrCreateUserId();
+        const deviceid = localStorage.getItem("deviceid");
+        let userinfo = {};
+        try {
+          const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+          if (res.ok) userinfo = await res.json();
+        } catch {}
+        const obserkode = userinfo.obserkode || "";
+        const navn = userinfo.navn || "";
+
+        // Tjek abonnement
+        let isSubscribed = false;
+        try {
+          const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            isSubscribed = !!subData.subscribed;
+          }
+        } catch {}
+
+        // Hvis ikke abonneret, abonner automatisk
+        if (!isSubscribed) {
+          await fetch(`/api/thread/${day}/${id}/subscribe`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              navn,
-              body,
-              user_id: getOrCreateUserId(),
-              device_id: localStorage.getItem("deviceid")
-            })
+            body: JSON.stringify({ user_id: userid, device_id: deviceid })
           });
-          document.getElementById('comment-input').value = "";
-          await loadComments();
+          isSubscribed = true;
+          // Opdater abonnér-knappen visuelt
+          const subBtn = document.getElementById("thread-sub-btn");
+          if (subBtn) subBtn.classList.add("is-on");
+        }
+
+        if (!obserkode || !navn) {
+          alert("Du skal have udfyldt både obserkode og navn i dine indstillinger for at kunne skrive et indlæg.");
+          return;
+        }
+
+        await fetch(`/api/thread/${day}/${id}/comments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ navn, body, user_id: userid, device_id: deviceid })
+        });
+        document.getElementById('comment-input').value = "";
+        await loadComments();
       };
   }
 

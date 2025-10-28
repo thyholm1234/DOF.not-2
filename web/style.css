@@ -43,7 +43,7 @@ body {
   color: var(--text-main);
 }
 h1 {
-  margin: 0 0 8px;
+  margin: 0 0 20px;
   font-size: clamp(28px, 2.6vw + 8px, 44px);
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -319,8 +319,10 @@ a:hover {
 /* ===== Header og brand ===== */
 header.wrap {
   display: flex;
-  align-items: center;
+  flex-direction: row;
+  align-items: center;         /* Vertikal centrering */
   justify-content: space-between;
+  gap: 32px;
   background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
@@ -328,7 +330,6 @@ header.wrap {
   margin: 0 auto 24px auto;
   max-width: 1000px;
   width: 100%;
-  padding-inline: 0px;
   box-sizing: border-box;
   border: 1px solid var(--card-border);
 }
@@ -339,74 +340,99 @@ header.wrap h1 {
   font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1.1;
+  text-align: center;
 }
 
 header.wrap .brand {
   color: var(--text-main);
   text-decoration: none;
   font-weight: 900;
-  font-size: 2rem;
+  font-size: 3rem;
   letter-spacing: -0.02em;
   transition: color 0.15s;
 }
+
 header.wrap .brand:hover {
   color: var(--col-accent);
   text-decoration: underline;
 }
 
-/* ===== Toolbar ===== */
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;              /* Mindre afstand mellem knapper */
+  margin-left: 0px;     /* Skubber toolbaren helt til højre */
+  padding-right: 0px;    /* Lidt luft til højre kant */
 }
 
 .toolbar a,
 .toolbar button {
-  background: none;
+  background: transparent;
+  color: #fff;
   border: none;
-  color: var(--text-main);
-  font-size: 1.5rem;
-  padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 30px 10px;      /* Mindre padding */
+  font-size: 1em;
+  font-weight: 600;
   cursor: pointer;
+  margin: 0 2px 0 0;      /* Mindre afstand mellem knapper */
   transition: background 0.15s, color 0.15s;
   display: flex;
   align-items: center;
+  justify-content: center;
+  height: 2.2em;          /* Lidt lavere */
+  min-width: 0;           /* Tillad smallere knapper */
+  max-width: 44px;        /* Giver fast bredde hvis ønsket */
+  box-sizing: border-box;
 }
 
 .toolbar a:hover,
 .toolbar button:hover,
 .toolbar a:focus,
 .toolbar button:focus {
-  background: var(--badge-bg);
+  background: transparent;
   color: var(--col-accent);
   outline: none;
 }
 
 #settings-icon,
 #notify-icon,
-#theme-icon {
+#theme-icon,
+.toolbar span {
   font-size: 1.5rem;
   line-height: 1;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2em;         /* Giver ens højde på alle spans */
   vertical-align: middle;
+}
+
+.toolbar span {
+  font-size: 1.5em;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Responsiv header */
 @media (max-width: 600px) {
   header.wrap {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;         /* <-- Skift fra column til row */
+    align-items: center;         /* Vertikal centrering */
+    justify-content: space-between;
     padding: 10px 6px;
     border-radius: 0 0 12px 12px;
   }
   .toolbar {
-    margin-top: 8px;
-    gap: 4px;
+    margin-top: 0;
+    gap: 2px;
+    padding-right: 0;
   }
-  header.wrap h1, header.wrap .brand {
-    font-size: 1.3rem;
+  header.wrap .brand {
+    font-size: 2rem;
+    padding-left: 6px; /* Flyt teksten 6px ind til højre kun på mobil */
   }
   .card-top {
     flex-direction: column;
@@ -915,4 +941,85 @@ label[for="show-only-filtered"] {
     color: #dbe1ea;
     border-color: #273244;
   }
+}
+
+.badge-pin {
+  display: inline-block;
+  background: var(--col-accent, #0b3d91);
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.95em;
+  margin: 4px 0 0 0;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.badge-pin:hover {
+  background: #1a5ad7;
+}
+
+.card, .thread-card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: border-color .15s, box-shadow .15s;
+  /* max-width: 400px;  <-- fjern denne linje */
+}
+
+#obserkode-card label,
+#navn-card label {
+  display: block;
+  margin-bottom: 0.3em;
+  font-weight: 500;
+}
+
+#obserkode, #navn {
+  width: 100%;
+  font-size: 1.1em;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1.5px solid var(--card-border, #c0c0c0);
+  background: var(--card-bg, #fff);
+  color: var(--text-main, #222);
+  margin-bottom: 0.5em;
+  box-sizing: border-box;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+#obserkode:focus, #navn:focus {
+  border-color: var(--col-accent, #0b3d91);
+  outline: none;
+}
+
+
+
+.comment-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+.send-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.card.disabled,
+#save-userinfo-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(0.3);
+}
+#save-userinfo-btn:disabled {
+  cursor: not-allowed;
+}
+
+.comment-body a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  color: var(--col-accent, #1a73e8);
 }

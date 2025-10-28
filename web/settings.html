@@ -21,9 +21,6 @@
   <header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
     <div class="toolbar">
-      <button id="notify-toggle" aria-label="Notifikationer">
-        <span id="notify-icon">🔔</span>
-      </button>
       <button id="theme-toggle" aria-label="Skift tema">
         <span id="theme-icon">☀️</span>
       </button>
@@ -37,15 +34,17 @@
     <button id="unsubscribe-btn">Afmeld</button>
 
     <h2>Mine oplysninger</h2>
-    <div class="prefs-row">
-      <label for="obserkode">Obserkode:</label>
-      <input type="text" id="obserkode" name="obserkode" autocomplete="off" />
+    <div class="card" id="obserkode-card">
+      <label for="obserkode">1. Skriv din DOF-obserkode:</label>
+      <input type="text" id="obserkode" maxlength="16" autocomplete="off" />
+      <button id="hent-navn-btn" type="button">Hent navn</button>
     </div>
-    <div class="prefs-row">
-      <label for="navn">Navn:</label>
-      <input type="text" id="navn" name="navn" autocomplete="off" />
+
+    <div class="card" id="navn-card">
+      <label for="navn">2. Check dit navn og gem:</label>
+      <input type="text" id="navn" readonly />
+      <button id="save-userinfo-btn">Gem oplysninger</button>
     </div>
-    <button id="save-userinfo-btn">Gem oplysninger</button>
 
     <h2>Mine præferencer</h2>
     <p class="sub">Her vælger du, hvilke observationer du ønsker notifikationer for. SUB indeholder SU osv.</p>

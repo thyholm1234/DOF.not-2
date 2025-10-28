@@ -189,6 +189,15 @@ async function subscribeUser(userid, deviceid) {
   }
 }
 
+document.getElementById("hent-navn-btn").onclick = async () => {
+  const kode = document.getElementById("obserkode").value.trim();
+  if (!kode) return;
+  // Kald backend-endpointet
+  const res = await fetch(`/api/lookup_obserkode?obserkode=${encodeURIComponent(kode)}`);
+  const data = await res.json();
+  document.getElementById("navn").value = data.navn || "";
+};
+
 function setPrefsTableEnabled(enabled) {
   const table = document.querySelector('.prefs-table');
   if (table) {
@@ -216,6 +225,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     localStorage.setItem("deviceid", deviceid);
   }
 
+  const settingsBtn = document.getElementById("settings-btn");
+  if (settingsBtn) {
+    settingsBtn.onclick = () => {
+      window.location.href = "./settings.html";
+    };
+  }
+
   // Vis debug-info i UI
   const debugDiv = document.getElementById("debug-info");
   if (debugDiv) {
@@ -225,10 +241,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let prefs = await loadPrefs();
   renderPrefsMatrix(prefs);
-
-  document.getElementById("subscribe-btn").onclick = async () => {
-    await subscribeUser(userid, deviceid);
-  };
 
   document.getElementById("unsubscribe-btn").onclick = async () => {
     await fetch("/api/unsubscribe", {

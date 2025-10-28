@@ -14,6 +14,7 @@ import urllib.request
 from urllib.parse import urljoin, urlparse, parse_qs
 from fastapi import Query, Depends
 
+
 VAPID_PRIVATE_KEY = "An73heQXWe62IL_wrlyz6N102d_9yH-tZKCohrDNRTY"
 VAPID_PUBLIC_KEY = "BHU3aBbXkYu7_KGJtKMEWCPU43gF1b6L0DKGVv-n_5-iybitwM5dodQdR2GkIec8OOWcJlwCEMSMzpfRX_RBUkA"
 
@@ -39,6 +40,15 @@ def db_init():
         """)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS thread_subs (
+                day TEXT,
+                thread_id TEXT,
+                user_id TEXT,
+                device_id TEXT,
+                PRIMARY KEY (day, thread_id, user_id, device_id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS thread_unsubs (
                 day TEXT,
                 thread_id TEXT,
                 user_id TEXT,
@@ -351,7 +361,11 @@ async def unsubscribe_thread(day: str, thread_id: str, request: Request):
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
-            "DELETE FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+                "DELETE FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+                (day, thread_id, user_id, device_id)
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO thread_unsubs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
             (day, thread_id, user_id, device_id)
         )
     return {"ok": True}
@@ -417,6 +431,27 @@ async def update_data(request: Request):
                     else:
                         print(f"Push-fejl til {user_id}/{device_id}: {ex}")
     return {"ok": True}
+
+@app.get("/api/lookup_obserkode")
+async def lookup_obserkode(obserkode: str = Query(...)):
+    import requests
+    url = f"https://dofbasen.dk/popobser.php?obserkode={obserkode}"
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code != 200:
+            return {"navn": ""}
+        # Find linjen med "Navn" og tag næste <td>
+        html = r.text
+        navn = ""
+        idx = html.find("Navn</acronym>:</td><td valign=\"top\">")
+        if idx != -1:
+            start = idx + len("Navn</acronym>:</td><td valign=\"top\">")
+            end = html.find("</td>", start)
+            if end != -1:
+                navn = html[start:end].strip()
+        return {"navn": navn}
+    except Exception:
+        return {"navn": ""}
 
 @app.get("/api/threads/{day}")
 async def api_threads_index(day: str):
@@ -532,7 +567,7 @@ async def thumbs_up_comment(day: str, thread_id: str, request: Request):
                                 "title": f"👍 på dit indlæg: {artnavn} {loknavn}",
                                 "body": f"Dit indlæg har fået en thumbs up!",
                                 "url": f"/traad.html?date={day}&id={thread_id}",
-                                "tag": thread_id
+                                "tag": f"{thread_id}-thumbsup-{ts.replace(' ', '_').replace(':', '-')}"
                             }
                             try:
                                 webpush(
@@ -602,6 +637,48 @@ async def post_comment(day: str, thread_id: str, request: Request):
             (day, thread_id, user_id, device_id)
         )
 
+    # --- AUTO-SUBSCRIBE ALLE OBSERKODER FRA EVENTS PÅ TRÅDEN ---
+    thread_path = os.path.join(thread_dir, "thread.json")
+    obserkoder_on_thread = set()
+    if os.path.isfile(thread_path):
+        try:
+            with open(thread_path, "r", encoding="utf-8") as f:
+                thread_data = json.load(f)
+            events = thread_data.get("events", [])
+            for ev in events:
+                kode = (ev.get("Obserkode") or ev.get("obserkode") or "").strip().upper()
+                if kode:
+                    obserkoder_on_thread.add(kode)
+        except Exception:
+            pass
+
+    if obserkoder_on_thread:
+        with sqlite3.connect(DB_PATH) as conn:
+            for kode in obserkoder_on_thread:
+                rows = conn.execute("SELECT user_id, prefs FROM user_prefs").fetchall()
+                for u_id, prefs_json in rows:
+                    try:
+                        prefs = json.loads(prefs_json)
+                        bruger_kode = (prefs.get("obserkode") or "").strip().upper()
+                        if bruger_kode == kode:
+                            dev_rows = conn.execute("SELECT device_id FROM subscriptions WHERE user_id=?", (u_id,)).fetchall()
+                            for (dev_id,) in dev_rows:
+                                # Tjek om brugeren har afmeldt denne tråd
+                                skip = conn.execute(
+                                    "SELECT 1 FROM thread_unsubs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+                                    (day, thread_id, u_id, dev_id)
+                                ).fetchone()
+                                if skip:
+                                    continue  # Brugeren har aktivt afmeldt, så spring over
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
+                                    (day, thread_id, u_id, dev_id)
+                                )
+                    except Exception:
+                        continue
+            conn.commit()
+    # --- SLUT AUTO-SUBSCRIBE ---
+
     # Find alle abonnenter for tråden (for dagen)
     with sqlite3.connect(DB_PATH) as conn:
         subs = conn.execute(
@@ -627,7 +704,7 @@ async def post_comment(day: str, thread_id: str, request: Request):
         # Spring forfatteren over
         if sub_user_id == user_id and sub_device_id == device_id:
             continue
-    # Find subscription-info
+        # Find subscription-info
         with sqlite3.connect(DB_PATH) as conn:
             row = conn.execute(
                 "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
@@ -640,7 +717,7 @@ async def post_comment(day: str, thread_id: str, request: Request):
             "title": f"Nyt indlæg på: {artnavn} {loknavn}",
             "body": f"{navn}: {body}",
             "url": f"/traad.html?date={day}&id={thread_id}",
-            "tag": thread_id
+            "tag": f"{thread_id}-comment-{ts.replace(' ', '_').replace(':', '-')}"
         }
         try:
             webpush(
@@ -653,9 +730,7 @@ async def post_comment(day: str, thread_id: str, request: Request):
         except Exception as ex:
             print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
 
-    return {"ok": True}
-
-    
+    return {"ok": True}   
 
 @app.get("/api/prefs/user/species")
 async def get_species_filters(user_id: str):

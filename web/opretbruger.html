@@ -17,27 +17,36 @@
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/style.css">
 </head>
-
-<body>
-  <header class="wrap">
+<header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
     <div class="toolbar">
-      <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
-              onclick="window.location.href='./settings.html'">
+    <a id="settings-link" href="./settings.html" aria-label="Indstillinger" title="Indstillinger">
         <span id="settings-icon">⚙️</span>
-      </button>
-      <button id="theme-toggle" aria-label="Skift tema" type="button">
-        <span id="theme-icon">☀️</span>
-      </button>
-    </div>
+    </a>
+    <button id="notify-toggle" aria-label="Notifikationer">
+      <span id="notify-icon">🔔</span>
+    </button>
+    <button id="theme-toggle" aria-label="Skift tema">
+      <span id="theme-icon">☀️</span>
+    </button>
+  </div>
   </header>
- 
-  <div class="wrap">
-  <h1 class="page-title">Dagens observationer</h1>
-  <div id="front-controls" class="controls-card"></div>
-  <div id="threads-status"></div>
-  <div id="threads-cards"></div>
-</div>
+<body>
+
+  <div id="opret-bruger">
+    <h2>Opret bruger</h2>
+    <button id="subscribe-btn">Tilmeld push-notifikationer</button>
+    <div>
+      <label for="obserkode">Obserkode:</label>
+      <input id="obserkode" type="text" maxlength="16">
+      <button id="hent-navn-btn">Hent navn</button>
+    </div>
+    <div>
+      <label for="navn">Navn:</label>
+      <input id="navn" type="text" readonly>
+    </div>
+    <button id="gem-bruger-btn">Gem og fortsæt</button>
+  </div>
   
   <script src="threads.js"></script>
   
