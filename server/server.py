@@ -12,7 +12,7 @@ import re
 import html
 import urllib.request
 from urllib.parse import urljoin, urlparse, parse_qs
-from fastapi import Query
+from fastapi import Query, Depends
 
 VAPID_PRIVATE_KEY = "An73heQXWe62IL_wrlyz6N102d_9yH-tZKCohrDNRTY"
 VAPID_PUBLIC_KEY = "BHU3aBbXkYu7_KGJtKMEWCPU43gF1b6L0DKGVv-n_5-iybitwM5dodQdR2GkIec8OOWcJlwCEMSMzpfRX_RBUkA"
@@ -35,6 +35,15 @@ def db_init():
                 device_id TEXT,
                 subscription TEXT,
                 PRIMARY KEY (user_id, device_id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS thread_subs (
+                day TEXT,
+                thread_id TEXT,
+                user_id TEXT,
+                device_id TEXT,
+                PRIMARY KEY (day, thread_id, user_id, device_id)
             )
         """)
 db_init()
@@ -318,6 +327,43 @@ async def notifications_enabled(user_id: str, device_id: str):
     # Tjek også om brugeren har slået notificationsEnabled fra i localStorage (valgfrit, hvis du vil synkronisere)
     enabled = bool(row)
     return {"enabled": enabled}
+
+@app.post("/api/thread/{day}/{thread_id}/subscribe")
+async def subscribe_thread(day: str, thread_id: str, request: Request):
+    data = await request.json()
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
+            (day, thread_id, user_id, device_id)
+        )
+    return {"ok": True}
+
+@app.post("/api/thread/{day}/{thread_id}/unsubscribe")
+async def unsubscribe_thread(day: str, thread_id: str, request: Request):
+    data = await request.json()
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "DELETE FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+            (day, thread_id, user_id, device_id)
+        )
+    return {"ok": True}
+
+@app.get("/api/thread/{day}/{thread_id}/subscription")
+async def get_subscription(day: str, thread_id: str, user_id: str, device_id: str):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+            (day, thread_id, user_id, device_id)
+        ).fetchone()
+    return {"subscribed": bool(row)}
 
 @app.post("/api/update")
 async def update_data(request: Request):

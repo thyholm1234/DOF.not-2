@@ -70,6 +70,44 @@
       $title.appendChild(h2);
       $meta.innerHTML = "";
 
+      // Abonner-knap (🔔)
+      const userid = getOrCreateUserId();
+      const deviceid = localStorage.getItem("deviceid");
+      let isSubscribed = false;
+      try {
+        const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          isSubscribed = !!subData.subscribed;
+        }
+      } catch {}
+      const subBtn = document.createElement('button');
+      subBtn.id = "thread-sub-btn";
+      subBtn.textContent = "🔔 Abonner";
+      subBtn.className = "twostate";
+      if (isSubscribed) subBtn.classList.add("is-on");
+      $meta.appendChild(subBtn);
+
+      subBtn.onclick = async () => {
+        const userid = getOrCreateUserId();
+        const deviceid = localStorage.getItem("deviceid");
+        if (subBtn.classList.contains("is-on")) {
+          await fetch(`/api/thread/${day}/${id}/unsubscribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userid, device_id: deviceid })
+          });
+          subBtn.classList.remove("is-on");
+        } else {
+          await fetch(`/api/thread/${day}/${id}/subscribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userid, device_id: deviceid })
+          });
+          subBtn.classList.add("is-on");
+        }
+      };
+
       // Vis alle events i tråden
       const events = data.events || [];
       if (!events.length) {
