@@ -283,6 +283,42 @@ def api_obs_images(
     images = _extract_service_image_urls(html_page)
     return {"obsid": obsid, "source": src, "count": len(images), "images": images}
 
+@app.get("/api/obs/sound")
+def api_obs_sound(
+    obsid: str = Query(..., min_length=3, description="DOFbasen observation id"),
+    url: str | None = Query(None, description="Optional override URL")
+):
+    src = url or f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+    try:
+        html_page = _fetch_html(src, timeout=10.0)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
+    matches = re.findall(r"""<a[^>]+href=['"]([^'"]*sound_proxy\.php[^'"]+)['"]""", html_page, re.IGNORECASE)
+    sound_urls = []
+    for href in matches:
+        href = html.unescape(href)  # <-- Denne linje fjerner &amp;
+        if href.startswith("/"):
+            sound_url = "https://dofbasen.dk" + href
+        else:
+            sound_url = href
+        sound_urls.append(sound_url)
+    return {"obsid": obsid, "sound_urls": sound_urls}
+
+@app.get("/api/notifications/enabled")
+async def notifications_enabled(user_id: str, device_id: str):
+    """
+    Returnerer om notifikationer er slået til for denne bruger+device.
+    """
+    # Findes der et subscription for denne user+device?
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM subscriptions WHERE user_id=? AND device_id=?",
+            (user_id, device_id)
+        ).fetchone()
+    # Tjek også om brugeren har slået notificationsEnabled fra i localStorage (valgfrit, hvis du vil synkronisere)
+    enabled = bool(row)
+    return {"enabled": enabled}
+
 @app.post("/api/update")
 async def update_data(request: Request):
     payload = await request.json()  # Liste af observationer
@@ -307,7 +343,8 @@ async def update_data(request: Request):
                 push_payload = {
                     "title": title,
                     "body": body,
-                    "url": obs.get("url", "https://dofbasen.dk")
+                    "url": obs.get("url", "https://dofbasen.dk"),
+                    "tag": obs.get("tag") or ""
                 }
                 try:
                     webpush(
@@ -354,6 +391,104 @@ async def api_thread(day: str, thread_id: str):
     with open(thread_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return JSONResponse(data)
+
+@app.get("/api/userinfo")
+async def get_userinfo(user_id: str, device_id: str):
+    prefs = get_prefs(user_id)
+    return {
+        "user_id": user_id,
+        "device_id": device_id,
+        "obserkode": prefs.get("obserkode", ""),
+        "navn": prefs.get("navn", "")
+    }
+
+@app.post("/api/userinfo")
+async def save_userinfo(data: dict):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    obserkode = data.get("obserkode", "")
+    navn = data.get("navn", "")
+    prefs = get_prefs(user_id)
+    prefs["obserkode"] = obserkode
+    prefs["navn"] = navn
+    set_prefs(user_id, prefs)
+    return {"ok": True}
+
+@app.get("/api/userinfo")
+async def get_userinfo(user_id: str, device_id: str):
+    prefs = get_prefs(user_id)
+    return {
+        "user_id": user_id,
+        "device_id": device_id,
+        "obserkode": prefs.get("obserkode", ""),
+        "navn": prefs.get("navn", "")
+    }
+
+@app.post("/api/thread/{day}/{thread_id}/comments/thumbsup")
+async def thumbs_up_comment(day: str, thread_id: str, request: Request):
+    data = await request.json()
+    ts = data.get("ts")
+    user_id = data.get("user_id")
+    if not ts or not user_id:
+        raise HTTPException(status_code=400, detail="Kommentar-tidspunkt eller bruger-id mangler")
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+    comments_path = os.path.join(thread_dir, "kommentar.json")
+    if not os.path.isfile(comments_path):
+        raise HTTPException(status_code=404, detail="Ingen kommentarer fundet")
+    with open(comments_path, "r", encoding="utf-8") as f:
+        comments = json.load(f)
+    found = False
+    for c in comments:
+        if c.get("ts") == ts:
+            thumbs_users = set(c.get("thumbs_users", []))
+            if user_id in thumbs_users:
+                thumbs_users.remove(user_id)  # Fjern thumbs up
+            else:
+                thumbs_users.add(user_id)     # Tilføj thumbs up
+            c["thumbs_users"] = list(thumbs_users)
+            c["thumbs"] = len(thumbs_users)
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Kommentar ikke fundet")
+    with open(comments_path, "w", encoding="utf-8") as f:
+        json.dump(comments, f, ensure_ascii=False, indent=2)
+    return {"ok": True, "thumbs": c["thumbs"]}
+
+@app.get("/api/thread/{day}/{thread_id}/comments")
+async def get_comments(day: str, thread_id: str):
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+    comments_path = os.path.join(thread_dir, "kommentar.json")
+    if not os.path.isfile(comments_path):
+        return []
+    with open(comments_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+@app.post("/api/thread/{day}/{thread_id}/comments")
+async def post_comment(day: str, thread_id: str, request: Request):
+    data = await request.json()
+    navn = data.get("navn", "Ukendt")
+    body = data.get("body", "").strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="Besked må ikke være tom")
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    comment = {
+        "navn": navn,
+        "body": body,
+        "ts": ts,
+        "thumbs": 0
+    }
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+    os.makedirs(thread_dir, exist_ok=True)
+    comments_path = os.path.join(thread_dir, "kommentar.json")
+    comments = []
+    if os.path.isfile(comments_path):
+        with open(comments_path, "r", encoding="utf-8") as f:
+            comments = json.load(f)
+    comments.append(comment)
+    with open(comments_path, "w", encoding="utf-8") as f:
+        json.dump(comments, f, ensure_ascii=False, indent=2)
+    return {"ok": True}
 
 @app.get("/api/prefs/user/species")
 async def get_species_filters(user_id: str):
@@ -427,7 +562,8 @@ async def debug_push(request: Request):
     payload = {
         "title": title,
         "body": body,
-        "url": obs.get("url", "https://dofbasen.dk")
+        "url": obs.get("url", "https://dofbasen.dk"),
+        "tag": obs.get("tag") or ""
     }
 
     # Send push

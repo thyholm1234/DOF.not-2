@@ -64,11 +64,40 @@ function renderPrefsMatrix(prefs) {
 const themeToggle = document.getElementById('theme-toggle');
 const themeIcon = document.getElementById('theme-icon');
 
+function updateThemeIcon(theme) {
+  if (themeIcon) {
+    themeIcon.textContent = theme === 'dark' ? '🌙' : '☀️';
+  }
+}
+
+function systemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getSavedTheme() {
+  return localStorage.getItem('theme');
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('theme', theme);
+  updateThemeIcon(theme);
+}
+
+function initTheme() {
+  const saved = getSavedTheme();
+  const theme = saved || systemTheme();
+  document.documentElement.dataset.theme = theme;
+  updateThemeIcon(theme);
+}
+
+initTheme();
+
 if (themeToggle) {
   themeToggle.addEventListener('click', () => {
     const cur = document.documentElement.dataset.theme || systemTheme();
-    // toggle explicitly between light/dark and persist that choice
-    applyTheme(cur === 'dark' ? 'light' : 'dark');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
   });
 }
 
@@ -225,6 +254,44 @@ document.getElementById("unsubscribe-btn").onclick = async () => {
   alert("Du er nu afmeldt!");
   localStorage.setItem("isSubscribed", "0");
   setPrefsTableEnabled(false);
+};
+
+// Hent evt. tidligere gemte oplysninger
+let userinfo = {};
+  try {
+    const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+    if (res.ok) {
+      userinfo = await res.json();
+    }
+  } catch (e) {
+    userinfo = {};
+  }
+  document.getElementById("obserkode").value = userinfo.obserkode || "";
+  document.getElementById("navn").value = userinfo.navn || "";
+
+// Gem oplysninger ved klik
+document.getElementById("save-userinfo-btn").onclick = async () => {
+  const userid = getOrCreateUserId();
+  const deviceid = localStorage.getItem("deviceid");
+  const obserkode = document.getElementById("obserkode").value.trim();
+  const navn = document.getElementById("navn").value.trim();
+
+  // Gem lokalt
+  localStorage.setItem("obserkode", obserkode);
+  localStorage.setItem("navn", navn);
+
+  // Gem på serveren
+  await fetch("/api/userinfo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: userid,
+      device_id: deviceid,
+      obserkode,
+      navn
+    })
+  });
+  alert("Oplysninger gemt!");
 };
 
 // Ved load:

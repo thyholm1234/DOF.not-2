@@ -1,5 +1,6 @@
 /* ===== Theme-variabler (fra style2.css) ===== */
-:root {
+:root,
+:root[data-theme="light"] {
   --bg-page: #ffffff;
   --card-bg: #fff;
   --card-border: #d0d0d0;
@@ -19,21 +20,19 @@
   --badge-region-fg: #003366;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page: #0b1220;
-    --card-bg: #0f172a;
-    --card-border: #273244;
-    --text-main: #dbe1ea;
-    --text-meta: #9aa7b6;
-    --text-muted: #a5b4c8;
-    --link: #6aa6ff;
-    --badge-bg: #263146;
-    --badge-fg: #dbe1ea;
-    --badge-region-bg: #10253d;
-    --badge-region-fg: #bcd9ff;
-    --col-alm: #fff;
-  }
+:root[data-theme="dark"] {
+  --bg-page: #0b1220;
+  --card-bg: #0f172a;
+  --card-border: #273244;
+  --text-main: #dbe1ea;
+  --text-meta: #9aa7b6;
+  --text-muted: #a5b4c8;
+  --link: #6aa6ff;
+  --badge-bg: #263146;
+  --badge-fg: #dbe1ea;
+  --badge-region-bg: #10253d;
+  --badge-region-fg: #bcd9ff;
+  --col-alm: #fff;
 }
 
 /* ===== Base ===== */
@@ -325,10 +324,11 @@ header.wrap {
   background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 12px 20px;
+  padding: 0px 20px;
   margin: 0 auto 24px auto;
   max-width: 1000px;
   width: 100%;
+  padding-inline: 0px;
   box-sizing: border-box;
   border: 1px solid var(--card-border);
 }
@@ -408,6 +408,21 @@ header.wrap .brand:hover {
   header.wrap h1, header.wrap .brand {
     font-size: 1.3rem;
   }
+  .card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .card-top-right {
+    flex-direction: row;
+    gap: 2%;
+  }
+  .card-top-right .badge.event-count {
+    display: inline-flex;
+  }
 }
 
 /* ===== Responsive ===== */
@@ -445,6 +460,9 @@ header.wrap .brand:hover {
   flex: 0 0 auto;
   text-align: right;
   min-width: 60px;
+  display: flex;
+  gap: 0.4em;
+  align-items: center;
 }
 
 /* ===== Title layout ===== */
@@ -488,14 +506,20 @@ header.wrap .brand:hover {
 
 /* ===== Event count badge ===== */
 .badge.event-count {
-  background: #10253D;
-  color: #BCD9FF;
-  border-color: #273244;
+  background: var(--badge-region-bg);
+  color: var(--badge-region-fg);
+  font-weight: bold;
+  border-radius: 1em;
+  padding: 0 0.7em;
+  font-size: 0.95em;
+  height: 1.7em;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--card-border);
 }
 .badge.event-count.warn {
-  background: #fffbe6;
-  color: #b26a00;
-  border-color: #ffe58f;
+  background: #ffd700;
+  color: #222;
 }
 
 /* ===== Info row ===== */
@@ -513,7 +537,7 @@ header.wrap .brand:hover {
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
-  padding-inline: 12px;
+  padding-inline: 0px;
   padding-block: 8px 12px;
   box-sizing: border-box;
 }
@@ -523,7 +547,7 @@ header.wrap .brand:hover {
   width: 100%;
   max-width: 1000px;
   margin: 0 auto 24px auto;
-  padding-inline: 12px;
+  padding-inline: 0px;
   box-sizing: border-box;
 }
 
@@ -779,3 +803,76 @@ label[for="show-only-filtered"] {
   width: 100%;
   grid-column: 1 / span 2;
 }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.98em;
+  flex-wrap: wrap;
+}
+
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5em;
+  flex-wrap: wrap;
+}
+
+.title-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card, .thread-card {
+  width: 100%;
+  box-sizing: border-box;
+  /* resten af din styling */
+}
+
+.card .info {
+  flex-wrap: wrap;
+}
+.card .info-bullet {
+  display: inline;
+}
+.card .info > span {
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .card-top-right {
+    flex-direction: row;
+    gap: 2%;
+  }
+  .card-top-right .badge.event-count {
+    display: inline-flex;
+  }
+}
+
+.art-name {
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+#comments-section { margin-top: 2em; }
+.comment-row { border-bottom: 1px solid #eee; padding: 0.5em 0; }
+.comment-title { font-size: 0.95em; color: #234; }
+.comment-body { margin: 0.2em 0 0.3em 0; }
+.comment-thumbs { font-size: 1.1em; color: #888; }
+#comment-form { margin-top: 1em; }

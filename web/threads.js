@@ -58,7 +58,8 @@
     usePrefs: true,
     onlySU: false,
     includeZero: true,
-    sortMode: "nyeste"
+    sortMode: "nyeste",
+    dayMode: "today" // "today" eller "yesterday"
   };
 
   function shouldShowThread(t) {
@@ -121,6 +122,10 @@
       cardTop.appendChild(left);
 
       const right = el('div', 'right');
+      // Tilføj badge her:
+      const obsCount = Number(t.antal_observationer ?? 0);
+      const obsBadgeClass = obsCount > 1 ? 'badge event-count warn' : 'badge event-count';
+      right.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
       right.appendChild(regionBadge(fmtAgeFromKlokkeslet(t.klokkeslet, t.day, t.obsidbirthtime)));
       cardTop.appendChild(right);
 
@@ -129,15 +134,14 @@
       // title
       const title = el('div', 'title');
       const titleLeft = el('div', 'title-left');
-      titleLeft.appendChild(el('span', `count ${catClass(t.last_kategori)}`, t.antal_individer != null ? t.antal_individer : ''));
-      titleLeft.appendChild(el('span', `art-name ${catClass(t.last_kategori)}`, t.art || ''));
+      const antalArtTekst = (t.antal_individer != null ? t.antal_individer + ' ' : '') + (t.art || '');
+      titleLeft.appendChild(el('span', `art-name ${catClass(t.last_kategori)}`, antalArtTekst));
       title.appendChild(titleLeft);
 
-      const titleRight = el('div', 'title-right');
-      const obsCount = Number(t.antal_observationer ?? 0);
-      const obsBadgeClass = obsCount > 1 ? 'badge event-count warn' : 'badge event-count';
-      titleRight.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
-      title.appendChild(titleRight);
+      // title-right ikke længere nødvendig
+      // const titleRight = el('div', 'title-right');
+      // titleRight.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
+      // title.appendChild(titleRight);
 
       article.appendChild(title);
 
@@ -155,8 +159,13 @@
 
   function setFrontState(key, value) {
     frontState[key] = value;
+    saveFrontState();
     updateFrontControls();
-    renderThreads();
+    if (key === "dayMode") {
+      loadThreads();
+    } else {
+      renderThreads();
+    }
   }
 
   function updateFrontControls() {
@@ -169,11 +178,15 @@
         <button type="button" class="twostate${!frontState.onlySU ? ' is-on' : ''}" id="btn-su">${suLabel}</button>
         <button type="button" class="twostate${frontState.includeZero ? ' is-on' : ''}" id="btn-zero">0-obs</button>
         <button type="button" class="twostate${frontState.sortMode === 'nyeste' ? ' is-on' : ''}" id="btn-sort">${frontState.sortMode === 'nyeste' ? 'Nyeste' : 'Alfabet'}</button>
+        <button type="button" class="twostate${frontState.dayMode === 'today' ? ' is-on' : ''}" id="btn-day">${frontState.dayMode === 'today' ? 'I dag' : 'I går'}</button>
       `;
       fc.querySelector('#btn-prefs').onclick = () => setFrontState('usePrefs', !frontState.usePrefs);
       fc.querySelector('#btn-su').onclick = () => setFrontState('onlySU', !frontState.onlySU);
       fc.querySelector('#btn-zero').onclick = () => setFrontState('includeZero', !frontState.includeZero);
       fc.querySelector('#btn-sort').onclick = () => setFrontState('sortMode', frontState.sortMode === 'nyeste' ? 'alfabet' : 'nyeste');
+      fc.querySelector('#btn-day').onclick = () => {
+        setFrontState('dayMode', frontState.dayMode === 'today' ? 'yesterday' : 'today');
+      };
     }
   }
 
@@ -191,67 +204,46 @@
     }
   }
 
-  function setFrontState(key, value) {
-    frontState[key] = value;
-    saveFrontState(); // <-- tilføj denne linje
-    updateFrontControls();
-    renderThreads();
-  }
-
   async function loadThreads() {
-    const day = getDayFromUrl();
-    const now = new Date();
-    let threads = [];
-
-    // Tjek om vi er mellem 00:00 og 03:00
-    const hour = now.getHours();
-    let fetchDays = [day];
-    if (hour >= 0 && hour < 3) {
-      // Find gårsdagens dato i DD-MM-YYYY
+    let day;
+    if (frontState.dayMode === "today") {
+      day = todayDMYLocal();
+    } else {
+      const now = new Date();
       const yesterday = new Date(now.getTime() - 86400000);
       const dd = String(yesterday.getDate()).padStart(2, '0');
       const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
       const yyyy = yesterday.getFullYear();
-      const yday = `${dd}-${mm}-${yyyy}`;
-      fetchDays = [yday, day];
+      day = `${dd}-${mm}-${yyyy}`;
     }
-
+    // ... resten af funktionen uændret, brug kun én dag:
     const $cards = document.getElementById('threads-cards') || document.getElementById('threads-list');
     const $status = document.getElementById('threads-status');
     if (!$cards) return;
-    $cards.innerHTML = '';
-    if ($status) $status.textContent = 'Henter tråde…';
-
+    
     try {
-      // Hent alle relevante dage og kombiner
-      let all = [];
-      for (const d of fetchDays) {
-        const r = await fetch(`/api/threads/${d}`, { cache: 'no-store' });
-        if (r.ok) {
-          const arr = await r.json();
-          if (Array.isArray(arr)) {
-            // Marker hvilken dag tråden kommer fra
-            arr.forEach(t => t._dofnot_dag = d);
-            all = all.concat(arr);
-          }
+      const r = await fetch(`/api/threads/${day}`, { cache: 'no-store' });
+      let threads = [];
+      if (r.ok) {
+        const arr = await r.json();
+        if (Array.isArray(arr)) {
+          arr.forEach(t => t._dofnot_dag = day);
+          threads = arr;
         }
       }
-      // Fjern dubletter baseret på thread_id (seneste vinder)
-      const seen = new Map();
-      for (const t of all) seen.set(t.thread_id, t);
-      threads = Array.from(seen.values());
+      if (!Array.isArray(threads) || !threads.length) {
+        if ($status) $status.textContent = 'Ingen tråde fundet for denne dag.';
+        // Vis evt. en tom-liste her, hvis du ønsker det
+        return;
+      }
+      if ($status) $status.textContent = '';
+      allThreads = threads;
+      $cards.innerHTML = ''; // <-- Tøm først nu!
+      renderThreads();
     } catch (e) {
       if ($status) $status.textContent = 'Fejl ved hentning af tråde.';
       return;
     }
-    if (!Array.isArray(threads) || !threads.length) {
-      if ($status) $status.textContent = 'Ingen tråde fundet for denne dag.';
-      return;
-    }
-    if ($status) $status.textContent = '';
-
-    allThreads = threads;
-    renderThreads();
   }
 
   document.addEventListener('DOMContentLoaded', async () => {

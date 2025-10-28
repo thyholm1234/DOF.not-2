@@ -89,7 +89,7 @@ document.getElementById('arts-table').addEventListener('input', e => {
       userFilters.exclude = userFilters.exclude.filter(a => a !== art);
     }
     filtersChanged = true;
-    renderArtsTable();
+    renderArtsTable(); // behold denne for checkbox
   }
   if (e.target.classList.contains('gte-input')) {
     const val = parseInt(e.target.value, 10);
@@ -100,7 +100,7 @@ document.getElementById('arts-table').addEventListener('input', e => {
       delete userFilters.counts[art];
     }
     filtersChanged = true;
-    renderArtsTable();
+    // renderArtsTable();  // fjern denne linje!
   }
 });
 

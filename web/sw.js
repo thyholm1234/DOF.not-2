@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dofnot-v2';
+const CACHE_NAME = 'dofnot-v3.1';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -82,7 +82,8 @@ self.addEventListener('push', (event) => {
     body: payload.body || JSON.stringify(payload),
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: payload
+    data: payload,
+    tag: payload.tag || undefined // <-- tilføj denne linje
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

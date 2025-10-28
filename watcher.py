@@ -107,16 +107,29 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
         obsid = r.get("Obsid", "").strip()
         art = (r.get("Artnavn") or "").strip()
         loknr = (r.get("Loknr") or "").strip()
-        kat = r["kategori"]
-        # Brug observationens dato, ikke today_date_str()
+        tag = f"{slugify(art)}-{loknr}" if art and loknr else ""
+        r["tag"] = tag
+        kat = r["kategori"].upper()
         obsdate = (r.get("Dato") or "").strip()
         # Formatér dato til DD-MM-YYYY hvis nødvendigt
-        if kat in ("SU", "SUB") and art and loknr and obsdate:
-            r["url"] = f"https://dofnot2.chfotofilm.dk/traad.html?date={obsdate}&id={slugify(art)}-{loknr}"
-        elif obsid:
-            r["url"] = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", obsdate):
+            y, m, d = obsdate.split("-")
+            obsdate_fmt = f"{d}-{m}-{y}"
+        else:
+            obsdate_fmt = obsdate
+        dofnot2_url = f"https://dofnot2.chfotofilm.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
+        dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
+        if kat in ("SU", "SUB"):
+            r["url"] = dofnot2_url
+            r["url2"] = dofbasen_url
+        elif kat in ("ALM", "BEMÆRK"):
+            r["url"] = dofbasen_url
+            if "url2" in r:
+                del r["url2"]
         else:
             r["url"] = ""
+            if "url2" in r:
+                del r["url2"]
     return rows
 
 def slugify(s):
@@ -126,7 +139,7 @@ def slugify(s):
     return s.strip('-')
 
 def group_and_sum_by_observer(obs_list):
-    """Returnér én række pr. Observatør x Art x Loknr, hvor Antal er summen."""
+    # key = (Fornavn, Efternavn, Artnavn, Loknr, Obserkode)
     grouped = defaultdict(lambda: None)
     for row in obs_list:
         key = (
@@ -134,6 +147,7 @@ def group_and_sum_by_observer(obs_list):
             row.get("Efternavn", "").strip(),
             row.get("Artnavn", "").strip(),
             row.get("Loknr", "").strip(),
+            row.get("Obserkode", "").strip(),
         )
         if grouped[key] is None:
             grouped[key] = dict(row)
