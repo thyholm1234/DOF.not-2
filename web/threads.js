@@ -84,77 +84,77 @@
   }
 
   function renderThreads() {
-    const $cards = document.getElementById('threads-cards');
-    if (!$cards) return;
-    $cards.innerHTML = '';
-    let threads = allThreads.filter(shouldShowThread);
+  const $cards = document.getElementById('threads-cards');
+  if (!$cards) return;
+  $cards.innerHTML = '';
+  let threads = allThreads.filter(shouldShowThread);
 
-    // Sortering
-    if (frontState.sortMode === "nyeste") {
-      threads.sort((a, b) => {
-        // Sammenlign dag først, derefter klokkeslet eller obsidbirthtime
-        const dagA = a._dofnot_dag || a.day || todayDMYLocal();
-        const dagB = b._dofnot_dag || b.day || todayDMYLocal();
-        if (dagA !== dagB) return dagB.localeCompare(dagA, 'da');
-        // Brug klokkeslet hvis muligt, ellers obsidbirthtime
-        const klA = (a.klokkeslet || a.obsidbirthtime || "00:00").padStart(5, "0");
-        const klB = (b.klokkeslet || b.obsidbirthtime || "00:00").padStart(5, "0");
-        return klB.localeCompare(klA, 'da');
-      });
-    } else if (frontState.sortMode === "alfabet") {
-      threads.sort((a, b) => (a.art || '').localeCompare(b.art || '', 'da'));
-    }
-
-    for (const t of threads) {
-      // <article>
-      const article = el('article', 'card thread-card');
-      article.tabIndex = 0;
-      article.style.cursor = 'pointer';
-      article.onclick = () => {
-        window.location.href = `traad.html?date=${encodeURIComponent(t._dofnot_dag || getDayFromUrl())}&id=${t.thread_id}`;
-      };
-
-      // card-top
-      const cardTop = el('div', 'card-top');
-      const left = el('div', 'left');
-      left.appendChild(el('span', badgeClass(t.last_kategori), String(t.last_kategori || '').toUpperCase()));
-      if (t.region) left.appendChild(regionBadge(t.region));
-      cardTop.appendChild(left);
-
-      const right = el('div', 'right');
-      // Tilføj badge her:
-      const obsCount = Number(t.antal_observationer ?? 0);
-      const obsBadgeClass = obsCount > 1 ? 'badge event-count warn' : 'badge event-count';
-      right.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
-      right.appendChild(regionBadge(fmtAgeFromKlokkeslet(t.klokkeslet, t.day, t.obsidbirthtime)));
-      cardTop.appendChild(right);
-
-      article.appendChild(cardTop);
-
-      // title
-      const title = el('div', 'title');
-      const titleLeft = el('div', 'title-left');
-      const antalArtTekst = (t.antal_individer != null ? t.antal_individer + ' ' : '') + (t.art || '');
-      titleLeft.appendChild(el('span', `art-name ${catClass(t.last_kategori)}`, antalArtTekst));
-      title.appendChild(titleLeft);
-
-      // title-right ikke længere nødvendig
-      // const titleRight = el('div', 'title-right');
-      // titleRight.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
-      // title.appendChild(titleRight);
-
-      article.appendChild(title);
-
-      // info
-      const info = el('div', 'info');
-      if (t.last_adf) info.appendChild(el('span', '', t.last_adf));
-      if (t.lok) info.appendChild(el('span', '', t.lok));
-      if (t.last_observer) info.appendChild(el('span', '', t.last_observer));
-      article.appendChild(info);
-
-      $cards.appendChild(article);
-    }
+  // Sortering
+  if (frontState.sortMode === "nyeste") {
+    threads.sort((a, b) => {
+      const dagA = a._dofnot_dag || a.day || todayDMYLocal();
+      const dagB = b._dofnot_dag || b.day || todayDMYLocal();
+      if (dagA !== dagB) return dagB.localeCompare(dagA, 'da');
+      const klA = (a.klokkeslet || a.obsidbirthtime || "00:00").padStart(5, "0");
+      const klB = (b.klokkeslet || b.obsidbirthtime || "00:00").padStart(5, "0");
+      return klB.localeCompare(klA, 'da');
+    });
+  } else if (frontState.sortMode === "alfabet") {
+    threads.sort((a, b) => (a.art || '').localeCompare(b.art || '', 'da'));
   }
+
+  for (const t of threads) {
+    // <article>
+    const article = el('article', 'card thread-card');
+    article.tabIndex = 0;
+    article.style.cursor = 'pointer';
+    article.onclick = () => {
+      window.location.href = `traad.html?date=${encodeURIComponent(t._dofnot_dag || getDayFromUrl())}&id=${t.thread_id}`;
+    };
+
+    // card-top
+    const cardTop = el('div', 'card-top');
+    const left = el('div', 'left');
+    left.appendChild(el('span', badgeClass(t.last_kategori), String(t.last_kategori || '').toUpperCase()));
+    if (t.region) left.appendChild(regionBadge(t.region));
+    cardTop.appendChild(left);
+
+    const right = el('div', 'right');
+
+    // Kommentar-badge (rød, kun hvis mindst 1 kommentar)
+    let commentCount = t.comment_count || 0;
+    if (commentCount > 0) {
+      right.appendChild(el('span', 'comment-count-badge', `${commentCount} indlæg`));
+    }
+
+    // Event-count badge (eksisterende)
+    const obsCount = Number(t.antal_observationer ?? 0);
+    const obsBadgeClass = obsCount > 1 ? 'badge event-count warn' : 'badge event-count';
+    right.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
+    right.appendChild(regionBadge(fmtAgeFromKlokkeslet(t.klokkeslet, t.day, t.obsidbirthtime)));
+    cardTop.appendChild(right);
+
+    article.appendChild(cardTop);
+
+    // title
+    const title = el('div', 'title');
+    const titleLeft = el('div', 'title-left');
+    const antalArtTekst = (t.antal_individer != null ? t.antal_individer + ' ' : '') + (t.art || '');
+    titleLeft.appendChild(el('span', `art-name ${catClass(t.last_kategori)}`, antalArtTekst));
+    title.appendChild(titleLeft);
+
+    article.appendChild(title);
+
+    // info
+    const info = el('div', 'info');
+    if (t.last_adf) info.appendChild(el('span', '', t.last_adf));
+    if (t.lok) info.appendChild(el('span', '', t.lok));
+    if (t.last_observer) info.appendChild(el('span', '', t.last_observer));
+    article.appendChild(info);
+
+    $cards.appendChild(article);
+  }
+}
   
 
   function setFrontState(key, value) {

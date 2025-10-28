@@ -455,13 +455,47 @@ async def lookup_obserkode(obserkode: str = Query(...)):
 
 @app.get("/api/threads/{day}")
 async def api_threads_index(day: str):
-    """Returner index.json for en given dag."""
+    """
+    Returner index.json for en given dag, inkl. comment_count for hver tråd.
+    Understøtter både array og objekt med "threads".
+    """
     index_path = os.path.join(web_dir, "obs", day, "index.json")
+    threads_dir = os.path.join(web_dir, "obs", day, "threads")
     if not os.path.isfile(index_path):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     with open(index_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    return JSONResponse(data)
+
+    # Hvis data er en liste, brug den direkte
+    if isinstance(data, list):
+        threads = data
+        out = threads
+    # Hvis data er et objekt med "threads", brug det
+    elif isinstance(data, dict) and "threads" in data:
+        threads = data["threads"]
+        out = data
+    else:
+        return JSONResponse({"detail": "Ugyldigt index-format"}, status_code=500)
+
+    # Tilføj comment_count til hver tråd
+    for thread in threads:
+        thread_id = thread.get("thread_id")
+        if not thread_id:
+            thread["comment_count"] = 0
+            continue
+        thread_dir = os.path.join(threads_dir, thread_id)
+        comments_path = os.path.join(thread_dir, "kommentar.json")
+        comment_count = 0
+        if os.path.isfile(comments_path):
+            try:
+                with open(comments_path, "r", encoding="utf-8") as f2:
+                    comments = json.load(f2)
+                comment_count = len(comments)
+            except Exception:
+                comment_count = 0
+        thread["comment_count"] = comment_count
+
+    return JSONResponse(out)
 
 @app.get("/api/thread/{day}/{thread_id}")
 async def api_thread(day: str, thread_id: str):

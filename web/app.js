@@ -209,6 +209,26 @@ function setPrefsTableEnabled(enabled) {
   }
 }
 
+function setUserinfoEnabled(enabled) {
+  // Gør felter og knapper i userinfo-sektionen grå/disabled
+  const fields = [
+    document.getElementById("obserkode"),
+    document.getElementById("navn"),
+    document.getElementById("hent-navn-btn"),
+    document.getElementById("save-userinfo-btn")
+  ];
+  fields.forEach(f => {
+    if (f) {
+      f.disabled = !enabled;
+      if (!enabled) {
+        f.classList.add("disabled");
+      } else {
+        f.classList.remove("disabled");
+      }
+    }
+  });
+}
+
 // Hjælpefunktion til VAPID-nøgle
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -252,24 +272,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   document.getElementById("subscribe-btn").onclick = async () => {
-  await subscribeUser(userid, deviceid);
-  localStorage.setItem("isSubscribed", "1");
-  setPrefsTableEnabled(true);
-};
+    await subscribeUser(userid, deviceid);
+    localStorage.setItem("isSubscribed", "1");
+    setPrefsTableEnabled(true);
+    setUserinfoEnabled(true);
+  };
 
-document.getElementById("unsubscribe-btn").onclick = async () => {
-  await fetch("/api/unsubscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userid, device_id: deviceid })
-  });
-  alert("Du er nu afmeldt!");
-  localStorage.setItem("isSubscribed", "0");
-  setPrefsTableEnabled(false);
-};
+  document.getElementById("unsubscribe-btn").onclick = async () => {
+    await fetch("/api/unsubscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userid, device_id: deviceid })
+    });
+    alert("Du er nu afmeldt!");
+    localStorage.setItem("isSubscribed", "0");
+    setPrefsTableEnabled(false);
+    setUserinfoEnabled(false);
+  };
 
-// Hent evt. tidligere gemte oplysninger
-let userinfo = {};
+  // Hent evt. tidligere gemte oplysninger
+  let userinfo = {};
   try {
     const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
     if (res.ok) {
@@ -308,6 +330,7 @@ document.getElementById("save-userinfo-btn").onclick = async () => {
 
 // Ved load:
 setPrefsTableEnabled(localStorage.getItem("isSubscribed") === "1");
+setUserinfoEnabled(localStorage.getItem("isSubscribed") === "1");
 
   // Hent og vis seneste observation
   const latest = await loadLatest();
