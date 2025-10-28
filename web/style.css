@@ -876,3 +876,43 @@ label[for="show-only-filtered"] {
 .comment-body { margin: 0.2em 0 0.3em 0; }
 .comment-thumbs { font-size: 1.1em; color: #888; }
 #comment-form { margin-top: 1em; }
+
+/* Kommentarsporet og input i cards */
+#comments-section.card {
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.5em;
+}
+#comment-form.card {
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+}
+
+/* Tekstfelt styling */
+#comment-input {
+  width: 98%;
+  min-height: 48px;
+  font-family: inherit;
+  font-size: 1.08em;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-main);
+  resize: vertical;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+#comment-input:focus {
+  border-color: var(--col-accent);
+  outline: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  #comment-input {
+    background: #232b3a;
+    color: #dbe1ea;
+    border-color: #273244;
+  }
+}

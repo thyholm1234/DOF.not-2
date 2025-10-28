@@ -243,12 +243,14 @@
       }
 
       // Efter events vises
-      const commentsDiv = document.createElement('div');
-      commentsDiv.id = "comments-section";
-      commentsDiv.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'>Indlæser...</div>";
-      $events.parentNode.appendChild(commentsDiv);
+      // Kommentarsporet i et card
+      const commentsCard = document.createElement('div');
+      commentsCard.className = "card";
+      commentsCard.id = "comments-section";
+      commentsCard.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'>Indlæser...</div>";
+      $events.parentNode.appendChild(commentsCard);
 
-      // Hent og vis kommentarer
+      // Hent og vis kommentarer (uændret)
       async function loadComments() {
           const res = await fetch(`/api/thread/${day}/${id}/comments`);
           const comments = await res.json();
@@ -281,16 +283,17 @@
       }
       await loadComments();
 
-      // Kommentar input
-      const formDiv = document.createElement('div');
-      formDiv.id = "comment-form";
-      formDiv.innerHTML = `
+      // Kommentar input i separat card
+      const formCard = document.createElement('div');
+      formCard.className = "card";
+      formCard.id = "comment-form";
+      formCard.innerHTML = `
           <textarea id="comment-input" rows="2" style="width:98%" placeholder="Skriv en kommentar..."></textarea>
           <button id="comment-send-btn">Send</button>
       `;
-      commentsDiv.appendChild(formDiv);
+      commentsCard.parentNode.appendChild(formCard);
 
-      // Send kommentar
+      // Send kommentar (uændret)
       document.getElementById('comment-send-btn').onclick = async () => {
           const body = document.getElementById('comment-input').value.trim();
           if (!body) return;
