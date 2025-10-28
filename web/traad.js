@@ -307,9 +307,14 @@
           } catch {}
           if (!navn) navn = "Ukendt";
           await fetch(`/api/thread/${day}/${id}/comments`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ navn, body })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              navn,
+              body,
+              user_id: getOrCreateUserId(),
+              device_id: localStorage.getItem("deviceid")
+            })
           });
           document.getElementById('comment-input').value = "";
           await loadComments();

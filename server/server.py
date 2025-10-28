@@ -487,13 +487,63 @@ async def thumbs_up_comment(day: str, thread_id: str, request: Request):
     for c in comments:
         if c.get("ts") == ts:
             thumbs_users = set(c.get("thumbs_users", []))
-            if user_id in thumbs_users:
+            already_thumbed = user_id in thumbs_users
+            if already_thumbed:
                 thumbs_users.remove(user_id)  # Fjern thumbs up
             else:
                 thumbs_users.add(user_id)     # Tilføj thumbs up
             c["thumbs_users"] = list(thumbs_users)
             c["thumbs"] = len(thumbs_users)
             found = True
+
+            # SEND PUSH HVIS NY THUMBS UP OG IKKE FRA EJEREN SELV
+            if not already_thumbed and user_id != c.get("user_id"):
+                owner_user_id = c.get("user_id")
+                owner_device_id = c.get("device_id")
+                if owner_user_id and owner_device_id:
+                    # TJEK OM EJEREN ABONNERER PÅ TRÅDEN
+                    with sqlite3.connect(DB_PATH) as conn:
+                        sub_row = conn.execute(
+                            "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+                            (day, thread_id, owner_user_id, owner_device_id)
+                        ).fetchone()
+                    if sub_row:
+                        # Find subscription-info
+                        with sqlite3.connect(DB_PATH) as conn:
+                            row = conn.execute(
+                                "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
+                                (owner_user_id, owner_device_id)
+                            ).fetchone()
+                        if row:
+                            sub = json.loads(row[0])
+                            # Find artnavn/loknavn til notifikation
+                            artnavn = thread_id.split('-')[0].capitalize()
+                            loknavn = ""
+                            thread_path = os.path.join(thread_dir, "thread.json")
+                            if os.path.isfile(thread_path):
+                                try:
+                                    with open(thread_path, "r", encoding="utf-8") as f2:
+                                        thread_data = json.load(f2)
+                                    loknavn = thread_data.get("Loknavn", "")
+                                    artnavn = thread_data.get("Artnavn", artnavn)
+                                except Exception:
+                                    pass
+                            payload = {
+                                "title": f"👍 på dit indlæg: {artnavn} {loknavn}",
+                                "body": f"Dit indlæg har fået en thumbs up!",
+                                "url": f"/traad.html?date={day}&id={thread_id}",
+                                "tag": thread_id
+                            }
+                            try:
+                                webpush(
+                                    subscription_info=sub,
+                                    data=json.dumps(payload, ensure_ascii=False),
+                                    vapid_private_key=VAPID_PRIVATE_KEY,
+                                    vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+                                    ttl=3600
+                                )
+                            except Exception as ex:
+                                print(f"Push-fejl til {owner_user_id}/{owner_device_id}: {ex}")
             break
     if not found:
         raise HTTPException(status_code=404, detail="Kommentar ikke fundet")
@@ -512,17 +562,27 @@ async def get_comments(day: str, thread_id: str):
 
 @app.post("/api/thread/{day}/{thread_id}/comments")
 async def post_comment(day: str, thread_id: str, request: Request):
+    import sqlite3
+
     data = await request.json()
     navn = data.get("navn", "Ukendt")
     body = data.get("body", "").strip()
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
     if not body:
         raise HTTPException(status_code=400, detail="Besked må ikke være tom")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     comment = {
         "navn": navn,
         "body": body,
         "ts": ts,
-        "thumbs": 0
+        "thumbs": 0,
+        "thumbs_users": [],
+        "user_id": user_id,
+        "device_id": device_id
     }
     thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
     os.makedirs(thread_dir, exist_ok=True)
@@ -534,7 +594,68 @@ async def post_comment(day: str, thread_id: str, request: Request):
     comments.append(comment)
     with open(comments_path, "w", encoding="utf-8") as f:
         json.dump(comments, f, ensure_ascii=False, indent=2)
+
+    # Tilføj forfatteren som abonnent på tråden (hvis ikke allerede)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
+            (day, thread_id, user_id, device_id)
+        )
+
+    # Find alle abonnenter for tråden (for dagen)
+    with sqlite3.connect(DB_PATH) as conn:
+        subs = conn.execute(
+            "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
+            (day, thread_id)
+        ).fetchall()
+
+    # Find artnavn og loknavn fra thread.json (hvis muligt)
+    artnavn = thread_id.split('-')[0].capitalize()
+    loknavn = ""
+    thread_path = os.path.join(thread_dir, "thread.json")
+    if os.path.isfile(thread_path):
+        try:
+            with open(thread_path, "r", encoding="utf-8") as f:
+                thread_data = json.load(f)
+            loknavn = thread_data.get("Loknavn", "")
+            artnavn = thread_data.get("Artnavn", artnavn)
+        except Exception:
+            pass
+
+    # Send push til alle abonnenter
+    for sub_user_id, sub_device_id in subs:
+        # Spring forfatteren over
+        if sub_user_id == user_id and sub_device_id == device_id:
+            continue
+    # Find subscription-info
+        with sqlite3.connect(DB_PATH) as conn:
+            row = conn.execute(
+                "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
+                (sub_user_id, sub_device_id)
+            ).fetchone()
+        if not row:
+            continue
+        sub = json.loads(row[0])
+        payload = {
+            "title": f"Nyt indlæg på: {artnavn} {loknavn}",
+            "body": f"{navn}: {body}",
+            "url": f"/traad.html?date={day}&id={thread_id}",
+            "tag": thread_id
+        }
+        try:
+            webpush(
+                subscription_info=sub,
+                data=json.dumps(payload, ensure_ascii=False),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+                ttl=3600
+            )
+        except Exception as ex:
+            print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
+
     return {"ok": True}
+
+    
 
 @app.get("/api/prefs/user/species")
 async def get_species_filters(user_id: str):
