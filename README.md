@@ -97,6 +97,12 @@
 
 ---
 
+## Grad af selv-vedligeholdelse
+
+Projektet kan i høj grad anses som selv-vedligeholdende, da det er designet til at køre automatisk uden behov for manuel indgriben i daglig drift. Så længe DOFbasens API forbliver uændret, og de anvendte teknologier fortsat understøttes, vil systemet kunne køre stabilt 24/7 med minimal vedligeholdelse. Kun i tilfælde af større ændringer i omgivelserne, såsom opdateringer af afhængigheder eller serverproblemer, kan der opstå behov for manuel indsats.
+
+---
+
 ## Licens
 
 © Christian Vemmelund Helligsø  
