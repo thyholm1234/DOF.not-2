@@ -15,6 +15,7 @@ from urllib.parse import urljoin, urlparse, parse_qs
 from fastapi import Query, Depends
 import threading
 import time
+from contextlib import asynccontextmanager
 
 
 VAPID_PRIVATE_KEY = "An73heQXWe62IL_wrlyz6N102d_9yH-tZKCohrDNRTY"
@@ -59,6 +60,50 @@ def db_init():
             )
         """)
 db_init()
+
+def cleanup_dirs(base_dir, days=3):
+    now = datetime.datetime.now()
+    for name in os.listdir(base_dir):
+        dir_path = os.path.join(base_dir, name)
+        if not os.path.isdir(dir_path):
+            continue
+        try:
+            dir_date = datetime.datetime.strptime(name, "%d-%m-%Y")
+        except ValueError:
+            continue
+        if (now - dir_date).days >= days:
+            print(f"Sletter: {dir_path}")
+            import shutil
+            shutil.rmtree(dir_path)
+
+def database_maintenance():
+    with sqlite3.connect(DB_PATH) as conn:
+        # Slet KUN thread_subs og thread_unsubs for dage der ikke længere findes i obs
+        for table in ["thread_subs", "thread_unsubs"]:
+            days = conn.execute(f"SELECT DISTINCT day FROM {table}").fetchall()
+            for (day,) in days:
+                obs_dir = os.path.join(web_dir, "obs", day)
+                if not os.path.isdir(obs_dir):
+                    print(f"Sletter {table} for dag {day} (mappe findes ikke)")
+                    conn.execute(f"DELETE FROM {table} WHERE day=?", (day,))
+        conn.commit()    
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    def run_and_repeat():
+        while True:
+            try:
+                cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
+                cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
+                database_maintenance()
+            except Exception as e:
+                print(f"Fejl under oprydning: {e}")
+            time.sleep(3600)
+    t = threading.Thread(target=run_and_repeat, daemon=True)
+    t.start()
+    yield  # Lifespan fortsætter mens app kører
+
+app = FastAPI(lifespan=lifespan)
 
 def get_prefs(user_id):
     with sqlite3.connect(DB_PATH) as conn:
@@ -432,6 +477,14 @@ async def update_data(request: Request):
                         with sqlite3.connect(DB_PATH) as conn:
                             conn.execute(
                                 "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
+                                (user_id, device_id)
+                            )
+                            conn.execute(
+                                "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
+                                (user_id, device_id)
+                            )
+                            conn.execute(
+                                "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
                                 (user_id, device_id)
                             )
                             conn.commit()
@@ -882,51 +935,7 @@ def should_notify(prefs, afdeling, kategori):
         return kat_norm in ("su", "sub", "bemaerk", "bemærk")
     return False
 
-app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
-
-def cleanup_dirs(base_dir, days=3):
-    now = datetime.datetime.now()
-    for name in os.listdir(base_dir):
-        dir_path = os.path.join(base_dir, name)
-        if not os.path.isdir(dir_path):
-            continue
-        try:
-            dir_date = datetime.datetime.strptime(name, "%d-%m-%Y")
-        except ValueError:
-            continue
-        if (now - dir_date).days >= days:
-            print(f"Sletter: {dir_path}")
-            import shutil
-            shutil.rmtree(dir_path)
-
-def periodic_cleanup():
-    while True:
-        try:
-            cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
-            cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
-        except Exception as e:
-            print(f"Fejl under oprydning: {e}")
-        time.sleep(3600)  # 1 time
-
-@app.on_event("startup")
-def start_cleanup_thread():
-    def run_and_repeat():
-        # Kør straks ved opstart
-        try:
-            cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
-            cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
-        except Exception as e:
-            print(f"Fejl under oprydning: {e}")
-        # Derefter hver time
-        while True:
-            time.sleep(3600)
-            try:
-                cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
-                cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
-            except Exception as e:
-                print(f"Fejl under oprydning: {e}")
-    t = threading.Thread(target=run_and_repeat, daemon=True)
-    t.start()
+app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")   
 
 if __name__ == "__main__":
     import uvicorn
