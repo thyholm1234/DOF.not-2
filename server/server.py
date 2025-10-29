@@ -371,44 +371,6 @@ async def api_obs_full(obsid: str = Query(..., min_length=3, description="DOFbas
         "sound_urls": sound_urls
     }
 
-@app.get("/api/obs/images")
-def api_obs_images(
-    obsid: str = Query(..., min_length=3, description="DOFbasen observation id"),
-    url: str | None = Query(None, description="Optional override URL")
-):
-    """
-    Returnér alle fuld-størrelse billed-URL'er som:
-    https://service.dofbasen.dk/media/image/o/<filnavn>.jpg
-    """
-    src = url or f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
-    try:
-        html_page = _fetch_html(src, timeout=10.0)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
-    images = _extract_service_image_urls(html_page)
-    return {"obsid": obsid, "source": src, "count": len(images), "images": images}
-
-@app.get("/api/obs/sound")
-def api_obs_sound(
-    obsid: str = Query(..., min_length=3, description="DOFbasen observation id"),
-    url: str | None = Query(None, description="Optional override URL")
-):
-    src = url or f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
-    try:
-        html_page = _fetch_html(src, timeout=10.0)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
-    matches = re.findall(r"""<a[^>]+href=['"]([^'"]*sound_proxy\.php[^'"]+)['"]""", html_page, re.IGNORECASE)
-    sound_urls = []
-    for href in matches:
-        href = html.unescape(href)  # <-- Denne linje fjerner &amp;
-        if href.startswith("/"):
-            sound_url = "https://dofbasen.dk" + href
-        else:
-            sound_url = href
-        sound_urls.append(sound_url)
-    return {"obsid": obsid, "sound_urls": sound_urls}
-
 @app.get("/api/notifications/enabled")
 async def notifications_enabled(user_id: str, device_id: str):
     """
@@ -528,23 +490,7 @@ async def update_data(request: Request):
                         print(f"Push-fejl til {user_id}/{device_id}: {ex}")
                     return {"ok": True}
                 
-
-@app.get("/api/obs/status")
-async def api_obs_status(obsid: str = Query(..., min_length=3, description="DOFbasen observation id")):
-    """
-    Returnerer status for observationen, fx 'Til behandling', ud fra obsid.
-    """
-    url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
-    try:
-        html_page = _fetch_html(url, timeout=10.0)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
-
-    # Find <acronym class="behandl" title="...">
-    m = re.search(r'<acronym[^>]*class=["\']behandl["\'][^>]*title=["\']([^"\']+)["\']', html_page, re.IGNORECASE)
-    status = m.group(1) if m else ""
-    return {"obsid": obsid, "status": status}                
-
+    
 @app.get("/api/lookup_obserkode")
 async def lookup_obserkode(obserkode: str = Query(...)):
     import requests
