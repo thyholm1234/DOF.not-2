@@ -7,6 +7,18 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <header class="wrap">
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
+    <div class="toolbar">
+      <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
+              onclick="window.location.href='./settings.html'">
+        <span id="settings-icon">⚙️</span>
+      </button>
+      <button id="theme-toggle" aria-label="Skift tema" type="button">
+        <span id="theme-icon">☀️</span>
+      </button>
+    </div>
+  </header>
   <main class="wrap">
     <div class="thread-header card">
       <div id="thread-title" class="thread-title"></div>

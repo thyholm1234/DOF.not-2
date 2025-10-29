@@ -103,14 +103,11 @@ def compute_kategori(row: Dict[str, str]) -> str:
 
 def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     for r in rows:
-        r["kategori"] = compute_kategori(r)
-        obsid = r.get("Obsid", "").strip()
-        art = (r.get("Artnavn") or "").strip()
-        loknr = (r.get("Loknr") or "").strip()
-        tag = f"{slugify(art)}-{loknr}" if art and loknr else ""
-        r["tag"] = tag
-        kat = r["kategori"].upper()
-        obsdate = (r.get("Dato") or "").strip()
+        kat = r.get("kategori", "").lower()
+        obsid = r.get("Obsid", "")
+        art = r.get("Artnavn", "")
+        loknr = r.get("Loknr", "")
+        obsdate = r.get("Dato", "")
         # Formatér dato til DD-MM-YYYY hvis nødvendigt
         if re.match(r"^\d{4}-\d{2}-\d{2}$", obsdate):
             y, m, d = obsdate.split("-")
@@ -119,10 +116,10 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             obsdate_fmt = obsdate
         dofnot2_url = f"https://dofnot2.chfotofilm.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
         dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
-        if kat in ("SU", "SUB"):
+        if kat in ("su", "sub"):
             r["url"] = dofnot2_url
             r["url2"] = dofbasen_url
-        elif kat in ("ALM", "BEMÆRK"):
+        elif kat in ("alm", "bemaerk"):
             r["url"] = dofbasen_url
             if "url2" in r:
                 del r["url2"]
