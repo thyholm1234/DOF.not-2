@@ -1,4 +1,4 @@
-// Version: 1.0.17.1 - 2025-10-29
+// Version: 1.0.18 - 2025-10-29
 (function () {
   function el(tag, cls, text) {
     const x = document.createElement(tag);

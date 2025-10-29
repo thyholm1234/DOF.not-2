@@ -1,4 +1,4 @@
-// Version: 1.0.17.1 - 2025-10-29
+// Version: 1.0.18 - 2025-10-29
 (function () {
   function el(tag, cls, text) {
     const x = document.createElement(tag);
@@ -190,7 +190,7 @@
           // Turnoter badge og tekst (hvis findes)
           if (ev.Turnoter) {
               const noteRow = el('div', 'note-row');
-              const badge = el('span', 'badge', 'Turnoter');
+              const badge = el('span', 'badge', 'Turnote');
               badge.style.marginRight = "8px";
               noteRow.appendChild(badge);
               const noteText = el('span', 'note-text', ev.Turnoter);
@@ -198,13 +198,13 @@
               obsRow.appendChild(noteRow);
           }
 
-          // Obsnoter badge og tekst (hvis findes)
-          if (ev.Obsnoter) {
+          // Fuglnoter badge og tekst (hvis findes)
+          if (ev.Fuglnoter) {
               const noteRow = el('div', 'note-row');
-              const badge = el('span', 'badge', 'Obsnoter');
+              const badge = el('span', 'badge', 'Obsnote');
               badge.style.marginRight = "8px";
               noteRow.appendChild(badge);
-              const noteText = el('span', 'note-text', ev.Obsnoter);
+              const noteText = el('span', 'note-text', ev.Fuglnoter);
               noteRow.appendChild(noteText);
               obsRow.appendChild(noteRow);
           }
