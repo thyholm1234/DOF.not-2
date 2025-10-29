@@ -18,7 +18,7 @@ BASE_URL = (
 )
 
 # Server endpoint der modtager JSON-array af ændrede observationer (hver med alle 38 kolonner + 'kategori')
-SERVER_URL = "http://localhost:8001/api/update"
+SERVER_URL = "http://localhost:8000/api/update"
 STATE_FILE = "/state/state.json"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")  # NYT
 WATCH_STATE_FILE = os.path.join(os.path.dirname(__file__), "state", "watch_state.json")  # NYT: separat state til watcher
@@ -117,10 +117,10 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             obsdate_fmt = f"{d}-{m}-{y}"
         else:
             obsdate_fmt = obsdate
-        dofnot2_url = f"https://dofnot2.chfotofilm.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
+        dofnot_url = f"https://dofnot.chfotofilm.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
         dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
         if kat in ("SU", "SUB"):
-            r["url"] = dofnot2_url
+            r["url"] = dofnot_url
             r["url2"] = dofbasen_url
         elif kat in ("alm", "bemaerk"):
             r["url"] = dofbasen_url
