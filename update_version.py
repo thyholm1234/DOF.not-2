@@ -10,7 +10,6 @@ FILES = [
     "web/advanced.js",
     "web/app.js",
     "web/index.html",
-    "web/manifest.webmanifest",
     "web/opretbruger.html",
     "web/settings.html",
     "web/style.css",
@@ -37,6 +36,10 @@ def version_line(ext):
 
 def update_file(filepath):
     ext = os.path.splitext(filepath)[1]
+    # Spring .manifest filer over
+    if ext == '.manifest':
+        print("Springer over .manifest:", filepath)
+        return
     if not os.path.exists(filepath):
         print("Filen findes ikke:", filepath)
         return
@@ -58,16 +61,26 @@ def update_file(filepath):
             new_content = version_line(ext) + '\n' + content
         def add_version_tag(match):
             url = match.group(1)
+            # Tilføj ikke version til .webmanifest
+            if url.endswith('.webmanifest'):
+                return f'{url}"'
             url = re.sub(r'\?v=[\d\.]+', '', url)
             return f'{url}?v={VERSION}"'
+        # Opdater kun .css og .js links med version, ikke .webmanifest
         new_content = re.sub(
-            r'(href="[^"]+\.(css|webmanifest))(?:\?v=[\d\.]+)?"',
+            r'(href="[^"]+\.(css))(?:\?v=[\d\.]+)?"',
             add_version_tag,
             new_content
         )
         new_content = re.sub(
             r'(src="[^"]+\.js)(?:\?v=[\d\.]+)?"',
             add_version_tag,
+            new_content
+        )
+        # Fjern evt. version fra .webmanifest links
+        new_content = re.sub(
+            r'(href="[^"]+\.webmanifest)(?:\?v=[\d\.]+)?"',
+            r'\1"',
             new_content
         )
     elif ext == '.css':
@@ -82,6 +95,8 @@ def update_file(filepath):
             flags=re.MULTILINE
         )
         new_content = version_line(ext) + '\n' + new_content
+    # Fjern evt. kontroltegn (fx \x0f)
+    new_content = new_content.replace('\x0f', '')
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
     print('Opdateret:', filepath)
