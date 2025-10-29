@@ -1,4 +1,4 @@
-// Version: 3.3.1.7 - 2025-10-29 21.18.05
+// Version: 3.3.2 - 2025-10-29 22.12.46
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -263,6 +263,7 @@ $meta.innerHTML = "";
                             audio.style.verticalAlign = "middle";
                             audio.style.maxWidth = "220px";
                             audio.src = url + (url.includes('?') ? '&raw=1' : '?raw=1');
+                            audio.addEventListener('click', e => e.stopPropagation());
                             soundRow.appendChild(audio);
                             obsRow.appendChild(soundRow);
                         });
