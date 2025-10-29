@@ -491,6 +491,23 @@ async def update_data(request: Request):
                     else:
                         print(f"Push-fejl til {user_id}/{device_id}: {ex}")
                     return {"ok": True}
+                
+
+@app.get("/api/obs/status")
+async def api_obs_status(obsid: str = Query(..., min_length=3, description="DOFbasen observation id")):
+    """
+    Returnerer status for observationen, fx 'Til behandling', ud fra obsid.
+    """
+    url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+    try:
+        html_page = _fetch_html(url, timeout=10.0)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
+
+    # Find <acronym class="behandl" title="...">
+    m = re.search(r'<acronym[^>]*class=["\']behandl["\'][^>]*title=["\']([^"\']+)["\']', html_page, re.IGNORECASE)
+    status = m.group(1) if m else ""
+    return {"obsid": obsid, "status": status}                
 
 @app.get("/api/lookup_obserkode")
 async def lookup_obserkode(obserkode: str = Query(...)):

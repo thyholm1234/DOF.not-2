@@ -1,4 +1,4 @@
-// Version: 3.3.3 - 2025-10-29 22.27.24
+// Version: 3.3.4 - 2025-10-29 22.37.48
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -132,6 +132,8 @@ $meta.innerHTML = "";
           return;
       }
 
+      
+
       // Sorter events efter tidspunkt (Obstidfra > Turtidfra > obsidbirthtime)
       events.sort((a, b) => {
           function getTime(ev) {
@@ -196,6 +198,32 @@ $meta.innerHTML = "";
 
           // Vandret streg under body
           obsRow.appendChild(el('hr', 'obs-hr'));
+
+          // --- DKU-status badge på eventet ---
+          if (ev.Obsid) {
+            try {
+              // Bemærk: fetch er asynkront, så vi bruger en IIFE for at kunne bruge await
+              (async () => {
+                const statusRes = await fetch(`/api/obs/status?obsid=${encodeURIComponent(ev.Obsid)}`);
+                if (statusRes.ok) {
+                  const statusData = await statusRes.json();
+                  if (statusData.status && statusData.status.trim()) {
+                    const dkuRow = el('div', 'note-row');
+                    const badge = el('span', 'badge', 'DKU');
+                    badge.style.marginRight = "8px";
+                    badge.style.background = "rgba(0, 162, 255, 1)";
+                    badge.style.color = "#fff";
+                    badge.style.fontWeight = "bold";
+                    dkuRow.appendChild(badge);
+                    const statusSpan = el('span', 'dku-status-text', statusData.status);
+                    dkuRow.appendChild(statusSpan);
+                    obsRow.appendChild(dkuRow);
+                  }
+                }
+              })();
+            } catch {}
+          }
+          // --- DKU-status badge slut ---
 
           // Turnoter badge og tekst (hvis findes)
           if (ev.Turnoter) {
