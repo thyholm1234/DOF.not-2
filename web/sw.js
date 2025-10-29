@@ -1,6 +1,6 @@
-// Version: 1.1.4 - 2025-10-29 19.16.39
+// Version: 3.3.1.2 - 2025-10-29 20.07.23
 // © Christian Vemmelund Helligsø
-const CACHE_NAME = 'dofnot-v3.1';
+const CACHE_NAME = 'dofnot-v3.3.1.2';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -21,7 +21,14 @@ self.addEventListener('install', (event) => {
 
 // Activate: cleanup old caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(key => key.startsWith('dofnot-v') && key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
+  );
 });
 
 // Fetch: network-first for API, cache-first for static

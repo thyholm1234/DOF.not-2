@@ -42,6 +42,13 @@ def update_file(filepath):
         return
     with open(filepath, encoding='utf-8') as f:
         content = f.read()
+    # Opdater CACHE_NAME i sw.js med hele versionsnummeret
+    if os.path.basename(filepath) == "sw.js":
+        content = re.sub(
+            r"(const CACHE_NAME\s*=\s*')[^']*(';)",
+            rf"\1dofnot-v{VERSION}\2",
+            content
+        )
     if ext == '.webmanifest':
         content = re.sub(r'^(<!-- Version:.*?-->\s*|// Version:.*?\n)+', '', content, flags=re.MULTILINE)
         new_content = version_line(ext) + '\n' + content.lstrip()

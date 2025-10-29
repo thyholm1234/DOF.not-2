@@ -1,4 +1,4 @@
-// Version: 1.1.4 - 2025-10-29 19.16.39
+// Version: 3.3.1.2 - 2025-10-29 20.07.23
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -278,6 +278,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     localStorage.setItem("isSubscribed", "1");
     setPrefsTableEnabled(true);
     setUserinfoEnabled(true);
+    // Når abonnementet er gennemført:
+    location.reload();
   };
 
   document.getElementById("unsubscribe-btn").onclick = async () => {
