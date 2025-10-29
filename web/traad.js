@@ -155,7 +155,6 @@ $meta.innerHTML = "";
           // Titelrække: Antal + Artnavn i samme felt (samlet <span>), klokkeslet-badge (højre)
           const titleRow = el('div', 'card-top');
           const left = el('div', 'left');
-          // Antal og artnavn i ét samlet felt, fx "1 Korsnæb"
           left.innerHTML = `
               <span class="art-name cat-${(ev.kategori || '').toLowerCase()}">
                 ${(ev.Antal ? ev.Antal + ' ' : '')}${ev.Artnavn || ''}
@@ -174,7 +173,6 @@ $meta.innerHTML = "";
             }
           }
           if (pinBadge) {
-            // Indsæt badge som HTML
             right.innerHTML = pinBadge;
             const badgeLink = right.querySelector('.badge-pin');
             if (badgeLink) {
@@ -191,7 +189,7 @@ $meta.innerHTML = "";
           titleRow.appendChild(right);
           obsRow.appendChild(titleRow);
 
-          // Info-række: Adfærd, Fornavn + Efternavn
+          // --- Hent DKU-status, billeder og
           const infoRow = el('div', 'info');
           infoRow.textContent = `${ev.Adfbeskrivelse || ''} • ${ev.Fornavn || ''} ${ev.Efternavn || ''}`;
           obsRow.appendChild(infoRow);
@@ -199,15 +197,16 @@ $meta.innerHTML = "";
           // Vandret streg under body
           obsRow.appendChild(el('hr', 'obs-hr'));
 
-          // --- DKU-status badge på eventet ---
+          // --- Hent DKU-status, billeder og lyd i ét kald ---
           if (ev.Obsid) {
-            try {
-              // Bemærk: fetch er asynkront, så vi bruger en IIFE for at kunne bruge await
-              (async () => {
-                const statusRes = await fetch(`/api/obs/status?obsid=${encodeURIComponent(ev.Obsid)}`);
-                if (statusRes.ok) {
-                  const statusData = await statusRes.json();
-                  if (statusData.status && statusData.status.trim()) {
+            (async () => {
+              try {
+                const res = await fetch(`/api/obs/full?obsid=${encodeURIComponent(ev.Obsid)}`);
+                if (res.ok) {
+                  const data = await res.json();
+
+                  // DKU-status badge
+                  if (data.status && data.status.trim()) {
                     const dkuRow = el('div', 'note-row');
                     const badge = el('span', 'badge', 'DKU');
                     badge.style.marginRight = "8px";
@@ -215,15 +214,64 @@ $meta.innerHTML = "";
                     badge.style.color = "#fff";
                     badge.style.fontWeight = "bold";
                     dkuRow.appendChild(badge);
-                    const statusSpan = el('span', 'dku-status-text', statusData.status);
+                    const statusSpan = el('span', 'dku-status-text', data.status);
                     dkuRow.appendChild(statusSpan);
-                    obsRow.appendChild(dkuRow);
+                    // Find første turnote-row, ellers indsæt sidst
+                    const firstTurnote = Array.from(obsRow.children).find(
+                      c => c.classList && c.classList.contains('note-row') && c.textContent.startsWith('Turnote')
+                    );
+                    if (firstTurnote) {
+                      obsRow.insertBefore(dkuRow, firstTurnote);
+                    } else {
+                      obsRow.appendChild(dkuRow);
+                    }
+                  }
+
+                  // Billeder
+                  if (data.images && data.images.length) {
+                    data.images.forEach((url, idx) => {
+                      const imgRow = el('div', 'img-row');
+                      const badge = el('span', 'badge', `Pic#${idx + 1}`);
+                      badge.style.marginRight = "8px";
+                      imgRow.appendChild(badge);
+                      const imgLink = document.createElement('a');
+                      imgLink.href = url;
+                      imgLink.target = "_blank";
+                      imgLink.rel = "noopener";
+                      const img = document.createElement('img');
+                      img.src = url;
+                      img.alt = "Observation billede";
+                      img.style.maxWidth = "120px";
+                      img.style.maxHeight = "90px";
+                      imgLink.appendChild(img);
+                      imgLink.addEventListener('click', e => e.stopPropagation());
+                      imgRow.appendChild(imgLink);
+                      obsRow.appendChild(imgRow);
+                    });
+                  }
+
+                  // Lydfiler
+                  if (data.sound_urls && data.sound_urls.length) {
+                    data.sound_urls.forEach((url, idx) => {
+                      const soundRow = el('div', 'sound-row');
+                      const badge = el('span', 'badge', `Rec#${idx + 1}`);
+                      badge.style.marginRight = "8px";
+                      soundRow.appendChild(badge);
+                      const audio = document.createElement('audio');
+                      audio.controls = true;
+                      audio.style.verticalAlign = "middle";
+                      audio.style.maxWidth = "220px";
+                      audio.src = url + (url.includes('?') ? '&raw=1' : '?raw=1');
+                      audio.addEventListener('click', e => e.stopPropagation());
+                      soundRow.appendChild(audio);
+                      obsRow.appendChild(soundRow);
+                    });
                   }
                 }
-              })();
-            } catch {}
+              } catch {}
+            })();
           }
-          // --- DKU-status badge slut ---
+          // --- DKU-status, billeder og lyd slut ---
 
           // Turnoter badge og tekst (hvis findes)
           if (ev.Turnoter) {
@@ -245,59 +293,6 @@ $meta.innerHTML = "";
               const noteText = el('span', 'note-text', ev.Fuglnoter);
               noteRow.appendChild(noteText);
               obsRow.appendChild(noteRow);
-          }
-
-                // Billeder: Hver får egen række med badge
-          if (ev.Obsid) {
-              fetch(`/api/obs/images?obsid=${encodeURIComponent(ev.Obsid)}`)
-                  .then(r => r.json())
-                  .then(data => {
-                      if (data.images && data.images.length) {
-                          data.images.forEach((url, idx) => {
-                              const imgRow = el('div', 'img-row');
-                              const badge = el('span', 'badge', `Pic#${idx + 1}`);
-                              badge.style.marginRight = "8px";
-                              imgRow.appendChild(badge);
-                              const imgLink = document.createElement('a');
-                              imgLink.href = url;
-                              imgLink.target = "_blank";
-                              imgLink.rel = "noopener";
-                              const img = document.createElement('img');
-                              img.src = url;
-                              img.alt = "Observation billede";
-                              img.style.maxWidth = "120px";
-                              img.style.maxHeight = "90px";
-                              imgLink.appendChild(img);
-                              imgLink.addEventListener('click', e => e.stopPropagation());
-                              imgRow.appendChild(imgLink);
-                              obsRow.appendChild(imgRow);
-                          });
-                      }
-                  })
-                  .catch(() => { /* ignorer fejl */ });
-
-              // Lydfiler: Hver får egen række med badge (under billeder)
-              fetch(`/api/obs/sound?obsid=${encodeURIComponent(ev.Obsid)}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.sound_urls && data.sound_urls.length) {
-                        data.sound_urls.forEach((url, idx) => {
-                            const soundRow = el('div', 'sound-row');
-                            const badge = el('span', 'badge', `Rec#${idx + 1}`);
-                            badge.style.marginRight = "8px";
-                            soundRow.appendChild(badge);
-                            const audio = document.createElement('audio');
-                            audio.controls = true;
-                            audio.style.verticalAlign = "middle";
-                            audio.style.maxWidth = "220px";
-                            audio.src = url + (url.includes('?') ? '&raw=1' : '?raw=1');
-                            audio.addEventListener('click', e => e.stopPropagation());
-                            soundRow.appendChild(audio);
-                            obsRow.appendChild(soundRow);
-                        });
-                    }
-                })
-                .catch(() => { /* ignorer fejl */ });
           }
 
           // Klik: Åbn url hvis findes

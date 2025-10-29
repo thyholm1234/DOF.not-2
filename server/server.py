@@ -335,6 +335,42 @@ def _extract_service_image_urls(html_text: str) -> list[str]:
         out.append(svc)
     return out
 
+@app.get("/api/obs/full")
+async def api_obs_full(obsid: str = Query(..., min_length=3, description="DOFbasen observation id")):
+    """
+    Returnerer DKU-status, billeder og lydklip for observationen.
+    """
+    url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+    try:
+        html_page = _fetch_html(url, timeout=10.0)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Kunne ikke hente kilde: {e}")
+
+    # DKU-status
+    m = re.search(r'<acronym[^>]*class=["\']behandl["\'][^>]*title=["\']([^"\']+)["\']', html_page, re.IGNORECASE)
+    status = m.group(1) if m else ""
+
+    # Billeder
+    images = _extract_service_image_urls(html_page)
+
+    # Lydklip
+    matches = re.findall(r"""<a[^>]+href=['"]([^'"]*sound_proxy\.php[^'"]+)['"]""", html_page, re.IGNORECASE)
+    sound_urls = []
+    for href in matches:
+        href = html.unescape(href)
+        if href.startswith("/"):
+            sound_url = "https://dofbasen.dk" + href
+        else:
+            sound_url = href
+        sound_urls.append(sound_url)
+
+    return {
+        "obsid": obsid,
+        "status": status,
+        "images": images,
+        "sound_urls": sound_urls
+    }
+
 @app.get("/api/obs/images")
 def api_obs_images(
     obsid: str = Query(..., min_length=3, description="DOFbasen observation id"),
