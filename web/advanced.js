@@ -1,4 +1,4 @@
-// Version: 1.1.3 - 2025-10-29 19.07.09
+// Version: 1.1.4 - 2025-10-29 19.16.39
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -135,6 +135,15 @@ document.getElementById('arts-search').addEventListener('input', e => {
 });
 
 document.getElementById('reset-filters').addEventListener('click', () => {
+  // Sikkerhedsregnestykke
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  const svar = prompt(`Bekræft nulstilling: Hvad er ${a} + ${b}?`);
+  if (svar === null) return; // Annulleret
+  if (parseInt(svar, 10) !== a + b) {
+    alert('Forkert svar. Nulstilling annulleret.');
+    return;
+  }
   userFilters = { include: [], exclude: [], counts: {} };
   renderArtsTable();
   saveUserFilters();

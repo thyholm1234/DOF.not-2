@@ -83,8 +83,3 @@ if __name__ == '__main__':
     for file in FILES:
         update_file(os.path.join(os.path.dirname(__file__), file))
     print('Færdig!')
-
-if __name__ == '__main__':
-    for file in FILES:
-        update_file(os.path.join(os.path.dirname(__file__), file))
-    print('Færdig!')
