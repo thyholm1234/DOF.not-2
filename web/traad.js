@@ -1,4 +1,4 @@
-// Version: 3.3.4.1 - 2025-10-29 22.46.47
+// Version: 3.3.4.2 - 2025-10-29 22.47.59
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -216,12 +216,13 @@ $meta.innerHTML = "";
                     dkuRow.appendChild(badge);
                     const statusSpan = el('span', 'dku-status-text', data.status);
                     dkuRow.appendChild(statusSpan);
-                    // Find første turnote-row, ellers indsæt sidst
-                    const firstTurnote = Array.from(obsRow.children).find(
-                      c => c.classList && c.classList.contains('note-row') && c.textContent.startsWith('Turnote')
+                    // Find første turnote- eller obsnote-row, ellers indsæt sidst
+                    const firstNote = Array.from(obsRow.children).find(
+                      c => c.classList && c.classList.contains('note-row') &&
+                        (c.textContent.startsWith('Turnote') || c.textContent.startsWith('Obsnote'))
                     );
-                    if (firstTurnote) {
-                      obsRow.insertBefore(dkuRow, firstTurnote);
+                    if (firstNote) {
+                      obsRow.insertBefore(dkuRow, firstNote);
                     } else {
                       obsRow.appendChild(dkuRow);
                     }
