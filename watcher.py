@@ -109,7 +109,7 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
         loknr = (r.get("Loknr") or "").strip()
         tag = f"{slugify(art)}-{loknr}" if art and loknr else ""
         r["tag"] = tag
-        kat = r["kategori"].upper()
+        kat = r["kategori"]  # <-- behold små bogstaver!
         obsdate = (r.get("Dato") or "").strip()
         # Formatér dato til DD-MM-YYYY hvis nødvendigt
         if re.match(r"^\d{4}-\d{2}-\d{2}$", obsdate):
@@ -122,7 +122,7 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
         if kat in ("SU", "SUB"):
             r["url"] = dofnot2_url
             r["url2"] = dofbasen_url
-        elif kat in ("alm", "bemærk"):
+        elif kat in ("alm", "bemaerk"):
             r["url"] = dofbasen_url
             if "url2" in r:
                 del r["url2"]

@@ -1,3 +1,4 @@
+// Version: 1.0.7 - 2025-10-29
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
   const text = await res.text();

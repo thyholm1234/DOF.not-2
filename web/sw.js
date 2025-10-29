@@ -1,3 +1,4 @@
+// Version: 1.0.7 - 2025-10-29
 const CACHE_NAME = 'dofnot-v3.1';
 const CORE_ASSETS = [
   '/',

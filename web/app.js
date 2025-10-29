@@ -1,3 +1,4 @@
+// Version: 1.0.7 - 2025-10-29
 const afdelinger = [
   "DOF København",
   "DOF Nordsjælland",

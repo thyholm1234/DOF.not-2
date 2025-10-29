@@ -1,3 +1,4 @@
+/* Version: 1.0.7 - 2025-10-29 */
 /* ===== Theme-variabler (fra style2.css) ===== */
 :root,
 :root[data-theme="light"] {
@@ -201,6 +202,15 @@ a:hover {
   margin-bottom: 4px;
   font-size: 1em;
 }
+
+.thread-card .lok,
+.info .lok {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 100%;
+}
+
 .thread-card .age {
   color: var(--text-muted);
   font-size: 0.95em;
@@ -1046,3 +1056,4 @@ label[for="show-only-filtered"] {
   margin-right: 6px;
   display: inline-block;
 }
+
