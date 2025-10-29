@@ -1,4 +1,4 @@
-// Version: 3.3.2 - 2025-10-29 22.12.46
+// Version: 3.3.3 - 2025-10-29 22.27.24
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -162,32 +162,31 @@ async function subscribeUser(userid, deviceid) {
     const reg = await ensureServiceWorker();
 
     const permission = await Notification.requestPermission();
-    console.log('Notification permission:', permission);
     if (permission !== 'granted') {
       alert('Du skal tillade notifikationer for at abonnere.');
-      return;
+      return false;
     }
 
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
     });
-    console.log('Push subscription:', sub);
 
-    // Send subscription til serveren
     await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user_id: userid,
         device_id: deviceid,
-        subscription: sub.toJSON() // <-- brug altid toJSON!
+        subscription: sub.toJSON()
       })
     });
     alert('Du er nu abonneret!');
+    return true;
   } catch (err) {
     console.error('subscribeUser fejl:', err);
     alert('Kunne ikke abonnere: se konsol.');
+    return false;
   }
 }
 
@@ -274,12 +273,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   document.getElementById("subscribe-btn").onclick = async () => {
-    await subscribeUser(userid, deviceid);
-    localStorage.setItem("isSubscribed", "1");
-    setPrefsTableEnabled(true);
-    setUserinfoEnabled(true);
-    // Når abonnementet er gennemført:
-    location.reload();
+    const ok = await subscribeUser(userid, deviceid);
+    if (ok) {
+      localStorage.setItem("isSubscribed", "1");
+      setPrefsTableEnabled(true);
+      setUserinfoEnabled(true);
+      location.reload();
+    }
   };
 
   document.getElementById("unsubscribe-btn").onclick = async () => {
