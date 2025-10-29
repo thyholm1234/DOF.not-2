@@ -1,4 +1,4 @@
-/* Version: 1.1.2 - 2025-10-29 14.21.27 */
+/* Version: 1.1.2.1 - 2025-10-29 14.25.08 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1157,5 +1157,21 @@ label[for="show-only-filtered"] {
   #thread-sub-btn {
     align-self: flex-end;
     margin: 0.5em 0 0 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .card .info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  .card .info > span {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 }
