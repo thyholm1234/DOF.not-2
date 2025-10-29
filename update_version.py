@@ -3,7 +3,7 @@
 import os
 import sys
 import re
-from datetime import date
+from datetime import datetime
 
 FILES = [
     "web/advanced.js",
@@ -20,17 +20,19 @@ FILES = [
 ]
 
 VERSION = sys.argv[1] if len(sys.argv) > 1 else '1.0.0'
-DATE = date.today().isoformat()
+now = datetime.now()
+DATE = now.strftime('%Y-%m-%d %H.%M.%S')
 
 def version_line(ext):
+    copyright_line = "© Christian Vemmelund Helligsø"
     if ext == '.html':
-        return f'<!-- Version: {VERSION} - {DATE} -->'
+        return f'<!-- Version: {VERSION} - {DATE} -->\n<!-- {copyright_line} -->'
     elif ext == '.webmanifest' or ext == '.json':
-        return f'// Version: {VERSION} - {DATE}'
+        return f'// Version: {VERSION} - {DATE}\n// {copyright_line}'
     elif ext == '.css':
-        return f'/* Version: {VERSION} - {DATE} */'
+        return f'/* Version: {VERSION} - {DATE} */\n/* {copyright_line} */'
     else:
-        return f'// Version: {VERSION} - {DATE}'
+        return f'// Version: {VERSION} - {DATE}\n// {copyright_line}'
 
 def update_file(filepath):
     ext = os.path.splitext(filepath)[1]
@@ -40,39 +42,33 @@ def update_file(filepath):
     with open(filepath, encoding='utf-8') as f:
         content = f.read()
     if ext == '.webmanifest':
-        # Fjern ALLE version-linjer i toppen, både <!-- ... --> og // ...
         content = re.sub(r'^(<!-- Version:.*?-->\s*|// Version:.*?\n)+', '', content, flags=re.MULTILINE)
-        new_content = content.lstrip()  # Ingen version-linje tilføjes!
+        new_content = version_line(ext) + '\n' + content.lstrip()
     elif ext == '.html':
-        new_content, n = re.subn(r'^<!-- Version:.*?-->\s*', version_line(ext) + '\n', content, count=1, flags=re.MULTILINE)
+        new_content, n = re.subn(r'^<!-- Version:.*?-->\s*(<!--.*?-->\s*)?', version_line(ext) + '\n', content, count=1, flags=re.MULTILINE)
         if n == 0:
             new_content = version_line(ext) + '\n' + content
-        # Tilføj eller opdater version-tags på .css, .js, .webmanifest
         def add_version_tag(match):
             url = match.group(1)
-            # Fjern evt. eksisterende ?v=...
             url = re.sub(r'\?v=[\d\.]+', '', url)
             return f'{url}?v={VERSION}"'
-        # <link rel="stylesheet" href="style.css">
         new_content = re.sub(
             r'(href="[^"]+\.(css|webmanifest))(?:\?v=[\d\.]+)?"',
             add_version_tag,
             new_content
         )
-        # <script src="app.js"></script>
         new_content = re.sub(
             r'(src="[^"]+\.js)(?:\?v=[\d\.]+)?"',
             add_version_tag,
             new_content
         )
     elif ext == '.css':
-        new_content, n = re.subn(r'^/\* Version:.*?\*/\s*', version_line(ext) + '\n', content, count=1, flags=re.MULTILINE)
+        new_content, n = re.subn(r'^/\* Version:.*?\*/\s*(/\*.*?\*/\s*)?', version_line(ext) + '\n', content, count=1, flags=re.MULTILINE)
         if n == 0:
             new_content = version_line(ext) + '\n' + content
     else:
-        # Fjern alle version-linjer og gamle version-numre i toppen
         new_content = re.sub(
-            r'^(// Version:.*?(\r?\n))+((\d+\.\d+\.\d+ - \d{4}-\d{2}-\d{2}\r?\n)*)',
+            r'^(// Version:.*?(\r?\n))+((//.*?(\r?\n))*)',
             '',
             content,
             flags=re.MULTILINE
@@ -81,6 +77,11 @@ def update_file(filepath):
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
     print('Opdateret:', filepath)
+
+if __name__ == '__main__':
+    for file in FILES:
+        update_file(os.path.join(os.path.dirname(__file__), file))
+    print('Færdig!')
 
 if __name__ == '__main__':
     for file in FILES:

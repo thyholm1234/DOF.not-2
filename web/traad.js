@@ -1,4 +1,5 @@
-// Version: 1.0.18 - 2025-10-29
+// Version: 1.1.1 - 2025-10-29 14.20.58
+// © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
     const x = document.createElement(tag);
@@ -69,33 +70,40 @@
 
       // Vis tråd-header som h2: Antal + Artnavn // Lok
       const thread = data.thread || {};
-      const antal = thread.antal_individer != null ? thread.antal_individer : '';
+      // const antal = thread.antal_individer != null ? thread.antal_individer : '';
       const art = thread.art || '';
       const lok = thread.lok || '';
-      const dato = thread.last_ts_obs ? thread.last_ts_obs.split('T')[0] : '';
-      document.title = `${antal} ${art} // ${lok} // ${dato}`;
+      // const dato = thread.last_ts_obs ? thread.last_ts_obs.split('T')[0] : '';
+      document.title = `${art} - ${lok}`;
       $title.innerHTML = "";
-      const h2 = el('h2', '', `${antal} ${art} // ${lok} // ${dato}`);
-      $title.appendChild(h2);
-      $meta.innerHTML = "";
+const titleRow = document.createElement('div');
+titleRow.className = "thread-title-row";
 
-      // Abonner-knap (🔔)
-      const userid = getOrCreateUserId();
-      const deviceid = localStorage.getItem("deviceid");
-      let isSubscribed = false;
-      try {
-        const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          isSubscribed = !!subData.subscribed;
-        }
-      } catch {}
-      const subBtn = document.createElement('button');
-      subBtn.id = "thread-sub-btn";
-      subBtn.textContent = "🔔 Abonner";
-      subBtn.className = "twostate";
-      if (isSubscribed) subBtn.classList.add("is-on");
-      $meta.appendChild(subBtn);
+// Titel
+const h2 = el('h2', '', `${art} - ${lok}`);
+h2.id = "thread-title";
+titleRow.appendChild(h2);
+
+// Abonner-knap (🔔)
+const userid = getOrCreateUserId();
+const deviceid = localStorage.getItem("deviceid");
+let isSubscribed = false;
+try {
+  const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+  if (subRes.ok) {
+    const subData = await subRes.json();
+    isSubscribed = !!subData.subscribed;
+  }
+} catch {}
+const subBtn = document.createElement('button');
+subBtn.id = "thread-sub-btn";
+subBtn.textContent = "🔔 Abonner";
+subBtn.className = "twostate";
+if (isSubscribed) subBtn.classList.add("is-on");
+titleRow.appendChild(subBtn);
+
+$title.appendChild(titleRow);
+$meta.innerHTML = "";
 
       subBtn.onclick = async () => {
         const userid = getOrCreateUserId();
@@ -142,12 +150,14 @@
           // Ydre container for én observation (række)
           const obsRow = el('div', 'obs-row');
 
-          // Titelrække: Antal + Artnavn (venstre), klokkeslet-badge (højre)
+          // Titelrække: Antal + Artnavn i samme felt (samlet <span>), klokkeslet-badge (højre)
           const titleRow = el('div', 'card-top');
           const left = el('div', 'left');
+          // Antal og artnavn i ét samlet felt, fx "1 Korsnæb"
           left.innerHTML = `
-              <span class="count ${catClass(ev.kategori).replace('badge ', '')}">${ev.Antal || ''}</span>
-              <span class="art-name ${catClass(ev.kategori).replace('badge ', '')}">${ev.Artnavn || ''}</span>
+              <span class="art-name cat-${(ev.kategori || '').toLowerCase()}">
+                ${(ev.Antal ? ev.Antal + ' ' : '')}${ev.Artnavn || ''}
+              </span>
           `;
           const right = el('div', 'right');
 
@@ -281,7 +291,7 @@
         <div class="comment-input-row">
           <textarea id="comment-input" rows="2" style="width:98%" placeholder="Skriv en kommentar..."></textarea>
           <div class="send-btn-row">
-            <button id="comment-send-btn">Send</button>
+            <button id="comment-send-btn" class="comment-send-btn">Send</button>
           </div>
         </div>
       `;
@@ -382,6 +392,15 @@
         document.getElementById('comment-input').value = "";
         await loadComments();
       };
+
+      // Automatisk højdeforøgelse af kommentar-input (textarea)
+      const commentInput = document.getElementById('comment-input');
+      if (commentInput) {
+        commentInput.addEventListener('input', function () {
+          this.style.height = 'auto';
+          this.style.height = (this.scrollHeight) + 'px';
+        });
+      }
   }
 
   document.addEventListener('DOMContentLoaded', loadThread);

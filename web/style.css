@@ -1,5 +1,5 @@
-/* Version: 1.0.18 - 2025-10-29 */
-/* ===== Theme-variabler (fra style2.css) ===== */
+/* Version: 1.1.1 - 2025-10-29 14.20.58 */
+/* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
   --bg-page: #ffffff;
@@ -903,18 +903,6 @@ label[for="show-only-filtered"] {
   flex-wrap: wrap;
 }
 
-.title-left {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.title-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .card, .thread-card {
   width: 100%;
   box-sizing: border-box;
@@ -1057,11 +1045,19 @@ label[for="show-only-filtered"] {
   display: flex;
   flex-direction: column;
   gap: 0.5em;
+  align-items: flex-end; /* Højrejustér indholdet */
+  width: 100%;
 }
+
+#comment-input {
+  width: 100% !important; /* Fylder hele rækken */
+  box-sizing: border-box;
+}
+
 .send-btn-row {
+  width: 100%;
   display: flex;
   justify-content: flex-end;
-  width: 100%;
 }
 
 .card.disabled,
@@ -1123,3 +1119,43 @@ label[for="show-only-filtered"] {
   vertical-align: middle;   /* Lidt ekstra hjælp til centrering */
 }
 
+#comment-input {
+  overflow-y: hidden;
+  resize: none;
+  width:98%;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+.comment-send-btn {
+  font-size: 1.4em;
+}
+
+.thread-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+  width: 100%;
+}
+
+#thread-title {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+#thread-sub-btn {
+  margin-left: auto;
+}
+
+/* Mobil: knap under titel, men højrejusteret */
+@media (max-width: 600px) {
+  .thread-title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #thread-sub-btn {
+    align-self: flex-end;
+    margin: 0.5em 0 0 0;
+  }
+}
