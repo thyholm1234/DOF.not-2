@@ -4,3 +4,5 @@ __pycache__/
 state/state.json
 state/watch_state.json
 server/users.db
+.env
+

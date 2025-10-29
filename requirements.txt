@@ -4,4 +4,5 @@ pywebpush
 requests
 python-multipart
 pandas
+python-dotenv
 # For watcher.py (csv, json, glob, os, re, time, collections, typing, datetime) er standardbiblioteket

@@ -16,10 +16,12 @@ from fastapi import Query, Depends
 import threading
 import time
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
+load_dotenv()
 
-VAPID_PRIVATE_KEY = "An73heQXWe62IL_wrlyz6N102d_9yH-tZKCohrDNRTY"
-VAPID_PUBLIC_KEY = "BHU3aBbXkYu7_KGJtKMEWCPU43gF1b6L0DKGVv-n_5-iybitwM5dodQdR2GkIec8OOWcJlwCEMSMzpfRX_RBUkA"
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
 
 app = FastAPI()
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
