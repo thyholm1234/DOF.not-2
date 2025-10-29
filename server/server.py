@@ -415,22 +415,24 @@ async def update_data(request: Request):
                         ttl=3600
                     )
                 except WebPushException as ex:
-                    if ex.response and ex.response.status_code == 410:
-                        print(f"Sletter abonnement for {user_id}/{device_id} pga. 410 Gone")
+                    should_delete = False
+                    # Slet hvis statuskode 410
+                    if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
+                        should_delete = True
+                    # Slet hvis fejltekst indeholder "unsubscribed" eller "expired"
+                    elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
+                        should_delete = True
+                    if should_delete:
+                        print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
                         with sqlite3.connect(DB_PATH) as conn:
                             conn.execute(
                                 "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
                                 (user_id, device_id)
                             )
-                            # Hvis du også vil slette brugerens præferencer for denne device, kan du gøre det her:
-                            # conn.execute(
-                            #     "DELETE FROM user_prefs WHERE user_id=?",
-                            #     (user_id,)
-                            # )
                             conn.commit()
                     else:
                         print(f"Push-fejl til {user_id}/{device_id}: {ex}")
-    return {"ok": True}
+                    return {"ok": True}
 
 @app.get("/api/lookup_obserkode")
 async def lookup_obserkode(obserkode: str = Query(...)):
