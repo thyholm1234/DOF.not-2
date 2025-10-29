@@ -13,6 +13,8 @@ import html
 import urllib.request
 from urllib.parse import urljoin, urlparse, parse_qs
 from fastapi import Query, Depends
+import threading
+import time
 
 
 VAPID_PRIVATE_KEY = "An73heQXWe62IL_wrlyz6N102d_9yH-tZKCohrDNRTY"
@@ -172,12 +174,15 @@ def _ts() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def _save_payload(payload) -> str:
-    os.makedirs(payload_dir, exist_ok=True)
+    # Opret dato-mappe i format DD-MM-YYYY
+    today = datetime.datetime.now().strftime("%d-%m-%Y")
+    datedir = os.path.join(payload_dir, today)
+    os.makedirs(datedir, exist_ok=True)
     fname = f"payload_{_ts()}.json"
-    fpath = os.path.join(payload_dir, fname)
+    fpath = os.path.join(datedir, fname)
     with open(fpath, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False)
-    # Skriv/overskriv "latest.json" for nem hentning
+    # Skriv/overskriv "latest.json" for nem hentning (stadig i payload_dir)
     with open(latest_symlink_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False)
     return fpath
@@ -878,6 +883,50 @@ def should_notify(prefs, afdeling, kategori):
     return False
 
 app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
+
+def cleanup_dirs(base_dir, days=3):
+    now = datetime.datetime.now()
+    for name in os.listdir(base_dir):
+        dir_path = os.path.join(base_dir, name)
+        if not os.path.isdir(dir_path):
+            continue
+        try:
+            dir_date = datetime.datetime.strptime(name, "%d-%m-%Y")
+        except ValueError:
+            continue
+        if (now - dir_date).days >= days:
+            print(f"Sletter: {dir_path}")
+            import shutil
+            shutil.rmtree(dir_path)
+
+def periodic_cleanup():
+    while True:
+        try:
+            cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
+            cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
+        except Exception as e:
+            print(f"Fejl under oprydning: {e}")
+        time.sleep(3600)  # 1 time
+
+@app.on_event("startup")
+def start_cleanup_thread():
+    def run_and_repeat():
+        # Kør straks ved opstart
+        try:
+            cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
+            cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
+        except Exception as e:
+            print(f"Fejl under oprydning: {e}")
+        # Derefter hver time
+        while True:
+            time.sleep(3600)
+            try:
+                cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
+                cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
+            except Exception as e:
+                print(f"Fejl under oprydning: {e}")
+    t = threading.Thread(target=run_and_repeat, daemon=True)
+    t.start()
 
 if __name__ == "__main__":
     import uvicorn
