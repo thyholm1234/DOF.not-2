@@ -100,6 +100,12 @@ VAPID_PUBLIC_KEY=
 
 `.env`-filen må **ikke** deles offentligt eller pushes til git.
 
+Du kan generere VAPID-nøgler ved at køre:
+
+```sh
+python -m pywebpush generate_vapid_key
+```
+
 ## Udviklernoter
 
 - **Push-notifikationer** kræver HTTPS i produktion.
