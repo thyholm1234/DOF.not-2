@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 
 FILES = [
+    "web/advanced.html",
     "web/advanced.js",
     "web/app.js",
     "web/index.html",

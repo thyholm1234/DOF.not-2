@@ -1,4 +1,4 @@
-// Version: 1.1.2.1 - 2025-10-29 14.25.08
+// Version: 1.1.2.2 - 2025-10-29 18.12.41
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -44,9 +44,13 @@ let searchTerm = '';
 let showOnlyFiltered = false;
 let filtersChanged = false;
 
+function catClass(kat) {
+  return `art-name cat-${String(kat||'').toLowerCase()}`;
+}
+
 function renderArtsTable() {
-  const table = document.getElementById('arts-table');
-  table.innerHTML = '';
+  const cards = document.getElementById('arts-cards');
+  cards.innerHTML = '';
   let filtered = allArter.filter(a =>
     (!searchTerm || a.artsnavn.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (!showOnlyFiltered ||
@@ -57,43 +61,56 @@ function renderArtsTable() {
     const artKey = art.artsnavn.toLowerCase();
     const isExcluded = userFilters.exclude.includes(artKey);
     const minCount = userFilters.counts[artKey] || '';
-    const row = document.createElement('tr');
+    const card = document.createElement('div');
+    card.className = 'card';
+    const row = document.createElement('div');
+    row.className = 'arts-card-row';
     row.innerHTML = `
-    <td>${art.artsnavn}</td>
-    <td>
-        <input type="checkbox" ${isExcluded ? 'checked' : ''} data-art="${artKey}" class="exclude-chk">
-    </td>
-    <td>
-        <input type="text" inputmode="numeric" pattern="[0-9]*" value="${minCount}" ${isExcluded ? 'disabled' : ''} data-art="${artKey}" class="gte-input sp-cnt-val">
-    </td>
+      <span class="art-col ${catClass(art.klassifikation)}">${art.artsnavn}</span>
+      <div class="actions-row">
+        <span class="min-col">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" value="${minCount}" ${isExcluded ? 'disabled' : ''} data-art="${artKey}" class="gte-input sp-cnt-val">
+        </span>
+        <span class="excl-col">
+          <button type="button" class="twostate excl${isExcluded ? ' is-on' : ''}" data-art="${artKey}">
+            ${isExcluded ? 'Eksl.' : 'Inkl.'}
+          </button>
+        </span>
+      </div>
     `;
-    table.appendChild(row);
+    card.appendChild(row);
+    cards.appendChild(card);
   }
 }
 
-document.getElementById('arts-search').addEventListener('input', e => {
-  searchTerm = e.target.value;
+// Toggle filtrerede-knap
+const showFilteredBtn = document.getElementById('show-only-filtered');
+showFilteredBtn.addEventListener('click', () => {
+  showOnlyFiltered = !showOnlyFiltered;
+  showFilteredBtn.classList.toggle('is-on', showOnlyFiltered);
   renderArtsTable();
 });
 
-document.getElementById('show-only-filtered').addEventListener('change', e => {
-  showOnlyFiltered = e.target.checked;
-  renderArtsTable();
-});
-
-document.getElementById('arts-table').addEventListener('input', e => {
-  const art = e.target.dataset.art;
-  if (e.target.classList.contains('exclude-chk')) {
-    if (e.target.checked) {
-      if (!userFilters.exclude.includes(art)) userFilters.exclude.push(art);
-      delete userFilters.counts[art];
-    } else {
+// Ekskluder/Inkluder-knap
+document.getElementById('arts-cards').addEventListener('click', e => {
+  if (e.target.classList.contains('twostate') && e.target.classList.contains('excl')) {
+    const art = e.target.dataset.art;
+    const isExcluded = userFilters.exclude.includes(art);
+    if (isExcluded) {
       userFilters.exclude = userFilters.exclude.filter(a => a !== art);
+    } else {
+      userFilters.exclude.push(art);
+      delete userFilters.counts[art];
     }
     filtersChanged = true;
-    renderArtsTable(); // behold denne for checkbox
+    renderArtsTable();
   }
+});
+
+// Min. antal input
+document.getElementById('arts-cards').addEventListener('input', e => {
   if (e.target.classList.contains('gte-input')) {
+    const art = e.target.dataset.art;
     const val = parseInt(e.target.value, 10);
     if (val >= 1) {
       userFilters.counts[art] = val;
@@ -102,8 +119,19 @@ document.getElementById('arts-table').addEventListener('input', e => {
       delete userFilters.counts[art];
     }
     filtersChanged = true;
-    // renderArtsTable();  // fjern denne linje!
+    // Fjern renderArtsTable() her!
   }
+});
+// Hvis du vil opdatere visningen, gør det på blur:
+document.getElementById('arts-cards').addEventListener('blur', e => {
+  if (e.target.classList.contains('gte-input')) {
+    renderArtsTable();
+  }
+}, true);
+
+document.getElementById('arts-search').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  renderArtsTable();
 });
 
 document.getElementById('reset-filters').addEventListener('click', () => {

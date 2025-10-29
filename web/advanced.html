@@ -1,4 +1,5 @@
-<!-- Version: 1.0.0 - 2025-10-29 -->
+<!-- Version: 1.1.2.1 - 2025-10-29 14.28.05 -->
+<!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
 <head>
@@ -8,7 +9,7 @@
   <meta name="theme-color" content="#0b3d91" />
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="/manifest.webmanifest?v=1.1.2.1">
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
@@ -16,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?v=1.1.2.1">
 </head>
 <header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
@@ -30,27 +31,25 @@
   </div>
   </header>
   <body>
-    <main class="wrap" style="max-width: 700px;">
+    <main class="wrap">
       <h2>Avanceret artsfiltrering</h2>
-      <div style="margin-bottom: 12px;">
-        <input id="arts-search" placeholder="Søg art..." type="text">
-        <label for="show-only-filtered"><input type="checkbox" id="show-only-filtered"> Vis kun filtrerede</label>
-        <button id="reset-filters">Nulstil</button>
-        <button id="export-filters">Eksportér</button>
-        <input type="file" id="import-filters" style="display:none;">
-        <button onclick="document.getElementById('import-filters').click()">Importér</button>
-        <button id="save-filters">Gem</button>
+      <div class="card" style="margin-bottom: 16px;">
+        <div class="filter-row">
+          <input id="arts-search" placeholder="Søg art..." type="text">
+          <button id="show-only-filtered" type="button">Vis filter</button>
+          <button id="reset-filters">Nulstil</button>
+          <button id="export-filters">Eksportér</button>
+          <input type="file" id="import-filters" style="display:none;">
+          <button onclick="document.getElementById('import-filters').click()">Importér</button>
+          <button id="save-filters">Gem</button>
+          </div>
       </div>
       <div class="prefs-table-wrapper">
-        <table class="prefs-table">
-          <thead>
-            <tr><th>Art</th><th>Ekskluder</th><th>Min. antal</th></tr>
-          </thead>
-          <tbody id="arts-table"></tbody>
-        </table>
+        
+        <div id="arts-cards"></div>
       </div>
     </main>
-    <script src="advanced.js"></script>
-    <script src="app.js"></script>
+    <script src="advanced.js?v=1.1.2.1"></script>
+    <script src="app.js?v=1.1.2.1"></script>
   </body>
 </html>
