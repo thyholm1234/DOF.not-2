@@ -89,6 +89,17 @@
 
 ---
 
+## Miljøvariabler (.env)
+
+Du skal oprette en fil med navnet `.env` i projektets rodmappe. Denne fil skal indeholde dine VAPID-nøgler:
+
+```
+VAPID_PRIVATE_KEY=
+VAPID_PUBLIC_KEY=
+```
+
+`.env`-filen må **ikke** deles offentligt eller pushes til git.
+
 ## Udviklernoter
 
 - **Push-notifikationer** kræver HTTPS i produktion.
