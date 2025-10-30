@@ -447,7 +447,6 @@ async def update_data(request: Request):
             afd = obs.get("DOF_afdeling")
             kat = obs.get("kategori")
             if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
-                # ... send push ...
                 title = f"{obs.get('Antal','?')} {obs.get('Artnavn','')}, {obs.get('Loknavn','')}"
                 body = f"{obs.get('Adfbeskrivelse','')}, {obs.get('Fornavn','')} {obs.get('Efternavn','')}"
                 push_payload = {
@@ -466,10 +465,8 @@ async def update_data(request: Request):
                     )
                 except WebPushException as ex:
                     should_delete = False
-                    # Slet hvis statuskode 410
                     if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
                         should_delete = True
-                    # Slet hvis fejltekst indeholder "unsubscribed" eller "expired"
                     elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
                         should_delete = True
                     if should_delete:
@@ -490,7 +487,7 @@ async def update_data(request: Request):
                             conn.commit()
                     else:
                         print(f"Push-fejl til {user_id}/{device_id}: {ex}")
-                    return {"ok": True}
+    return {"ok": True}
                 
     
 @app.get("/api/lookup_obserkode")
