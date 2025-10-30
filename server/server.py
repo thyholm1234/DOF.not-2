@@ -17,6 +17,7 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
@@ -106,6 +107,40 @@ async def lifespan(app: FastAPI):
     yield  # Lifespan fortsætter mens app kører
 
 app = FastAPI(lifespan=lifespan)
+
+def send_push(sub, push_payload, user_id, device_id):
+    try:
+        webpush(
+            subscription_info=sub,
+            data=json.dumps(push_payload),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+            ttl=3600
+        )
+    except WebPushException as ex:
+        should_delete = False
+        if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
+            should_delete = True
+        elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
+            should_delete = True
+        if should_delete:
+            print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.execute(
+                    "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
+                    (user_id, device_id)
+                )
+                conn.execute(
+                    "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
+                    (user_id, device_id)
+                )
+                conn.execute(
+                    "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
+                    (user_id, device_id)
+                )
+                conn.commit()
+        else:
+            print(f"Push-fejl til {user_id}/{device_id}: {ex}")
 
 def get_prefs(user_id):
     with sqlite3.connect(DB_PATH) as conn:
@@ -431,65 +466,98 @@ async def get_subscription(day: str, thread_id: str, user_id: str, device_id: st
 
 @app.post("/api/update")
 async def update_data(request: Request):
-    payload = await request.json()  # Liste af observationer
+    payload = await request.json()
     _save_payload(payload)
-    # Hent alle brugere med prefs og subscription
-    with sqlite3.connect(DB_PATH) as conn:
-        rows = conn.execute(
-            "SELECT user_prefs.user_id, subscriptions.device_id, user_prefs.prefs, subscriptions.subscription "
-            "FROM user_prefs JOIN subscriptions ON user_prefs.user_id = subscriptions.user_id"
-        ).fetchall()
-    for user_id, device_id, prefs_json, sub_json in rows:
-        prefs = json.loads(prefs_json)
-        sub = json.loads(sub_json)
-        species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
+    tasks = []
+
+    def push_task(sub, push_payload, user_id, device_id):
+        try:
+            webpush(
+                subscription_info=sub,
+                data=json.dumps(push_payload),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+                ttl=3600
+            )
+        except WebPushException as ex:
+            should_delete = False
+            if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
+                should_delete = True
+            elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
+                should_delete = True
+            if should_delete:
+                print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
+                with sqlite3.connect(DB_PATH) as conn2:
+                    conn2.execute(
+                        "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    )
+                    conn2.execute(
+                        "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    )
+                    conn2.execute(
+                        "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    )
+                    conn2.commit()
+            else:
+                print(f"Push-fejl til {user_id}/{device_id}: {ex}")
+
+    with ThreadPoolExecutor(max_workers=8) as executor, sqlite3.connect(DB_PATH) as conn:
         for obs in payload:
             afd = obs.get("DOF_afdeling")
             kat = obs.get("kategori")
-            if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
-                title = f"{obs.get('Antal','?')} {obs.get('Artnavn','')}, {obs.get('Loknavn','')}"
-                body = f"{obs.get('Adfbeskrivelse','')}, {obs.get('Fornavn','')} {obs.get('Efternavn','')}"
-                push_payload = {
-                    "title": title,
-                    "body": body,
-                    "url": obs.get("url", "https://dofbasen.dk"),
-                    "tag": obs.get("tag") or ""
-                }
-                try:
-                    webpush(
-                        subscription_info=sub,
-                        data=json.dumps(push_payload),
-                        vapid_private_key=VAPID_PRIVATE_KEY,
-                        vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-                        ttl=3600
+            statechanged = int(obs.get("statechanged", 0))
+            thread_id = obs.get("tag")  # eller brug obs.get("thread_id") hvis det findes
+            day = datetime.datetime.strptime(obs.get("Dato"), "%Y-%m-%d").strftime("%d-%m-%Y")
+            title = f"{obs.get('Antal','?')} {obs.get('Artnavn','')}, {obs.get('Loknavn','')}"
+            body = f"{obs.get('Adfbeskrivelse','')}, {obs.get('Fornavn','')} {obs.get('Efternavn','')}"
+            push_payload = {
+                "title": title,
+                "body": body,
+                "url": obs.get("url", "https://dofbasen.dk"),
+                "tag": obs.get("tag") or ""
+            }
+
+            if statechanged == 1:
+                # Send til alle med prefs
+                rows = conn.execute(
+                    "SELECT user_prefs.user_id, subscriptions.device_id, user_prefs.prefs, subscriptions.subscription "
+                    "FROM user_prefs JOIN subscriptions ON user_prefs.user_id = subscriptions.user_id"
+                ).fetchall()
+                for user_id, device_id, prefs_json, sub_json in rows:
+                    prefs = json.loads(prefs_json)
+                    sub = json.loads(sub_json)
+                    species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
+                    if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
+                        tasks.append(
+                            executor.submit(push_task, sub, push_payload, user_id, device_id)
+                        )
+            else:
+                # Send kun til thread-subscribers
+                if not thread_id:
+                    continue
+                rows = conn.execute(
+                    "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
+                    (day, thread_id)
+                ).fetchall()
+                for user_id, device_id in rows:
+                    sub_row = conn.execute(
+                        "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    ).fetchone()
+                    if not sub_row:
+                        continue
+                    sub = json.loads(sub_row[0])
+                    tasks.append(
+                        executor.submit(push_task, sub, push_payload, user_id, device_id)
                     )
-                except WebPushException as ex:
-                    should_delete = False
-                    if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
-                        should_delete = True
-                    elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
-                        should_delete = True
-                    if should_delete:
-                        print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
-                        with sqlite3.connect(DB_PATH) as conn:
-                            conn.execute(
-                                "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
-                                (user_id, device_id)
-                            )
-                            conn.execute(
-                                "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
-                                (user_id, device_id)
-                            )
-                            conn.execute(
-                                "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
-                                (user_id, device_id)
-                            )
-                            conn.commit()
-                    else:
-                        print(f"Push-fejl til {user_id}/{device_id}: {ex}")
+        for t in tasks:
+            t.result()
     return {"ok": True}
                 
-    
+   
 @app.get("/api/lookup_obserkode")
 async def lookup_obserkode(obserkode: str = Query(...)):
     import requests
