@@ -115,7 +115,8 @@ def send_push(sub, push_payload, user_id, device_id):
             data=json.dumps(push_payload),
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-            ttl=3600
+            ttl=3600,
+            headers={"Urgency": "high"}  # <-- Tilføj urgency high
         )
     except WebPushException as ex:
         should_delete = False
@@ -477,7 +478,8 @@ async def update_data(request: Request):
                 data=json.dumps(push_payload),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-                ttl=3600
+                ttl=3600,
+                headers={"Urgency": "high"}  # <-- Tilføj urgency high
             )
         except WebPushException as ex:
             should_delete = False
@@ -735,7 +737,8 @@ async def thumbs_up_comment(day: str, thread_id: str, request: Request):
                                     data=json.dumps(payload, ensure_ascii=False),
                                     vapid_private_key=VAPID_PRIVATE_KEY,
                                     vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-                                    ttl=3600
+                                    ttl=3600,
+                                    headers={"Urgency": "high"}  # <-- Tilføj urgency high
                                 )
                             except Exception as ex:
                                 print(f"Push-fejl til {owner_user_id}/{owner_device_id}: {ex}")
@@ -885,7 +888,8 @@ async def post_comment(day: str, thread_id: str, request: Request):
                 data=json.dumps(payload, ensure_ascii=False),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-                ttl=3600
+                ttl=3600,
+                headers={"Urgency": "high"}  # <-- Tilføj urgency high
             )
         except Exception as ex:
             print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
@@ -978,7 +982,8 @@ async def debug_push(request: Request):
                 "sub": "mailto:cvh.privat@gmail.com",
                 "publicKey": VAPID_PUBLIC_KEY  # valgfrit, men ikke som separat argument
             },
-            ttl=3600  # 1 time
+            ttl=3600,  # 1 time
+            headers={"Urgency": "high"}  # <-- Tilføj urgency high
         )
     except Exception as ex:
         return JSONResponse({"error": f"webpush-fejl: {ex}"}, status_code=500)
