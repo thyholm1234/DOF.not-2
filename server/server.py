@@ -743,19 +743,20 @@ async def thumbs_up_comment(day: str, thread_id: str, request: Request):
                         if row:
                             sub = json.loads(row[0])
                             # Find artnavn/loknavn til notifikation
-                            artnavn = thread_id.split('-')[0].capitalize()
-                            loknavn = ""
                             thread_path = os.path.join(thread_dir, "thread.json")
+                            artnavn = ""
+                            loknavn = ""
                             if os.path.isfile(thread_path):
                                 try:
-                                    with open(thread_path, "r", encoding="utf-8") as f2:
-                                        thread_data = json.load(f2)
-                                    loknavn = thread_data.get("Loknavn", "")
-                                    artnavn = thread_data.get("Artnavn", artnavn)
+                                    with open(thread_path, "r", encoding="utf-8") as f:
+                                        thread_data = json.load(f)
+                                    thread_info = thread_data.get("thread", {})
+                                    artnavn = thread_info.get("art", "")
+                                    loknavn = thread_info.get("lok", "")
                                 except Exception:
                                     pass
                             payload = {
-                                "title": f"👍 på dit indlæg: {artnavn} {loknavn}",
+                                "title": f"👍 på dit indlæg: {artnavn} - {loknavn}",
                                 "body": f"Dit indlæg har fået en thumbs up!",
                                 "url": f"/traad.html?date={day}&id={thread_id}",
                                 "tag": f"{thread_id}-thumbsup-{ts.replace(' ', '_').replace(':', '-')}"
@@ -879,15 +880,16 @@ async def post_comment(day: str, thread_id: str, request: Request):
         ).fetchall()
 
     # Find artnavn og loknavn fra thread.json (hvis muligt)
-    artnavn = thread_id.split('-')[0].capitalize()
-    loknavn = ""
     thread_path = os.path.join(thread_dir, "thread.json")
+    artnavn = ""
+    loknavn = ""
     if os.path.isfile(thread_path):
         try:
             with open(thread_path, "r", encoding="utf-8") as f:
                 thread_data = json.load(f)
-            loknavn = thread_data.get("Loknavn", "")
-            artnavn = thread_data.get("Artnavn", artnavn)
+            thread_info = thread_data.get("thread", {})
+            artnavn = thread_info.get("art", "")
+            loknavn = thread_info.get("lok", "")
         except Exception:
             pass
 
@@ -906,7 +908,7 @@ async def post_comment(day: str, thread_id: str, request: Request):
             continue
         sub = json.loads(row[0])
         payload = {
-            "title": f"Nyt indlæg på: {artnavn} {loknavn}",
+            "title": f"Nyt indlæg på: {artnavn} - {loknavn}",
             "body": f"{navn}: {body}",
             "url": f"/traad.html?date={day}&id={thread_id}",
             "tag": f"{thread_id}-comment-{ts.replace(' ', '_').replace(':', '-')}"
@@ -1063,6 +1065,7 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
     await websocket.accept()
     key = ws_key(day, thread_id)
     ws_connections.setdefault(key, []).append(websocket)
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)  # <-- Tilføj denne linje
     try:
         while True:
             data = await websocket.receive_text()
@@ -1105,15 +1108,16 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                         "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
                         (day, thread_id)
                     ).fetchall()
-                artnavn = thread_id.split('-')[0].capitalize()
+                thread_path = os.path.join(thread_dir, "thread.json")
+                artnavn = ""
                 loknavn = ""
-                thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
                 if os.path.isfile(thread_path):
                     try:
                         with open(thread_path, "r", encoding="utf-8") as f:
                             thread_data = json.load(f)
-                        loknavn = thread_data.get("Loknavn", "")
-                        artnavn = thread_data.get("Artnavn", artnavn)
+                        thread_info = thread_data.get("thread", {})
+                        artnavn = thread_info.get("art", "")
+                        loknavn = thread_info.get("lok", "")
                     except Exception:
                         pass
                 for sub_user_id, sub_device_id in subs:
@@ -1128,7 +1132,7 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                         continue
                     sub = json.loads(row[0])
                     payload = {
-                        "title": f"Nyt indlæg på: {artnavn} {loknavn}",
+                        "title": f"Nyt indlæg på: {artnavn} - {loknavn}",
                         "body": f"{navn}: {body}",
                         "url": f"/traad.html?date={day}&id={thread_id}",
                         "tag": f"{thread_id}-comment-{ts.replace(' ', '_').replace(':', '-')}"
@@ -1191,19 +1195,20 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                                         ).fetchone()
                                     if row:
                                         sub = json.loads(row[0])
-                                        artnavn = thread_id.split('-')[0].capitalize()
+                                        thread_path = os.path.join(thread_dir, "thread.json")
+                                        artnavn = ""
                                         loknavn = ""
-                                        thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
                                         if os.path.isfile(thread_path):
                                             try:
-                                                with open(thread_path, "r", encoding="utf-8") as f2:
-                                                    thread_data = json.load(f2)
-                                                loknavn = thread_data.get("Loknavn", "")
-                                                artnavn = thread_data.get("Artnavn", artnavn)
+                                                with open(thread_path, "r", encoding="utf-8") as f:
+                                                    thread_data = json.load(f)
+                                                thread_info = thread_data.get("thread", {})
+                                                artnavn = thread_info.get("art", "")
+                                                loknavn = thread_info.get("lok", "")
                                             except Exception:
                                                 pass
                                         payload = {
-                                            "title": f"👍 på dit indlæg: {artnavn} {loknavn}",
+                                            "title": f"👍 på dit indlæg: {artnavn} - {loknavn}",
                                             "body": f"Dit indlæg har fået en thumbs up!",
                                             "url": f"/traad.html?date={day}&id={thread_id}",
                                             "tag": f"{thread_id}-thumbsup-{ts.replace(' ', '_').replace(':', '-')}"
