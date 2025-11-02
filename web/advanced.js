@@ -1,4 +1,4 @@
-// Version: 4.0.7.5 - 2025-11-02 22.07.12
+// Version: 4.1.1 - 2025-11-02 22.39.55
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -22,7 +22,7 @@ function updateAdvancedFilterBtn() {
   const btn = document.getElementById('toggle-advanced-filter');
   if (!btn) return;
   btn.classList.toggle('is-on', useAdvancedFilter);
-  btn.textContent = 'Avanceret filtrering: ' + (useAdvancedFilter ? 'Til' : 'Fra');
+  btn.textContent = 'Filtrér forside-feed: ' + (useAdvancedFilter ? 'Til' : 'Fra');
 }
 
 document.getElementById('toggle-advanced-filter').addEventListener('click', () => {

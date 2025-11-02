@@ -66,7 +66,7 @@
    Start serveren:
    ```sh
    cd server
-   uvicorn server:app --reload --host 0.0.0.0 --port 8000 --log-level info --access-log
+   uvicorn server:app --reload --host 0.0.0.0 --port 8000 --log-level info --access-log --workers 4
    ```
 
 3. **Observation-watcher:**  
