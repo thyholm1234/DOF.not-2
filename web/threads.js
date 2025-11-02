@@ -1,4 +1,4 @@
-// Version: 4.0.5 - 2025-11-02 21.07.48
+// Version: 4.0.5.2 - 2025-11-02 21.14.18
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -289,6 +289,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
+    // Hvis siden reloades (ikke back/forward), fjern scroll-position
+    if (performance.navigation.type === 1) { // 1 = Reload
+      sessionStorage.removeItem('threadsScroll');
+    }
     const brand = document.querySelector('.brand');
     if (brand) {
       brand.addEventListener('click', () => {

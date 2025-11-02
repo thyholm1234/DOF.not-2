@@ -1,4 +1,4 @@
-// Version: 4.0.5 - 2025-11-02 21.07.48
+// Version: 4.0.5.2 - 2025-11-02 21.14.18
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -381,6 +381,15 @@ $meta.innerHTML = "";
       // Automatisk højdeforøgelse af kommentar-input (textarea)
       const commentInput = document.getElementById('comment-input');
       if (commentInput) {
+        commentInput.addEventListener('keydown', function(e) {
+          if (
+            (e.ctrlKey && e.key === 'Enter') || // Ctrl+Enter (Windows/Linux)
+            (e.metaKey && e.key === 'Enter')    // Cmd+Enter (Mac)
+          ) {
+            document.getElementById('comment-send-btn').click();
+            e.preventDefault();
+          }
+        });
         commentInput.addEventListener('input', function () {
           this.style.height = 'auto';
           this.style.height = (this.scrollHeight) + 'px';
