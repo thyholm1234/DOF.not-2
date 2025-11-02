@@ -1,4 +1,4 @@
-// Version: 4.0.4.3 - 2025-11-02 20.47.52
+// Version: 4.0.5 - 2025-11-02 21.07.48
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -387,6 +387,7 @@ $meta.innerHTML = "";
         });
       }
   }
+
 
   // --- WEBSOCKET CHAT/THUMBSUP ---
   let ws;

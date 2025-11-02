@@ -1,4 +1,4 @@
-// Version: 4.0.4.3 - 2025-11-02 20.47.52
+// Version: 4.0.5 - 2025-11-02 21.07.48
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -134,6 +134,7 @@
     article.tabIndex = 0;
     article.style.cursor = 'pointer';
     article.onclick = () => {
+      sessionStorage.setItem('threadsScroll', window.scrollY);
       window.location.href = `traad.html?date=${encodeURIComponent(t._dofnot_dag || getDayFromUrl())}&id=${t.thread_id}`;
     };
 
@@ -274,6 +275,13 @@
       allThreads = threads;
       $cards.innerHTML = ''; // <-- Tøm først nu!
       renderThreads();
+
+      // Genskab scroll-position hvis den findes (efter render)
+      const scroll = sessionStorage.getItem('threadsScroll');
+      if (scroll) {
+        window.scrollTo(0, parseInt(scroll, 10));
+        sessionStorage.removeItem('threadsScroll');
+      }
     } catch (e) {
       if ($status) $status.textContent = 'Fejl ved hentning af tråde.';
       return;
@@ -281,14 +289,26 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    loadFrontState(); // <-- tilføj denne linje
-    // Hent brugerpræferencer
+    const brand = document.querySelector('.brand');
+    if (brand) {
+      brand.addEventListener('click', () => {
+        sessionStorage.removeItem('threadsScroll');
+      });
+    }
+    loadFrontState();
     try {
       const res = await fetch('/api/prefs?user_id=' + encodeURIComponent(localStorage.getItem('userid')));
       if (res.ok) userPrefs = await res.json();
     } catch (e) {}
-
     updateFrontControls();
     await loadThreads();
   });
 })();
+
+// Udenfor din IIFE, fx allernederst i threads.js:
+// window.addEventListener('pageshow', function(event) {
+//  if (sessionStorage.getItem('forceReloadOnBack')) {
+//    sessionStorage.removeItem('forceReloadOnBack');
+//    window.location.reload(true);
+//  }
+//});
