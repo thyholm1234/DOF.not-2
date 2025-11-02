@@ -1,4 +1,4 @@
-// Version: 4.0.5.2 - 2025-11-02 21.14.18
+// Version: 4.0.6 - 2025-11-02 21.27.46
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -64,25 +64,57 @@
     dayMode: "today", // "today" eller "yesterday"
     prioritizeComments: false // <-- NYT: tilføj denne linje
   };
+  let speciesFilters = null; // globalt i filen
+
+  async function fetchSpeciesFilters(userId) {
+    const res = await fetch(`/api/prefs/user/species?user_id=${encodeURIComponent(userId)}`);
+    if (res.ok) {
+      return await res.json();
+    }
+    return { include: [], exclude: [], counts: {} };
+  }
 
   function shouldShowThread(t) {
-    // Filtrér efter brugerpræferencer hvis valgt
+    // Eksisterende kategori/lokalafdeling-filtrering
     if (frontState.usePrefs && userPrefs && t.region && userPrefs[t.region]) {
       const kat = userPrefs[t.region];
       if (kat === "Ingen") return false;
       if (kat === "SU" && t.last_kategori !== "SU") return false;
       if (kat === "SUB" && !["SU", "SUB"].includes(t.last_kategori)) return false;
       if (kat === "Bemærk") {
-        // Vis altid SU og SUB og Bemærk
         if (!["SU", "SUB", "Bemærk", "bemaerk"].includes((t.last_kategori||"").toUpperCase())) return false;
       }
     }
     // Kun SU hvis valgt
     if (frontState.onlySU && t.last_kategori !== "SU") return false;
-    // Skjul 0-obs hvis valgt (både antal_observationer og antal_individer)
+    // Skjul 0-obs hvis valgt
     const antalObs = Number(t.antal_observationer) || 0;
     const antalInd = Number(t.antal_individer) || 0;
     if (!frontState.includeZero && (antalObs < 1 || antalInd < 1)) return false;
+
+    // --- NYT: Artsfiltrering ---
+    if (frontState.usePrefs && speciesFilters) {
+      const artnavn = (t.art || '').toLowerCase().trim();
+      // Ekskluderede arter
+      if (speciesFilters.exclude && speciesFilters.exclude.map(a => a.toLowerCase()).includes(artnavn)) {
+        return false;
+      }
+      // Minimumsantal (tjek nøgler case-insensitive)
+      if (speciesFilters.counts) {
+        // Normaliser både nøgler og opslag
+        const normArt = (t.art || '').toLowerCase().trim();
+        let minCount = undefined;
+        for (const [key, val] of Object.entries(speciesFilters.counts)) {
+          if (key.toLowerCase().trim() === normArt) {
+            minCount = Number(val);
+            break;
+          }
+        }
+        if (minCount !== undefined && antalInd < minCount) return false;
+      }
+    }
+    // --- SLUT ARTSFILTRERING ---
+
     return true;
   }
 
@@ -304,6 +336,11 @@
       const res = await fetch('/api/prefs?user_id=' + encodeURIComponent(localStorage.getItem('userid')));
       if (res.ok) userPrefs = await res.json();
     } catch (e) {}
+    // Hent artsfiltre hvis brugerfiltrering er valgt
+    speciesFilters = null;
+    if (frontState.usePrefs && localStorage.getItem('userid')) {
+      speciesFilters = await fetchSpeciesFilters(localStorage.getItem('userid'));
+    }
     updateFrontControls();
     await loadThreads();
   });
