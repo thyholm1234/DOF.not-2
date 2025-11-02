@@ -1071,13 +1071,14 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
             except Exception:
                 continue
 
-            # Send alle kommentarer
+            # Tilføj denne blok:
             if msg.get("type") == "get_comments":
                 comments = get_comments_for_thread(day, thread_id)
                 await websocket.send_json({"type": "comments", "comments": comments})
+                continue
 
             # Ny kommentar
-            elif msg.get("type") == "new_comment":
+            if msg.get("type") == "new_comment":
                 navn = msg.get("navn", "Ukendt")
                 body = (msg.get("body") or "").strip()
                 user_id = msg.get("user_id")
@@ -1097,7 +1098,55 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                 comments = get_comments_for_thread(day, thread_id)
                 comments.append(comment)
                 save_comments_for_thread(day, thread_id, comments)
-                # Broadcast til alle
+
+                # --- SEND PUSH TIL ALLE ABONNENTER (undtagen forfatteren) ---
+                with sqlite3.connect(DB_PATH) as conn:
+                    subs = conn.execute(
+                        "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
+                        (day, thread_id)
+                    ).fetchall()
+                artnavn = thread_id.split('-')[0].capitalize()
+                loknavn = ""
+                thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+                if os.path.isfile(thread_path):
+                    try:
+                        with open(thread_path, "r", encoding="utf-8") as f:
+                            thread_data = json.load(f)
+                        loknavn = thread_data.get("Loknavn", "")
+                        artnavn = thread_data.get("Artnavn", artnavn)
+                    except Exception:
+                        pass
+                for sub_user_id, sub_device_id in subs:
+                    if sub_user_id == user_id and sub_device_id == device_id:
+                        continue
+                    with sqlite3.connect(DB_PATH) as conn:
+                        row = conn.execute(
+                            "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
+                            (sub_user_id, sub_device_id)
+                        ).fetchone()
+                    if not row:
+                        continue
+                    sub = json.loads(row[0])
+                    payload = {
+                        "title": f"Nyt indlæg på: {artnavn} {loknavn}",
+                        "body": f"{navn}: {body}",
+                        "url": f"/traad.html?date={day}&id={thread_id}",
+                        "tag": f"{thread_id}-comment-{ts.replace(' ', '_').replace(':', '-')}"
+                    }
+                    try:
+                        webpush(
+                            subscription_info=sub,
+                            data=json.dumps(payload, ensure_ascii=False),
+                            vapid_private_key=VAPID_PRIVATE_KEY,
+                            vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+                            ttl=3600,
+                            headers={"Urgency": "high"}
+                        )
+                    except Exception as ex:
+                        print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
+                # --- SLUT PUSH ---
+
+                # Broadcast til alle websockets
                 for ws in ws_connections.get(key, []):
                     try:
                         await ws.send_json({"type": "new_comment"})
@@ -1123,10 +1172,57 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                         c["thumbs_users"] = list(thumbs_users)
                         c["thumbs"] = len(thumbs_users)
                         found = True
+
+                        # --- SEND PUSH HVIS NY THUMBS UP OG IKKE FRA EJEREN SELV ---
+                        if not already_thumbed and user_id != c.get("user_id"):
+                            owner_user_id = c.get("user_id")
+                            owner_device_id = c.get("device_id")
+                            if owner_user_id and owner_device_id:
+                                with sqlite3.connect(DB_PATH) as conn:
+                                    sub_row = conn.execute(
+                                        "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+                                        (day, thread_id, owner_user_id, owner_device_id)
+                                    ).fetchone()
+                                if sub_row:
+                                    with sqlite3.connect(DB_PATH) as conn:
+                                        row = conn.execute(
+                                            "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
+                                            (owner_user_id, owner_device_id)
+                                        ).fetchone()
+                                    if row:
+                                        sub = json.loads(row[0])
+                                        artnavn = thread_id.split('-')[0].capitalize()
+                                        loknavn = ""
+                                        thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+                                        if os.path.isfile(thread_path):
+                                            try:
+                                                with open(thread_path, "r", encoding="utf-8") as f2:
+                                                    thread_data = json.load(f2)
+                                                loknavn = thread_data.get("Loknavn", "")
+                                                artnavn = thread_data.get("Artnavn", artnavn)
+                                            except Exception:
+                                                pass
+                                        payload = {
+                                            "title": f"👍 på dit indlæg: {artnavn} {loknavn}",
+                                            "body": f"Dit indlæg har fået en thumbs up!",
+                                            "url": f"/traad.html?date={day}&id={thread_id}",
+                                            "tag": f"{thread_id}-thumbsup-{ts.replace(' ', '_').replace(':', '-')}"
+                                        }
+                                        try:
+                                            webpush(
+                                                subscription_info=sub,
+                                                data=json.dumps(payload, ensure_ascii=False),
+                                                vapid_private_key=VAPID_PRIVATE_KEY,
+                                                vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
+                                                ttl=3600,
+                                                headers={"Urgency": "high"}
+                                            )
+                                        except Exception as ex:
+                                            print(f"Push-fejl til {owner_user_id}/{owner_device_id}: {ex}")
+                        # --- SLUT PUSH ---
                         break
                 if found:
                     save_comments_for_thread(day, thread_id, comments)
-                    # Broadcast thumbs update
                     for ws in ws_connections.get(key, []):
                         try:
                             await ws.send_json({"type": "thumbs_update"})
