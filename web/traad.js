@@ -1,4 +1,4 @@
-// Version: 4.0 - 2025-11-02 18.53.01
+// Version: 4.0.1 - 2025-11-02 19.34.30
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -30,6 +30,14 @@
     return q.get(name) || '';
   }
 
+  function linkify(text) {
+    // Find alle http(s)://... links og lav dem til klikbare links
+    return text.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
+    );
+  }
+
   async function loadThread() {
       const day = getParam('date');
       const id = getParam('id');
@@ -59,14 +67,6 @@
           return;
       }
       $status.textContent = "";
-
-      function linkify(text) {
-        // Find alle http(s)://... links og lav dem til klikbare links
-        return text.replace(
-          /(https?:\/\/[^\s<]+)/g,
-          url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
-        );
-      }
 
       // Vis tråd-header som h2: Antal + Artnavn // Lok
       const thread = data.thread || {};
@@ -322,57 +322,17 @@ $meta.innerHTML = "";
       `;
       $events.parentNode.appendChild(formCard);
 
-      // Kommentarsporet i et card (kun hvis der er kommentarer)
-      async function loadComments() {
-          const res = await fetch(`/api/thread/${day}/${id}/comments`);
-          const comments = await res.json();
-          let commentsCard = document.getElementById('comments-section');
-          if (!comments.length) {
-              // Fjern kommentarkortet hvis det findes
-              if (commentsCard) commentsCard.remove();
-              return;
-          }
-          // Hvis kortet ikke findes (fx efter første kommentar), opret det igen
-          if (!commentsCard) {
-              commentsCard = document.createElement('div');
-              commentsCard.className = "card";
-              commentsCard.id = "comments-section";
-              commentsCard.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'></div>";
-              // Indsæt før formCard
-              formCard.parentNode.insertBefore(commentsCard, formCard);
-          }
-          const $list = commentsCard.querySelector('#comments-list');
-          $list.innerHTML = "";
-          comments.forEach(c => {
-              const row = document.createElement('div');
-              row.className = "comment-row";
-              row.innerHTML = `
-                  <div class="comment-title"><b>${c.navn}</b>, <span class="comment-time">${c.ts.split(' ')[1]}</span></div>
-                  <div class="comment-body">${linkify(c.body)}</div>
-                  <div class="comment-thumbs">👍 <span>${c.thumbs || 0}</span></div>
-              `;
-              row.querySelector('.comment-thumbs').onclick = async () => {
-                  const userid = getOrCreateUserId ? getOrCreateUserId() : localStorage.getItem("userid");
-                  await fetch(`/api/thread/${day}/${id}/comments/thumbsup`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ts: c.ts, user_id: userid })
-                  });
-                  await loadComments();
-              };
-              $list.appendChild(row);
-          });
-      }
-      await loadComments();
+      // --- WEBSOCKET CHAT/THUMBSUP ---
+      await loadCommentsWebSocket();
 
-      // Send kommentar (uændret)
+      // Send kommentar via WebSocket
       document.getElementById('comment-send-btn').onclick = async () => {
         const btn = document.getElementById('comment-send-btn');
         const input = document.getElementById('comment-input');
         const body = input.value.trim();
         if (!body) return;
 
-        btn.disabled = true; // Deaktiver knappen
+        btn.disabled = true;
 
         // Hent brugerinfo
         const userid = getOrCreateUserId();
@@ -403,7 +363,6 @@ $meta.innerHTML = "";
             body: JSON.stringify({ user_id: userid, device_id: deviceid })
           });
           isSubscribed = true;
-          // Opdater abonnér-knappen visuelt
           const subBtn = document.getElementById("thread-sub-btn");
           if (subBtn) subBtn.classList.add("is-on");
         }
@@ -414,14 +373,9 @@ $meta.innerHTML = "";
           return;
         }
 
-        await fetch(`/api/thread/${day}/${id}/comments`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ navn, body, user_id: userid, device_id: deviceid })
-        });
+        wsSend({ type: "new_comment", navn, body, user_id: userid, device_id: deviceid });
         input.value = "";
-        await loadComments();
-        btn.disabled = false; // Aktiver knappen igen
+        btn.disabled = false;
       };
 
       // Automatisk højdeforøgelse af kommentar-input (textarea)
@@ -432,6 +386,72 @@ $meta.innerHTML = "";
           this.style.height = (this.scrollHeight) + 'px';
         });
       }
+  }
+
+  // --- WEBSOCKET CHAT/THUMBSUP ---
+  let ws;
+  let wsReady = false;
+  let wsQueue = [];
+  function wsSend(obj) {
+    if (wsReady) ws.send(JSON.stringify(obj));
+    else wsQueue.push(obj);
+  }
+
+  async function loadCommentsWebSocket() {
+    const day = getParam('date');
+    const id = getParam('id');
+    let commentsCard = document.getElementById('comments-section');
+    if (!commentsCard) {
+      commentsCard = document.createElement('div');
+      commentsCard.className = "card";
+      commentsCard.id = "comments-section";
+      commentsCard.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'></div>";
+      // Indsæt før formCard
+      const formCard = document.getElementById('comment-form');
+      formCard.parentNode.insertBefore(commentsCard, formCard);
+    }
+    const $list = commentsCard.querySelector('#comments-list');
+    $list.innerHTML = "<div>Henter kommentarer...</div>";
+
+    // WebSocket setup
+    if (ws) ws.close();
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${proto}://${location.host}/ws/thread/${day}/${id}`);
+    wsReady = false;
+    wsQueue = [];
+
+    ws.onopen = () => {
+      wsReady = true;
+      wsQueue.forEach(obj => ws.send(JSON.stringify(obj)));
+      wsQueue = [];
+      ws.send(JSON.stringify({ type: "get_comments" }));
+    };
+    ws.onclose = () => { wsReady = false; };
+    ws.onerror = () => { wsReady = false; };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "comments") {
+        $list.innerHTML = "";
+        (msg.comments || []).forEach(c => {
+          const row = document.createElement('div');
+          row.className = "comment-row";
+          row.innerHTML = `
+            <div class="comment-title"><b>${c.navn}</b>, <span class="comment-time">${c.ts.split(' ')[1]}</span></div>
+            <div class="comment-body">${linkify(c.body)}</div>
+            <div class="comment-thumbs">👍 <span>${c.thumbs || 0}</span></div>
+          `;
+          row.querySelector('.comment-thumbs').onclick = () => {
+            const userid = getOrCreateUserId ? getOrCreateUserId() : localStorage.getItem("userid");
+            wsSend({ type: "thumbsup", ts: c.ts, user_id: userid });
+          };
+          $list.appendChild(row);
+        });
+      }
+      if (msg.type === "new_comment" || msg.type === "thumbs_update") {
+        ws.send(JSON.stringify({ type: "get_comments" }));
+      }
+    };
   }
 
   document.addEventListener('DOMContentLoaded', loadThread);

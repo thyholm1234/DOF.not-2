@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import FastAPI, Request, status, HTTPException
+from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import json
 import os
@@ -18,6 +18,7 @@ import time
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List
 
 load_dotenv()
 
@@ -1034,8 +1035,111 @@ def should_notify(prefs, afdeling, kategori):
         return kat_norm in ("su", "sub", "bemaerk", "bemærk")
     return False
 
+# --- WEBSOCKET CHAT/THUMBSUP ---
+
+# In-memory mapping: (day, thread_id) -> [WebSocket, ...]
+ws_connections: Dict[str, List[WebSocket]] = {}
+
+def ws_key(day, thread_id):
+    return f"{day}::{thread_id}"
+
+def get_comments_for_thread(day, thread_id):
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+    comments_path = os.path.join(thread_dir, "kommentar.json")
+    if not os.path.isfile(comments_path):
+        return []
+    with open(comments_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_comments_for_thread(day, thread_id, comments):
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+    os.makedirs(thread_dir, exist_ok=True)
+    comments_path = os.path.join(thread_dir, "kommentar.json")
+    with open(comments_path, "w", encoding="utf-8") as f:
+        json.dump(comments, f, ensure_ascii=False, indent=2)
+
+@app.websocket("/ws/thread/{day}/{thread_id}")
+async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
+    await websocket.accept()
+    key = ws_key(day, thread_id)
+    ws_connections.setdefault(key, []).append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+            except Exception:
+                continue
+
+            # Send alle kommentarer
+            if msg.get("type") == "get_comments":
+                comments = get_comments_for_thread(day, thread_id)
+                await websocket.send_json({"type": "comments", "comments": comments})
+
+            # Ny kommentar
+            elif msg.get("type") == "new_comment":
+                navn = msg.get("navn", "Ukendt")
+                body = (msg.get("body") or "").strip()
+                user_id = msg.get("user_id")
+                device_id = msg.get("device_id")
+                if not body or not user_id or not device_id:
+                    continue
+                ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                comment = {
+                    "navn": navn,
+                    "body": body,
+                    "ts": ts,
+                    "thumbs": 0,
+                    "thumbs_users": [],
+                    "user_id": user_id,
+                    "device_id": device_id
+                }
+                comments = get_comments_for_thread(day, thread_id)
+                comments.append(comment)
+                save_comments_for_thread(day, thread_id, comments)
+                # Broadcast til alle
+                for ws in ws_connections.get(key, []):
+                    try:
+                        await ws.send_json({"type": "new_comment"})
+                    except:
+                        pass
+
+            # Thumbs up
+            elif msg.get("type") == "thumbsup":
+                ts = msg.get("ts")
+                user_id = msg.get("user_id")
+                if not ts or not user_id:
+                    continue
+                comments = get_comments_for_thread(day, thread_id)
+                found = False
+                for c in comments:
+                    if c.get("ts") == ts:
+                        thumbs_users = set(c.get("thumbs_users", []))
+                        already_thumbed = user_id in thumbs_users
+                        if already_thumbed:
+                            thumbs_users.remove(user_id)
+                        else:
+                            thumbs_users.add(user_id)
+                        c["thumbs_users"] = list(thumbs_users)
+                        c["thumbs"] = len(thumbs_users)
+                        found = True
+                        break
+                if found:
+                    save_comments_for_thread(day, thread_id, comments)
+                    # Broadcast thumbs update
+                    for ws in ws_connections.get(key, []):
+                        try:
+                            await ws.send_json({"type": "thumbs_update"})
+                        except:
+                            pass
+
+    except WebSocketDisconnect:
+        ws_connections[key].remove(websocket)
+        if not ws_connections[key]:
+            del ws_connections[key]
+
 app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")   
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
