@@ -1,4 +1,4 @@
-// Version: 4.0.4 - 2025-11-02 20.39.52
+// Version: 4.0.4.3 - 2025-11-02 20.47.52
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -401,17 +401,13 @@ $meta.innerHTML = "";
     const day = getParam('date');
     const id = getParam('id');
     let commentsCard = document.getElementById('comments-section');
-    if (!commentsCard) {
-      commentsCard = document.createElement('div');
-      commentsCard.className = "card";
-      commentsCard.id = "comments-section";
-      commentsCard.innerHTML = "<h3>Kommentarer</h3><div id='comments-list'></div>";
-      // Indsæt før formCard
-      const formCard = document.getElementById('comment-form');
-      formCard.parentNode.insertBefore(commentsCard, formCard);
+    const formCard = document.getElementById('comment-form');
+
+    // Fjern eksisterende comments-section (så den ikke blinker)
+    if (commentsCard) {
+      commentsCard.remove();
+      commentsCard = null;
     }
-    const $list = commentsCard.querySelector('#comments-list');
-    $list.innerHTML = "<div>Henter kommentarer...</div>";
 
     // WebSocket setup
     if (ws) ws.close();
@@ -431,9 +427,21 @@ $meta.innerHTML = "";
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      if (msg.type === "comments") {
+      // Fjern evt. gammel sektion igen (hvis reload)
+      let oldCard = document.getElementById('comments-section');
+      if (oldCard) oldCard.remove();
+
+      if (msg.type === "comments" && msg.comments && msg.comments.length) {
+        // Opret og indsæt kun hvis der er kommentarer
+        commentsCard = document.createElement('div');
+        commentsCard.className = "card";
+        commentsCard.id = "comments-section";
+        commentsCard.innerHTML = "<h2>Kommentarer</h2><div id='comments-list'></div>";
+        formCard.parentNode.insertBefore(commentsCard, formCard);
+
+        const $list = commentsCard.querySelector('#comments-list');
         $list.innerHTML = "";
-        (msg.comments || []).forEach(c => {
+        msg.comments.forEach(c => {
           const row = document.createElement('div');
           row.className = "comment-row";
           row.innerHTML = `
