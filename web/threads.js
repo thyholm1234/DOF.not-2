@@ -1,4 +1,4 @@
-// Version: 4.1.4 - 2025-11-02 23.34.39
+// Version: 4.2 - 2025-11-02 23.42.28
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -301,18 +301,21 @@ let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
       }
       if (!Array.isArray(threads) || !threads.length) {
         if ($status) $status.textContent = '';
-        $cards.innerHTML = ''; // Tøm listen hvis ingen tråde
+        $cards.innerHTML = '';
         return;
       }
       if ($status) $status.textContent = '';
       allThreads = threads;
-      $cards.innerHTML = ''; // <-- Tøm først nu!
+      $cards.innerHTML = '';
       renderThreads();
 
-      // Genskab scroll-position hvis den findes (efter render)
-      const scroll = sessionStorage.getItem('threadsScroll');
-      if (scroll) {
-        window.scrollTo(0, parseInt(scroll, 10));
+      // Genskab scroll-position KUN hvis man kommer fra traad.html
+      if (
+        document.referrer &&
+        document.referrer.includes('traad.html') &&
+        sessionStorage.getItem('threadsScroll')
+      ) {
+        window.scrollTo(0, parseInt(sessionStorage.getItem('threadsScroll'), 10));
         sessionStorage.removeItem('threadsScroll');
       }
     } catch (e) {

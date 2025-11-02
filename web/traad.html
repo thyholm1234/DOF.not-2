@@ -1,4 +1,4 @@
-<!-- Version: 4.1.4 - 2025-11-02 23.34.39 -->
+<!-- Version: 4.2 - 2025-11-02 23.42.28 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -6,12 +6,16 @@
   <meta charset="utf-8">
   <title>Tråd</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="style.css?v=4.1.4">
+  <link rel="stylesheet" href="style.css?v=4.2">
 </head>
 <body>
   <header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
     <div class="toolbar">
+      <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
+                onclick="window.location.reload()">
+        <span id="refresh-icon">🔄</span>
+      </button>
       <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
               onclick="window.location.href='./settings.html'">
         <span id="settings-icon">⚙️</span>
@@ -29,7 +33,7 @@
     <div id="thread-events"></div>
     <div id="thread-status"></div>
   </main>
-  <script src="traad.js?v=4.1.4"></script>
-  <script src="app.js?v=4.1.4"></script>
+  <script src="traad.js?v=4.2"></script>
+  <script src="app.js?v=4.2"></script>
 </body>
 </html>
