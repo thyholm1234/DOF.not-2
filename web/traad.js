@@ -1,4 +1,4 @@
-// Version: 3.3.5.1 - 2025-11-01 10.02.00
+// Version: 3.4 - 2025-11-02 17.00.48
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -367,8 +367,12 @@ $meta.innerHTML = "";
 
       // Send kommentar (uændret)
       document.getElementById('comment-send-btn').onclick = async () => {
-        const body = document.getElementById('comment-input').value.trim();
+        const btn = document.getElementById('comment-send-btn');
+        const input = document.getElementById('comment-input');
+        const body = input.value.trim();
         if (!body) return;
+
+        btn.disabled = true; // Deaktiver knappen
 
         // Hent brugerinfo
         const userid = getOrCreateUserId();
@@ -406,6 +410,7 @@ $meta.innerHTML = "";
 
         if (!obserkode || !navn) {
           alert("Du skal have udfyldt både obserkode og navn i dine indstillinger for at kunne skrive et indlæg.");
+          btn.disabled = false;
           return;
         }
 
@@ -414,8 +419,9 @@ $meta.innerHTML = "";
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ navn, body, user_id: userid, device_id: deviceid })
         });
-        document.getElementById('comment-input').value = "";
+        input.value = "";
         await loadComments();
+        btn.disabled = false; // Aktiver knappen igen
       };
 
       // Automatisk højdeforøgelse af kommentar-input (textarea)

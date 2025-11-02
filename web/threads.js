@@ -1,4 +1,4 @@
-// Version: 3.3.5.1 - 2025-11-01 10.02.00
+// Version: 3.4 - 2025-11-02 17.00.48
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {

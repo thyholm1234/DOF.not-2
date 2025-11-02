@@ -64,6 +64,17 @@ def db_init():
         """)
 db_init()
 
+def cleanup_user_prefs_without_subscriptions():
+    """
+    Slet alle user_prefs hvor user_id ikke findes i subscriptions.
+    """
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            DELETE FROM user_prefs
+            WHERE user_id NOT IN (SELECT DISTINCT user_id FROM subscriptions)
+        """)
+        conn.commit()
+
 def cleanup_dirs(base_dir, days=3):
     now = datetime.datetime.now()
     for name in os.listdir(base_dir):
@@ -89,7 +100,9 @@ def database_maintenance():
                 if not os.path.isdir(obs_dir):
                     print(f"Sletter {table} for dag {day} (mappe findes ikke)")
                     conn.execute(f"DELETE FROM {table} WHERE day=?", (day,))
-        conn.commit()    
+        conn.commit()
+    # Ryd op i user_prefs uden tilknyttede subscriptions
+    cleanup_user_prefs_without_subscriptions()  
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -139,6 +152,16 @@ def send_push(sub, push_payload, user_id, device_id):
                     "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
                     (user_id, device_id)
                 )
+                # Slet user_prefs hvis der ikke er flere subscriptions for user_id
+                remaining = conn.execute(
+                    "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
+                    (user_id,)
+                ).fetchone()
+                if not remaining:
+                    conn.execute(
+                        "DELETE FROM user_prefs WHERE user_id=?",
+                        (user_id,)
+                    )
                 conn.commit()
         else:
             print(f"Push-fejl til {user_id}/{device_id}: {ex}")
@@ -161,8 +184,13 @@ def set_prefs(user_id, prefs):
 async def api_set_prefs(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
-    prefs = data.get("prefs")
-    set_prefs(user_id, prefs)
+    new_prefs = data.get("prefs")
+    # Hent eksisterende prefs og opdater kun afdelingsvalg
+    old_prefs = get_prefs(user_id)
+    # Opdater kun afdelingsnøgler
+    for afd in new_prefs:
+        old_prefs[afd] = new_prefs[afd]
+    set_prefs(user_id, old_prefs)
     return {"ok": True}
 
 @app.get("/api/prefs")

@@ -1,0 +1,3 @@
+user_id,obserkode,navn,SU,SUB,Bemærk,laveste_kategori,afdelinger_med_laveste,avanceret_filtrering,antal_exclude
+user-71pqifq5km3,5000MARA,Maria Rasmussen,8,5,0,SUB,"DOF København, DOF Vestsjælland, DOF Fyn, DOF Sydvestjylland, DOF Vestjylland",False,0
+user-87amr7edvwr,8220CVH,Christian Vemmelund Helligsø,5,7,1,Bemærk,DOF Østjylland,True (220 arter i exclude),220

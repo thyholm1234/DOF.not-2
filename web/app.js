@@ -1,4 +1,4 @@
-// Version: 3.3.5.1 - 2025-11-01 10.02.00
+// Version: 3.4 - 2025-11-02 17.00.48
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -296,16 +296,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Hent evt. tidligere gemte oplysninger
   let userinfo = {};
-  try {
-    const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
-    if (res.ok) {
-      userinfo = await res.json();
-    }
-  } catch (e) {
-    userinfo = {};
+try {
+  const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+  if (res.ok) {
+    userinfo = await res.json();
   }
-  document.getElementById("obserkode").value = userinfo.obserkode || "";
-  document.getElementById("navn").value = userinfo.navn || "";
+} catch (e) {
+  userinfo = {};
+}
+document.getElementById("obserkode").value = userinfo.obserkode || "";
+document.getElementById("navn").value = userinfo.navn || "";
+
+// Sørg for store bogstaver i obserkode
+const obserkodeInput = document.getElementById("obserkode");
+if (obserkodeInput) {
+  obserkodeInput.addEventListener("input", () => {
+    obserkodeInput.value = obserkodeInput.value.toUpperCase();
+  });
+}
 
 // Gem oplysninger ved klik
 document.getElementById("save-userinfo-btn").onclick = async () => {
@@ -314,11 +322,11 @@ document.getElementById("save-userinfo-btn").onclick = async () => {
   const obserkode = document.getElementById("obserkode").value.trim();
   const navn = document.getElementById("navn").value.trim();
 
-  // Gem lokalt
-  localStorage.setItem("obserkode", obserkode);
-  localStorage.setItem("navn", navn);
+  // Fjern lokal gemning:
+  // localStorage.setItem("obserkode", obserkode);
+  // localStorage.setItem("navn", navn);
 
-  // Gem på serveren
+  // Gem kun på serveren
   await fetch("/api/userinfo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

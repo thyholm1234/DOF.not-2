@@ -1,4 +1,4 @@
-/* Version: 3.3.5.1 - 2025-11-01 10.02.00 */
+/* Version: 3.4 - 2025-11-02 17.00.48 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -167,6 +167,7 @@ a:hover {
     color: var(--text-main);
   }
 }
+
 
 /* ===== Badge (kategori/region) ===== */
 .badge {
@@ -869,11 +870,9 @@ label[for="show-only-filtered"] {
 }
 
 /* DARK MODE: hvid border og mørkere baggrund */
-@media (prefers-color-scheme: dark) {
-  .checkmark {
+:root[data-theme="dark"] .checkmark {
     background-color: #232b3a; /* lidt mørkere end kortet i dark */
     border: 2px solid #fff;    /* hvid border i dark */
-  }
 }
 
 @keyframes checkAnim {
@@ -993,7 +992,7 @@ label[for="show-only-filtered"] {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1.5px solid var(--card-border);
-  background: var(--card-bg);
+  background: #e3e3e3;
   color: var(--text-main);
   resize: vertical;
   margin-bottom: 10px;
@@ -1004,15 +1003,6 @@ label[for="show-only-filtered"] {
   border-color: var(--col-accent);
   outline: none;
 }
-
-@media (prefers-color-scheme: dark) {
-  #comment-input {
-    background: #232b3a;
-    color: #dbe1ea;
-    border-color: #273244;
-  }
-}
-
 .art-name.cat-su {
   color: var(--col-su, #1b5e20);
   font-weight: 700;
@@ -1423,4 +1413,19 @@ label[for="show-only-filtered"] {
     margin-left: -16px; /* eller -16px, afhængigt af .wrap padding */
     width: calc(100vw - 8px);
   }
+}
+
+/* Light mode: lysegrå */
+:root[data-theme="light"] #comment-input {
+  background: #f3f3f3 !important;
+  color: #222 !important;
+}
+
+/* Dark mode: mørk */
+:root[data-theme="dark"] #comment-input {
+  background: #232b3a !important;
+  color: #dbe1ea !important;
+}
+:root[data-theme="dark"] .comment-title {
+  color: #fff !important;
 }
