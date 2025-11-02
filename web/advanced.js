@@ -1,4 +1,4 @@
-// Version: 4.0.6 - 2025-11-02 21.27.46
+// Version: 4.0.7.3 - 2025-11-02 21.47.40
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -16,6 +16,20 @@ async function fetchArtsliste() {
 }
 
 let userFilters = { include: [], exclude: [], counts: {} };
+let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
+
+function updateAdvancedFilterBtn() {
+  const btn = document.getElementById('toggle-advanced-filter');
+  if (!btn) return;
+  btn.classList.toggle('is-on', useAdvancedFilter);
+  btn.textContent = 'Avanceret filtrering: ' + (useAdvancedFilter ? 'Til' : 'Fra');
+}
+
+document.getElementById('toggle-advanced-filter').addEventListener('click', () => {
+  useAdvancedFilter = !useAdvancedFilter;
+  localStorage.setItem('useAdvancedFilter', useAdvancedFilter);
+  updateAdvancedFilterBtn();
+});
 
 async function fetchUserFilters() {
   const user_id = localStorage.getItem('userid') || prompt("Indtast bruger-id:");
@@ -83,15 +97,12 @@ function renderArtsTable() {
   }
 }
 
-// Toggle filtrerede-knap
-const showFilteredBtn = document.getElementById('show-only-filtered');
-showFilteredBtn.addEventListener('click', () => {
+document.getElementById('show-only-filtered').addEventListener('click', () => {
   showOnlyFiltered = !showOnlyFiltered;
   showFilteredBtn.classList.toggle('is-on', showOnlyFiltered);
   renderArtsTable();
 });
 
-// Ekskluder/Inkluder-knap
 document.getElementById('arts-cards').addEventListener('click', e => {
   if (e.target.classList.contains('twostate') && e.target.classList.contains('excl')) {
     const art = e.target.dataset.art;
@@ -107,7 +118,6 @@ document.getElementById('arts-cards').addEventListener('click', e => {
   }
 });
 
-// Min. antal input
 document.getElementById('arts-cards').addEventListener('input', e => {
   if (e.target.classList.contains('gte-input')) {
     const art = e.target.dataset.art;
@@ -119,10 +129,8 @@ document.getElementById('arts-cards').addEventListener('input', e => {
       delete userFilters.counts[art];
     }
     filtersChanged = true;
-    // Fjern renderArtsTable() her!
   }
 });
-// Hvis du vil opdatere visningen, gør det på blur:
 document.getElementById('arts-cards').addEventListener('blur', e => {
   if (e.target.classList.contains('gte-input')) {
     renderArtsTable();
@@ -135,11 +143,10 @@ document.getElementById('arts-search').addEventListener('input', e => {
 });
 
 document.getElementById('reset-filters').addEventListener('click', () => {
-  // Sikkerhedsregnestykke
   const a = Math.floor(Math.random() * 10) + 1;
   const b = Math.floor(Math.random() * 10) + 1;
   const svar = prompt(`Bekræft nulstilling: Hvad er ${a} + ${b}?`);
-  if (svar === null) return; // Annulleret
+  if (svar === null) return;
   if (parseInt(svar, 10) !== a + b) {
     alert('Forkert svar. Nulstilling annulleret.');
     return;
@@ -188,3 +195,5 @@ document.getElementById('save-filters').addEventListener('click', () => {
   await fetchUserFilters();
   renderArtsTable();
 })();
+
+updateAdvancedFilterBtn();

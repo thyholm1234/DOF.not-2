@@ -1,4 +1,4 @@
-/* Version: 4.0.6 - 2025-11-02 21.27.46 */
+/* Version: 4.0.7.3 - 2025-11-02 21.47.40 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1432,4 +1432,33 @@ label[for="show-only-filtered"] {
 
 #comments-section h2 {
     margin-top: 0px;
+}
+
+/* Info-card farver tilpasset tema */
+.card.info-card {
+  background: #f7faff;
+  color: #234;
+}
+:root[data-theme="dark"] .card.info-card {
+  background: #0F172A;
+  color: #fff;
+}
+
+/* Flex layout til advanced filter card */
+.advanced-filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.advanced-filter-content > button {
+  align-self: flex-end;   /* <-- flyt knappen til højre */
+  margin-top: 5px;
+  margin-bottom: 0;
+  position: static;
+}
+
+.advanced-filter-content > div {
+  padding-right: 0;
+  min-width: 0;
 }

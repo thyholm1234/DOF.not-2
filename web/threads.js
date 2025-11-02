@@ -1,4 +1,4 @@
-// Version: 4.0.6 - 2025-11-02 21.27.46
+// Version: 4.0.7.3 - 2025-11-02 21.47.40
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -93,7 +93,7 @@
     if (!frontState.includeZero && (antalObs < 1 || antalInd < 1)) return false;
 
     // --- NYT: Artsfiltrering ---
-    if (frontState.usePrefs && speciesFilters) {
+    if (frontState.usePrefs && useAdvancedFilter && speciesFilters) {
       const artnavn = (t.art || '').toLowerCase().trim();
       // Ekskluderede arter
       if (speciesFilters.exclude && speciesFilters.exclude.map(a => a.toLowerCase()).includes(artnavn)) {
@@ -214,6 +214,7 @@
   }
 }
   
+let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
 
   function setFrontState(key, value) {
   // Hvis man har klikket på "I dag"/"I går", så lås dagMode og tillad kun filtrering/sortering på den hentede dag
@@ -343,6 +344,13 @@
     }
     updateFrontControls();
     await loadThreads();
+  });
+
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'useAdvancedFilter') {
+      useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
+      renderThreads();
+    }
   });
 })();
 
