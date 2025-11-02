@@ -1,4 +1,4 @@
-<!-- Version: 4.1.3 - 2025-11-02 23.19.49 -->
+<!-- Version: 4.1.4 - 2025-11-02 23.34.39 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,19 +17,24 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.1.3">
+  <link rel="stylesheet" href="/style.css?v=4.1.4">
 </head>
-<header class="wrap">
-    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
-    <div class="toolbar">
-    <a id="settings-link" href="./settings.html" aria-label="Indstillinger" title="Indstillinger">
-        <span id="settings-icon">⚙️</span>
-    </a>
-    <button id="theme-toggle" aria-label="Skift tema">
-      <span id="theme-icon">☀️</span>
-    </button>
-  </div>
-  </header>
+  <header class="wrap">
+      <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
+      <div class="toolbar">
+        <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
+                onclick="window.location.href='./advanced.html'">
+          <span id="refresh-icon">🔄</span>
+        </button>
+        <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
+                onclick="window.location.href='./settings.html'">
+          <span id="settings-icon">⚙️</span>
+        </button>
+        <button id="theme-toggle" aria-label="Skift tema" type="button">
+          <span id="theme-icon">☀️</span>
+        </button>
+      </div>
+    </header>
   <body>
     <main class="wrap">
       <h2>Avanceret artsfiltrering</h2>
@@ -57,7 +62,7 @@
       </div>
       
     </main>
-    <script src="advanced.js?v=4.1.3"></script>
-    <script src="app.js?v=4.1.3"></script>
+    <script src="advanced.js?v=4.1.4"></script>
+    <script src="app.js?v=4.1.4"></script>
   </body>
 </html>
