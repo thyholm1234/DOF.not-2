@@ -1,4 +1,4 @@
-<!-- Version: 4.0.7.3 - 2025-11-02 21.47.40 -->
+<!-- Version: 4.0.7.5 - 2025-11-02 22.07.12 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.0.7.3">
+  <link rel="stylesheet" href="/style.css?v=4.0.7.5">
 </head>
 <header class="wrap">
     <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
@@ -41,7 +41,7 @@
           <button id="toggle-advanced-filter" type="button" class="twostate">Avanceret filtrering: Fra</button>
         </div>
       </div>
-      <div class="card" style="margin-bottom: 16px;">
+      <div class="filter-bar card" style="margin-bottom: 16px; margin-top: 15px;">
         <div class="filter-row">
           <input id="arts-search" placeholder="Søg art..." type="text">
           <button id="show-only-filtered" type="button">Vis filter</button>
@@ -50,14 +50,14 @@
           <input type="file" id="import-filters" style="display:none;">
           <button onclick="document.getElementById('import-filters').click()">Importér</button>
           <button id="save-filters">Gem</button>
-          </div>
+        </div>
       </div>
-      <div class="prefs-table-wrapper">
-        
+      <div id="arts-cards-viewport">
         <div id="arts-cards"></div>
       </div>
+      
     </main>
-    <script src="advanced.js?v=4.0.7.3"></script>
-    <script src="app.js?v=4.0.7.3"></script>
+    <script src="advanced.js?v=4.0.7.5"></script>
+    <script src="app.js?v=4.0.7.5"></script>
   </body>
 </html>

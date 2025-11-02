@@ -1,5 +1,17 @@
 [
   {
+    "user_id": "user-6ynjyaen9zi",
+    "obserkode": "8220CVH",
+    "navn": "Christian Vemmelund Helligsø",
+    "SU": 10,
+    "SUB": 2,
+    "Bemærk": 1,
+    "laveste_kategori": "Bemærk",
+    "afdelinger_med_laveste": "DOF Østjylland",
+    "avanceret_exclude": 222,
+    "avanceret_count": 14
+  },
+  {
     "user_id": "user-71pqifq5km3",
     "obserkode": "5000MARA",
     "navn": "Maria Rasmussen",
@@ -15,13 +27,13 @@
     "user_id": "user-87amr7edvwr",
     "obserkode": "8220CVH",
     "navn": "Christian Vemmelund Helligsø",
-    "SU": 5,
-    "SUB": 7,
+    "SU": 11,
+    "SUB": 1,
     "Bemærk": 1,
     "laveste_kategori": "Bemærk",
     "afdelinger_med_laveste": "DOF Østjylland",
-    "avanceret_exclude": 220,
-    "avanceret_count": 1
+    "avanceret_exclude": 219,
+    "avanceret_count": 3
   },
   {
     "user_id": "user-gphzysi1b3n",

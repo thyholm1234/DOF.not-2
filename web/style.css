@@ -1,4 +1,4 @@
-/* Version: 4.0.7.3 - 2025-11-02 21.47.40 */
+/* Version: 4.0.7.5 - 2025-11-02 22.07.12 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1461,4 +1461,16 @@ label[for="show-only-filtered"] {
 .advanced-filter-content > div {
   padding-right: 0;
   min-width: 0;
+}
+
+.filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f7faff; /* eller brug din tema-baggrund */
+  box-shadow: 0 2px 8px -4px rgba(0,0,0,0.08);
+  margin-top: 15px;
+}
+:root[data-theme="dark"] .filter-bar {
+  background: var(--card-bg);
 }
