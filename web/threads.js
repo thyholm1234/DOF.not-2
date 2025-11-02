@@ -1,4 +1,4 @@
-// Version: 4.1.1 - 2025-11-02 22.39.55
+// Version: 4.1.3 - 2025-11-02 23.19.49
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -240,14 +240,14 @@ let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
       fc.innerHTML = `
         <button type="button" class="twostate${frontState.usePrefs ? ' is-on' : ''}" id="btn-prefs">Bruger</button>
         <button type="button" class="twostate${!frontState.onlySU ? ' is-on' : ''}" id="btn-su">${suLabel}</button>
-        <button type="button" class="twostate${frontState.includeZero ? ' is-on' : ''}" id="btn-zero">0-obs</button>
+        <!---<button type="button" class="twostate${frontState.includeZero ? ' is-on' : ''}" id="btn-zero">0-obs</button>--->
         <button type="button" class="twostate${frontState.sortMode === 'nyeste' ? ' is-on' : ''}" id="btn-sort">${frontState.sortMode === 'nyeste' ? 'Nyeste' : 'Alfabet'}</button>
         <button type="button" class="twostate${frontState.dayMode === 'today' ? ' is-on' : ''}" id="btn-day">${frontState.dayMode === 'today' ? 'I dag' : 'I går'}</button>
         <button type="button" class="twostate${!frontState.prioritizeComments ? ' is-on' : ' is-off'}" id="btn-comments">Indlæg</button>
       `;
       fc.querySelector('#btn-prefs').onclick = () => setFrontState('usePrefs', !frontState.usePrefs);
       fc.querySelector('#btn-su').onclick = () => setFrontState('onlySU', !frontState.onlySU);
-      fc.querySelector('#btn-zero').onclick = () => setFrontState('includeZero', !frontState.includeZero);
+      //fc.querySelector('#btn-zero').onclick = () => setFrontState('includeZero', !frontState.includeZero);
       fc.querySelector('#btn-sort').onclick = () => setFrontState('sortMode', frontState.sortMode === 'nyeste' ? 'alfabet' : 'nyeste');
       fc.querySelector('#btn-day').onclick = () => {
         setFrontState('dayMode', frontState.dayMode === 'today' ? 'yesterday' : 'today');
