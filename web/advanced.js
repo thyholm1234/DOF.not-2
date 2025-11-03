@@ -1,4 +1,4 @@
-// Version: 4.2.1 - 2025-11-03 09.54.24
+// Version: 4.2.2 - 2025-11-03 14.50.19
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -17,6 +17,7 @@ async function fetchArtsliste() {
 
 let userFilters = { include: [], exclude: [], counts: {} };
 let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
+
 
 function updateAdvancedFilterBtn() {
   const btn = document.getElementById('toggle-advanced-filter');
@@ -56,6 +57,7 @@ async function saveUserFilters() {
 let allArter = [];
 let searchTerm = '';
 let showOnlyFiltered = false;
+const showFilteredBtn = document.getElementById('show-only-filtered');
 let filtersChanged = false;
 
 function catClass(kat) {
@@ -65,12 +67,15 @@ function catClass(kat) {
 function renderArtsTable() {
   const cards = document.getElementById('arts-cards');
   cards.innerHTML = '';
-  let filtered = allArter.filter(a =>
-    (!searchTerm || a.artsnavn.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (!showOnlyFiltered ||
-      userFilters.exclude.includes(a.artsnavn.toLowerCase()) ||
-      userFilters.counts[a.artsnavn.toLowerCase()])
-  );
+  let filtered = allArter.filter(a => {
+    const artKey = a.artsnavn.toLowerCase();
+    const isExcluded = userFilters.exclude.includes(artKey);
+    const hasCount = !!userFilters.counts[artKey];
+    return (
+      (!searchTerm || a.artsnavn.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (!showOnlyFiltered || isExcluded || hasCount)
+    );
+  });
   for (const art of filtered) {
     const artKey = art.artsnavn.toLowerCase();
     const isExcluded = userFilters.exclude.includes(artKey);
