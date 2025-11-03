@@ -1,4 +1,4 @@
-<!-- Version: 4.2 - 2025-11-02 23.42.28 -->
+<!-- Version: 4.2.1 - 2025-11-03 09.54.24 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.2">
+  <link rel="stylesheet" href="/style.css?v=4.2.1">
 </head>
   <header class="wrap">
       <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
@@ -37,11 +37,30 @@
     </header>
   <body>
     <main class="wrap">
-      <h2>Avanceret artsfiltrering</h2>
+      <h1 style="margin-top: 0px; text-align: center;">Avanceret artsfiltrering</h1>
+      <!-- NYT: Guide-kort -->
+      <div class="card info-card" style="margin-bottom: 16px; margin-top: 20px;">
+        <h3 style="margin-top: 0px;">Hvordan virker det?</h3>
+        <div>
+          Avanceret filter lægger sig oven på dine valgte kategorier for lokalafdelingerne. Her kan du stille ekstra krav til antal og fjerne arter, som du - uanset lokalafdeling og kategori - ikke ønsker at få notifikationer om.<br><br>
+          For at ekskludere en art skal knappen lyse rød og vise "Eksl." Det er ikke muligt at filtrere på lokalafdelingsniveau i det avancerede filter.
+        </div>
+        <div style="margin-top: 1em;">
+          <b>Sådan bruger du værktøjslinjen:</b><br>
+          <ul>
+            <li><b>Søg</b>: Find en art ved at skrive i søgefeltet.</li>
+            <li><b>Vis filter</b>: Vis kun de arter, du har filtreret på.</li>
+            <li><b>Nulstil</b>: Fjern alle dine nuværende filtre.</li>
+            <li><b>Eksportér</b>: Gem dine filtre som en fil.</li>
+            <li><b>Importér</b>: Indlæs filtre fra en fil.</li>
+            <li><b>Gem</b>: Husk at trykke "Gem" for at gemme dine ændringer.</li>
+          </ul>
+        </div>
+      </div>
       <div class="card info-card advanced-filter-card">
         <div class="advanced-filter-content">
           <div>
-            Herunder kan du oprette personlige filtre for, hvilke arter du ønsker notifikationer for. Du kan søge efter arter samt eksportere og importere dine filtre. Ved at aktivere knappen herunder vil filtreringen også påvirke hvilke observationer, der vises på forsiden.
+            Ved at aktivere knappen herunder vil filtreringen også påvirke hvilke observationer, der vises på forsiden i dit feed.
           </div>
           <button id="toggle-advanced-filter" type="button" class="twostate">Avanceret filtrering: Fra</button>
         </div>
@@ -62,7 +81,7 @@
       </div>
       
     </main>
-    <script src="advanced.js?v=4.2"></script>
-    <script src="app.js?v=4.2"></script>
+    <script src="advanced.js?v=4.2.1"></script>
+    <script src="app.js?v=4.2.1"></script>
   </body>
 </html>
