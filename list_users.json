@@ -1,5 +1,6 @@
 {
   "unikke_navne": [
+    "Christian Michael Villadsen",
     "Christian Vemmelund Helligsø",
     "Emil Skovgaard Brandtoft",
     "Jesper Pabst Stiem",
@@ -31,6 +32,18 @@
       "Bemærk": 0,
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-3zkdpqs5s1w",
+      "obserkode": "8000CMM",
+      "navn": "Christian Michael Villadsen",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Østjylland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -79,8 +92,8 @@
       "Bemærk": 1,
       "laveste_kategori": "Bemærk",
       "afdelinger_med_laveste": "DOF Østjylland",
-      "avanceret_exclude": 219,
-      "avanceret_count": 3
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
     },
     {
       "user_id": "user-dodiqcq3xj",
@@ -92,6 +105,18 @@
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
       "avanceret_exclude": 4,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-egryhcuo8y8",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 13,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
       "avanceret_count": 0
     },
     {
@@ -163,18 +188,6 @@
       "Bemærk": 0,
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
-      "avanceret_exclude": 0,
-      "avanceret_count": 0
-    },
-    {
-      "user_id": "user-zpuorf0mtb",
-      "obserkode": "-",
-      "navn": "-",
-      "SU": 0,
-      "SUB": 0,
-      "Bemærk": 0,
-      "laveste_kategori": null,
-      "afdelinger_med_laveste": "",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },

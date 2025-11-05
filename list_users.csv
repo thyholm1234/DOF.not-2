@@ -1,3 +1,17 @@
-user_id,obserkode,navn,SU,SUB,Bemærk,laveste_kategori,afdelinger_med_laveste,avanceret_filtrering,antal_exclude
-user-71pqifq5km3,5000MARA,Maria Rasmussen,8,5,0,SUB,"DOF København, DOF Vestsjælland, DOF Fyn, DOF Sydvestjylland, DOF Vestjylland",False,0
-user-87amr7edvwr,8220CVH,Christian Vemmelund Helligsø,5,7,1,Bemærk,DOF Østjylland,True (220 arter i exclude),220
+user_id,obserkode,navn,SU,SUB,Bemærk,laveste_kategori,afdelinger_med_laveste,avanceret_exclude,avanceret_count
+user-1dlqld7lcaz,-,-,0,13,0,SUB,"DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",3,0
+user-239tcch08oo,8230ESB,Emil Skovgaard Brandtoft,0,13,0,SUB,"DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",0,0
+user-3zkdpqs5s1w,8000CMM,Christian Michael Villadsen,12,1,0,SUB,DOF Østjylland,0,0
+user-519n36v5pdq,8870JPS,Jesper Pabst Stiem,0,8,0,SUB,"DOF Vestsjælland, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",0,0
+user-5ijerai8fu2,8240RJ,Rikke Jakobsen,0,1,0,SUB,DOF Østjylland,0,0
+user-71pqifq5km3,5000MARA,Maria Rasmussen,8,5,0,SUB,"DOF København, DOF Vestsjælland, DOF Fyn, DOF Sydvestjylland, DOF Vestjylland",0,0
+user-87amr7edvwr,8220CVH,Christian Vemmelund Helligsø,11,1,1,Bemærk,DOF Østjylland,0,0
+user-dodiqcq3xj,-,-,0,13,0,SUB,"DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",4,0
+user-egryhcuo8y8,-,-,0,13,0,SUB,"DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",0,0
+user-f838gyr7dju,-,-,0,13,0,SUB,"DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",0,0
+user-gphzysi1b3n,1663TNY,Timme Nyegaard,12,1,0,SUB,DOF København,0,0
+user-h63cw7ido5f,8220CVH,Christian Vemmelund Helligsø,11,1,1,Bemærk,DOF Østjylland,222,15
+user-ih6xh30uqer,2860LRE,Lars Refsgaard,11,2,0,SUB,"DOF København, DOF Nordsjælland",0,0
+user-navxpc1qeam,2000MIBH,Michael Brunhøj Hansen,9,3,1,Bemærk,DOF Fyn,178,8
+user-owzhcdf7fid,-,-,0,13,0,SUB,"DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",0,0
+user-zx6rjfgxsmr,2000MIBH,Michael Brunhøj Hansen,9,3,1,Bemærk,DOF Fyn,178,6
