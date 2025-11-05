@@ -1,4 +1,4 @@
-/* Version: 4.2.2 - 2025-11-03 14.50.19 */
+/* Version: 4.2.4 - 2025-11-05 08.45.08 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -702,6 +702,15 @@ header.wrap .brand:hover {
   box-shadow: none;
 }
 
+.twostate,
+.twostate:active,
+.twostate:focus {
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: none;
+  outline: none;
+}
+
 /* Gør tabelrækker til kort */
 .prefs-table tbody tr {
   background: var(--card-bg);
@@ -776,9 +785,13 @@ button, .prefs-table button {
   margin: 0 4px 8px 0;
   transition: background 0.15s, color 0.15s;
 }
-button:hover, .prefs-table button:hover {
+
+/* ny – udeluk to-state knapper fra blå hover */
+button:hover:not(.twostate),
+.prefs-table button:hover:not(.twostate) {
   background: #174ea6;
 }
+
 
 /* Søgning og filter */
 #arts-search {

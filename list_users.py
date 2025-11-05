@@ -18,6 +18,13 @@ with sqlite3.connect(DB_PATH) as conn:
 
 result = []
 
+unique_names = set()
+for user_id in sub_user_ids:
+    prefs = prefs_map.get(user_id)
+    navn = prefs.get("navn", "") if prefs else ""
+    if navn:
+        unique_names.add(navn)
+
 for user_id in sub_user_ids:
     prefs = prefs_map.get(user_id)
     obserkode = prefs.get("obserkode", "") if prefs else ""
@@ -80,8 +87,12 @@ for user_id in sub_user_ids:
     result.append(entry)
 
 if output_json:
+    output = {
+        "unikke_navne": sorted(n for n in unique_names if n and n != "-"),
+        "brugere": result
+    }
     with open("list_users.json", "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=2)
+        json.dump(output, f, ensure_ascii=False, indent=2)
     print("Gemte som list_users.json")
 elif output_csv:
     with open("list_users.csv", "w", encoding="utf-8", newline="") as f:
@@ -94,7 +105,8 @@ elif output_csv:
             writer.writerow(row)
     print("Gemte som list_users.csv")
 else:
-    print(f"\nAntal unikke user_id i subscriptions: {len(sub_user_ids)}\n")
+    print(f"\nUnikke navne: {sorted(n for n in unique_names if n and n != '-')}\n")
+    print(f"Antal unikke user_id i subscriptions: {len(sub_user_ids)}\n")
     print("user_id i subscriptions:")
     for entry in result:
         line = (
