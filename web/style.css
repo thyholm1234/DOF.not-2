@@ -1492,3 +1492,40 @@ label[for="show-only-filtered"] {
     background-color: #2EA043 !important;
     border-color: #2EA043 !important;
 }
+
+.afd-grid { margin: 1em 0 0 0; }
+.afd-grid-row {
+  display: flex;
+  gap: 1em;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.afd-grid-header span {
+  font-weight: normal;
+  color: #bbb;
+}
+.afd-grid-row span { 
+  display: flex; 
+  align-items: center;
+}
+
+.lokalafd-btn {
+  background: #eee;
+  color: #444;
+  border: 1px solid #bbb;
+}
+.lokalafd-btn.has-local {
+  background: #ffd600;
+  color: #222;
+  border: 1px solid #e6b800;
+}
+
+.afd-grid-hr {
+  border: none;
+  border-top: 1.5px solid #bbb;
+  margin: 8px 0 12px 0;
+  width: 100%;
+}
+:root[data-theme="dark"] .afd-grid-hr {
+  border-top: 1.5px solid #444;
+}
