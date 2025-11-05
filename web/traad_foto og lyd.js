@@ -1,4 +1,4 @@
-// Version: 4.2.5.1 - 2025-11-05 19.05.47
+// Version: 4.2.5 - 2025-11-05 15.47.49
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -228,7 +228,7 @@ $meta.innerHTML = "";
                     }
                   }
 
-                  // Billeder (kun link)
+                  // Billeder
                   if (data.images && data.images.length) {
                     data.images.forEach((url, idx) => {
                       const imgRow = el('div', 'img-row');
@@ -239,27 +239,32 @@ $meta.innerHTML = "";
                       imgLink.href = url;
                       imgLink.target = "_blank";
                       imgLink.rel = "noopener";
-                      imgLink.textContent = "Se billede";
+                      const img = document.createElement('img');
+                      img.src = url;
+                      img.alt = "Observation billede";
+                      img.style.maxWidth = "120px";
+                      img.style.maxHeight = "90px";
+                      imgLink.appendChild(img);
                       imgLink.addEventListener('click', e => e.stopPropagation());
                       imgRow.appendChild(imgLink);
                       obsRow.appendChild(imgRow);
                     });
                   }
 
-                  // Lydfiler (kun link)
+                  // Lydfiler
                   if (data.sound_urls && data.sound_urls.length) {
                     data.sound_urls.forEach((url, idx) => {
                       const soundRow = el('div', 'sound-row');
                       const badge = el('span', 'badge', `Rec#${idx + 1}`);
                       badge.style.marginRight = "8px";
                       soundRow.appendChild(badge);
-                      const soundLink = document.createElement('a');
-                      soundLink.href = url + (url.includes('?') ? '&raw=1' : '?raw=1');
-                      soundLink.target = "_blank";
-                      soundLink.rel = "noopener";
-                      soundLink.textContent = "Hør optagelse";
-                      soundLink.addEventListener('click', e => e.stopPropagation());
-                      soundRow.appendChild(soundLink);
+                      const audio = document.createElement('audio');
+                      audio.controls = true;
+                      audio.style.verticalAlign = "middle";
+                      audio.style.maxWidth = "220px";
+                      audio.src = url + (url.includes('?') ? '&raw=1' : '?raw=1');
+                      audio.addEventListener('click', e => e.stopPropagation());
+                      soundRow.appendChild(audio);
                       obsRow.appendChild(soundRow);
                     });
                   }
