@@ -592,21 +592,51 @@ async def update_data(request: Request):
 
 
 @app.post("/api/admin/blacklist")
-async def admin_get_blacklist(data: dict = Body(...)):
+async def admin_blacklist(data: dict = Body(...)):
+    obsid = data.get("obsid")
     user_id = data.get("user_id")
-    if not user_id:
-        return JSONResponse({"error": "Missing user_id"}, status_code=400)
+    reason = data.get("reason", "").strip()
+    navn = data.get("navn", "").strip()
+    body = data.get("body", "").strip()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     prefs = get_prefs(user_id)
     admins = load_admins()
-    if prefs.get("obserkode") not in admins:
-        return JSONResponse({"error": "Not admin"}, status_code=403)
+    admin_obserkode = prefs.get("obserkode", "")
+    if admin_obserkode not in admins:
+        return JSONResponse({"ok": False, "error": "Not admin"}, status_code=403)
+
+    if not obsid:
+        try:
+            with open("./blacklist.json", "r", encoding="utf-8") as f:
+                bl = json.load(f)
+            return bl
+        except Exception as e:
+            print("Blacklist read error:", e)
+            return []
+    if not reason:
+        return {"ok": False, "error": "Årsag til blacklistning mangler"}
     try:
-        with open("./blacklist.json", "r", encoding="utf-8") as f:
-            bl = json.load(f)
-        return bl.get("blacklisted_obsids", [])
+        try:
+            with open("./blacklist.json", "r", encoding="utf-8") as f:
+                bl = json.load(f)
+        except Exception:
+            bl = []
+        bl = [entry for entry in bl if entry.get("obserkode") != obsid]
+        bl.append({
+            "obserkode": obsid,
+            "navn": navn,
+            "reason": reason,
+            "body": body,
+            "time": now,
+            "admin_obserkode": admin_obserkode
+        })
+        with open("./blacklist.json", "w", encoding="utf-8") as f:
+            json.dump(bl, f, ensure_ascii=False, indent=2)
+        return {"ok": True}
     except Exception as e:
-        print("Blacklist read error:", e)
-        return []
+        print("Blacklist error:", e)
+        return {"ok": False, "error": "Server error"}
 
 @app.post("/api/admin/unblacklist")
 async def admin_unblacklist(data: dict = Body(...)):
@@ -622,13 +652,49 @@ async def admin_unblacklist(data: dict = Body(...)):
     try:
         with open("./blacklist.json", "r", encoding="utf-8") as f:
             bl = json.load(f)
-        if obsid in bl["blacklisted_obsids"]:
-            bl["blacklisted_obsids"].remove(obsid)
-            with open("./blacklist.json", "w", encoding="utf-8") as f:
-                json.dump(bl, f, ensure_ascii=False, indent=2)
+        # Fjern entry med denne obserkode
+        bl = [entry for entry in bl if entry.get("obserkode") != obsid]
+        with open("./blacklist.json", "w", encoding="utf-8") as f:
+            json.dump(bl, f, ensure_ascii=False, indent=2)
         return {"ok": True}
     except Exception as e:
         print("Unblacklist error:", e)
+        return {"ok": False, "error": "Server error"}
+    
+@app.post("/api/admin/remove-comment")
+async def admin_remove_comment(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    ts = data.get("ts")
+    admin_user_id = data.get("admin_user_id")
+    thread_id = data.get("thread_id")
+    day = data.get("day")
+    if not user_id or not device_id or not ts or not admin_user_id or not thread_id or not day:
+        return {"ok": False, "error": "Missing data"}
+    prefs = get_prefs(admin_user_id)
+    admins = load_admins()
+    if prefs.get("obserkode") not in admins:
+        return {"ok": False, "error": "Not admin"}
+    try:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
+        kommentar_path = os.path.join(base_dir, day, "threads", thread_id, "kommentar.json")
+        if not os.path.exists(kommentar_path):
+            return {"ok": False, "error": "File not found"}
+        with open(kommentar_path, "r", encoding="utf-8") as f:
+            comments = json.load(f)
+        comments = [
+            c for c in comments
+            if not (
+                c.get("user_id") == user_id and
+                c.get("device_id") == device_id and
+                c.get("ts") == ts
+            )
+        ]
+        with open(kommentar_path, "w", encoding="utf-8") as f:
+            json.dump(comments, f, ensure_ascii=False, indent=2)
+        return {"ok": True}
+    except Exception as e:
+        print("Remove comment error:", e)
         return {"ok": False, "error": "Server error"}
 
 @app.get("/api/threads/{day}")

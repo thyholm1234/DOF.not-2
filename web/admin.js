@@ -1,4 +1,4 @@
-// Version: 4.3.3.7 - 2025-11-06 22.16.51
+// Version: 4.3.4 - 2025-11-06 23.06.13
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -18,17 +18,18 @@ function getOrCreateDeviceId() {
   return deviceid;
 }
 
-async function blacklistObsid(obsid) {
-  const user_id = getOrCreateUserId();
-  await fetch("/api/admin/blacklist", {
+async function removeComment(user_id, device_id, ts, thread_id, day) {
+  const admin_user_id = getOrCreateUserId();
+  await fetch("/api/admin/remove-comment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ obsid, user_id })
+    body: JSON.stringify({ user_id, device_id, ts, admin_user_id, thread_id, day })
   });
   await loadCommentThreads();
 }
 
 async function unblacklistObsid(obsid) {
+  if (!confirm("Vil du fjerne denne obserkode fra blacklist?")) return;
   const user_id = getOrCreateUserId();
   await fetch("/api/admin/unblacklist", {
     method: "POST",
@@ -36,15 +37,36 @@ async function unblacklistObsid(obsid) {
     body: JSON.stringify({ obsid, user_id })
   });
   await loadBlacklist();
+  await loadCommentThreads();
 }
 
 async function loadCommentThreads() {
+  const user_id = getOrCreateUserId();
+  let blacklisted = [];
+  try {
+    const blRes = await fetch("/api/admin/blacklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id })
+    });
+    if (blRes.ok) {
+      const blList = await blRes.json();
+      blacklisted = blList.map(entry => (entry.obserkode || "").trim().toLowerCase());
+    }
+  } catch {}
+  
   const res = await fetch("/api/admin/comments");
   if (res.ok) {
     const threads = await res.json();
     const container = document.getElementById("comment-threads");
     container.innerHTML = "";
+    let shownThreads = 0;
     threads.forEach(thread => {
+      // Tjek om der er kommentarer
+      if (!thread.comments || !thread.comments.length) {
+        return; // Spring denne tråd over
+      }
+      shownThreads++;
       const threadHeader = document.createElement("h3");
       threadHeader.textContent = `${thread.art_lokation} (${thread.day})`;
       container.appendChild(threadHeader);
@@ -55,7 +77,7 @@ async function loadCommentThreads() {
         commentCard.style.marginBottom = "1em";
         commentCard.style.position = "relative";
         commentCard.innerHTML = `
-          <strong>${comment.navn}${comment.obserkode ? ", " + comment.obserkode : ""}</strong><br>
+          <strong>${comment.navn}${comment.obserkode ? " (" + comment.obserkode + ")" : ""}</strong><br>
           ${comment.body}
         `;
         if (comment.obserkode) {
@@ -83,14 +105,45 @@ async function loadCommentThreads() {
           // Blacklist-knap
           const btn = document.createElement("button");
           btn.textContent = "Blacklist";
-          btn.onclick = () => showBlacklistModal(comment.obserkode);
+          if (blacklisted.includes((comment.obserkode || "").trim().toLowerCase())) {
+            btn.className = "blacklist-btn-red";
+            btn.title = "Denne obserkode er allerede blacklistet";
+          }
+          btn.onclick = () => showBlacklistModal(comment.obserkode, comment.navn, comment.body);
           btnWrap.appendChild(btn);
+
+          // Lav thread_id hvis det ikke findes:
+          let thread_id = thread.thread_id;
+          if (!thread_id && thread.art_lokation) {
+            thread_id = thread.art_lokation.trim().toLowerCase().replace(/\s+/g, '-');
+          }
+
+          // Fjern kommentar-knap
+          const removeBtn = document.createElement("button");
+          removeBtn.textContent = "Fjern kommentar";
+          removeBtn.className = "remove-comment-btn";
+          removeBtn.onclick = () => {
+            if (confirm("Vil du fjerne denne kommentar?")) {
+              removeComment(
+                comment.user_id,
+                comment.device_id,
+                comment.ts,
+                thread_id,
+                thread.day
+              );
+            }
+          };
+          // Sæt knappen forrest/til venstre
+          btnWrap.insertBefore(removeBtn, btnWrap.firstChild);
 
           commentCard.appendChild(btnWrap);
         }
         container.appendChild(commentCard);
       });
     });
+    if (shownThreads === 0) {
+      container.innerHTML = "<em>Ingen tråde at moderere</em>";
+    }
   }
 }
 
@@ -105,37 +158,48 @@ async function loadBlacklist() {
     const list = await res.json();
     const container = document.getElementById("blacklist-entries");
     container.innerHTML = "";
-    if (list.length === 0) {
-      container.innerHTML = "<p>Ingen blacklistede observationer.</p>";
+    if (!list.length) {
+      container.innerHTML = "<em>Ingen blacklistede observatører</em>";
       return;
     }
-    list.forEach(obserkode => {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.marginBottom = "1em";
-      card.innerHTML = `
-        <strong>${obserkode}</strong><br>
-        <button type="button" class="unblacklist-btn">Ophæv blacklist</button>
+    list.forEach(entry => {
+      const div = document.createElement("div");
+      div.className = "blacklist-entry";
+      div.innerHTML = `
+        <strong>${entry.navn ? entry.navn + " (" + entry.obserkode + ")" : entry.obserkode}</strong>
+        <br>${entry.body ? "Besked: " + entry.body : ""}
+        <br>Årsag: ${entry.reason}
+        <br>Tidspunkt: ${entry.time}
+        <br>Moderator: ${entry.admin_obserkode}
+        <br>
+        <button onclick="unblacklistObsid('${entry.obserkode}')">Fjern fra blacklist</button>
       `;
-      card.querySelector(".unblacklist-btn").onclick = () => unblacklistObsid(obserkode);
-      container.appendChild(card);
+      container.appendChild(div);
     });
   }
 }
 
 let blacklistObserkode = null;
+let blacklistNavn = null;
+let blacklistBody = null;
 
-function showBlacklistModal(obserkode) {
+function showBlacklistModal(obserkode, navn, body) {
   blacklistObserkode = obserkode;
+  blacklistNavn = navn || "";
+  blacklistBody = body || "";
   document.getElementById("blacklist-modal-obserkode").textContent = "Obserkode: " + obserkode;
   document.getElementById("blacklist-reason").value = "";
   document.getElementById("blacklist-modal").style.display = "flex";
+  setTimeout(() => {
+    document.getElementById("blacklist-reason").focus();
+  }, 50);
 }
 
 function hideBlacklistModal() {
   document.getElementById("blacklist-modal").style.display = "none";
 }
 
+// Tilføj event listeners til modal-knapperne
 document.addEventListener('DOMContentLoaded', async () => {
   const user_id = getOrCreateUserId();
   const device_id = getOrCreateDeviceId();
@@ -152,4 +216,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch {
     document.getElementById("no-access").style.display = "";
   }
+
+  // Modal knapper
+  document.getElementById("blacklist-cancel-btn").onclick = hideBlacklistModal;
+  let blacklistModalBusy = false;
+  async function saveBlacklistModal() {
+    if (blacklistModalBusy) return;
+    blacklistModalBusy = true;
+    const reason = document.getElementById("blacklist-reason").value.trim();
+    if (!reason) {
+      alert("Du skal angive en årsag til blacklistning.");
+      blacklistModalBusy = false;
+      return;
+    }
+    const user_id = getOrCreateUserId();
+    await fetch("/api/admin/blacklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ obsid: blacklistObserkode, user_id, reason, navn: blacklistNavn, body: blacklistBody })
+    });
+    hideBlacklistModal();
+    await loadCommentThreads();
+    await loadBlacklist();
+    blacklistModalBusy = false;
+  }
+  document.getElementById("blacklist-save-btn").onclick = saveBlacklistModal;
+
+  // Ctrl+Enter eller Cmd+Enter i textarea
+  document.getElementById("blacklist-reason").addEventListener("keydown", function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      saveBlacklistModal();
+    }
+  });
 });
+
