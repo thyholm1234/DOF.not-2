@@ -1,0 +1,41 @@
+<!-- Version: 4.3.3.7 - 2025-11-06 22.16.51 -->
+<!-- © Christian Vemmelund Helligsø -->
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <title>Adminpanel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="style.css?v=4.3.3.7" />
+</head>
+<body>
+  <main class="wrap">
+    <div id="admin-content" style="display:none;">
+        <h2>Adminpanel</h2>
+        <div id="comment-threads"></div>
+
+        <h2>Blacklist</h2>
+        <div class="card" id="blacklist-card">
+            <div id="blacklist-entries"></div>
+        </div>
+    </div>
+    <div id="no-access" style="display:none;">
+        <h2>Ingen adgang</h2>
+        <p>Du har ikke adgang til adminpanelet.</p>
+    </div>
+    </main>
+  <script src="admin.js?v=4.3.3.7"></script>
+  <div id="blacklist-modal" class="modal" style="display:none;">
+    <div class="modal-content card" style="max-width:400px;margin:auto;">
+      <h3>Blacklist observation</h3>
+      <p id="blacklist-modal-obserkode"></p>
+      <label for="blacklist-reason">Årsag:</label>
+      <textarea id="blacklist-reason" rows="3" style="width:100%;"></textarea>
+      <div style="margin-top:12px; text-align:right;">
+        <button id="blacklist-cancel-btn" type="button">Annullér</button>
+        <button id="blacklist-save-btn" type="button">Gem</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

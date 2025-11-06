@@ -1,4 +1,4 @@
-// Version: 4.2.5.1 - 2025-11-05 19.05.47
+// Version: 4.3.3.7 - 2025-11-06 22.16.51
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -74,36 +74,58 @@
       const art = thread.art || '';
       const lok = thread.lok || '';
       // const dato = thread.last_ts_obs ? thread.last_ts_obs.split('T')[0] : '';
+      // --- NYT: Lav link til artside og lokalitet ---
+      let artnr = '';
+      if (thread.Artnr) {
+        artnr = String(thread.Artnr).padStart(5, '0');
+      } else if (data.events && data.events.length && data.events[0].Artnr) {
+        artnr = String(data.events[0].Artnr).padStart(5, '0');
+      }
+      const artLink = artnr
+        ? `<a href="https://dofbasen.dk/danmarksfugle/art/${artnr}" target="_blank" rel="noopener">${art}</a>`
+        : art;
+
+      let loknr = '';
+      if (thread.Loknr) {
+        loknr = String(thread.Loknr).padStart(6, '0');
+      } else if (data.events && data.events.length && data.events[0].Loknr) {
+        loknr = String(data.events[0].Loknr).padStart(6, '0');
+      }
+      const lokLink = loknr
+        ? `<a href="https://dofbasen.dk/poplok.php?loknr=${loknr}" target="_blank" rel="noopener">${lok}</a>`
+        : lok;
+
       document.title = `${art} - ${lok}`;
       $title.innerHTML = "";
-const titleRow = document.createElement('div');
-titleRow.className = "thread-title-row";
+      const titleRow = document.createElement('div');
+      titleRow.className = "thread-title-row";
 
-// Titel
-const h2 = el('h2', '', `${art} - ${lok}`);
-h2.id = "thread-title";
-titleRow.appendChild(h2);
+      // Titel
+      const h2 = el('h2', '', '');
+      h2.id = "thread-title";
+      h2.innerHTML = `${artLink} - ${lokLink}`;
+      titleRow.appendChild(h2);
 
-// Abonner-knap (🔔)
-const userid = getOrCreateUserId();
-const deviceid = localStorage.getItem("deviceid");
-let isSubscribed = false;
-try {
-  const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
-  if (subRes.ok) {
-    const subData = await subRes.json();
-    isSubscribed = !!subData.subscribed;
-  }
-} catch {}
-const subBtn = document.createElement('button');
-subBtn.id = "thread-sub-btn";
-subBtn.textContent = "🔔 Abonner";
-subBtn.className = "twostate";
-if (isSubscribed) subBtn.classList.add("is-on");
-titleRow.appendChild(subBtn);
+      // Abonner-knap (🔔)
+      const userid = getOrCreateUserId();
+      const deviceid = localStorage.getItem("deviceid");
+      let isSubscribed = false;
+      try {
+        const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          isSubscribed = !!subData.subscribed;
+        }
+      } catch {}
+      const subBtn = document.createElement('button');
+      subBtn.id = "thread-sub-btn";
+      subBtn.textContent = "🔔 Abonner";
+      subBtn.className = "twostate";
+      if (isSubscribed) subBtn.classList.add("is-on");
+      titleRow.appendChild(subBtn);
 
-$title.appendChild(titleRow);
-$meta.innerHTML = "";
+      $title.appendChild(titleRow);
+      $meta.innerHTML = "";
 
       subBtn.onclick = async () => {
         const userid = getOrCreateUserId();
@@ -368,7 +390,7 @@ $meta.innerHTML = "";
           return;
         }
 
-        wsSend({ type: "new_comment", navn, body, user_id: userid, device_id: deviceid });
+        wsSend({ type: "new_comment", navn, obserkode, body, user_id: userid, device_id: deviceid });
         input.value = "";
         btn.disabled = false;
       };
@@ -435,6 +457,11 @@ $meta.innerHTML = "";
       // Fjern evt. gammel sektion igen (hvis reload)
       let oldCard = document.getElementById('comments-section');
       if (oldCard) oldCard.remove();
+
+      if (msg.type === "error" && msg.message) {
+        alert(msg.message); // eller vis beskeden på anden måde
+        return;
+      }
 
       if (msg.type === "comments" && msg.comments && msg.comments.length) {
         // Opret og indsæt kun hvis der er kommentarer

@@ -1,4 +1,4 @@
-/* Version: 4.2.5.1 - 2025-11-05 19.05.47 */
+/* Version: 4.3.3.7 - 2025-11-06 22.16.51 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1058,17 +1058,17 @@ label[for="show-only-filtered"] {
   font-weight: 500;
 }
 
-#obserkode, #navn {
-  width: 100%;
-  font-size: 1.1em;
-  padding: 8px 10px;
-  border-radius: 7px;
-  border: 1.5px solid var(--card-border, #c0c0c0);
-  background: var(--card-bg, #fff);
-  color: var(--text-main, #222);
-  margin-bottom: 0.5em;
-  box-sizing: border-box;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+#obserkode, #navn, #adgangskode, #obserkode_greyed {
+    width: 100%;
+    font-size: 1.1em;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: 1.5px solid var(--card-border, #c0c0c0);
+    background: var(--card-bg, #fff);
+    color: var(--text-main, #222);
+    margin-bottom: 0.5em;
+    box-sizing: border-box;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 #obserkode:focus, #navn:focus {
@@ -1528,4 +1528,50 @@ label[for="show-only-filtered"] {
 }
 :root[data-theme="dark"] .afd-grid-hr {
   border-top: 1.5px solid #444;
+}
+
+/* Tilføj til style.css */
+.greyed {
+  background: #eee;
+  color: #888;
+}
+
+#login-card h3,
+#userinfo-card h3 {
+    margin-top: 0;
+}
+
+#abonnement-card h2 {
+  margin-top: 0;
+}
+
+.admin-btn-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .admin-btn-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+}
+
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
 }

@@ -1,4 +1,4 @@
-// Version: 4.2.5.1 - 2025-11-05 19.05.47
+// Version: 4.3.3.7 - 2025-11-06 22.16.51
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -190,15 +190,6 @@ async function subscribeUser(userid, deviceid) {
   }
 }
 
-document.getElementById("hent-navn-btn").onclick = async () => {
-  const kode = document.getElementById("obserkode").value.trim();
-  if (!kode) return;
-  // Kald backend-endpointet
-  const res = await fetch(`/api/lookup_obserkode?obserkode=${encodeURIComponent(kode)}`);
-  const data = await res.json();
-  document.getElementById("navn").value = data.navn || "";
-};
-
 function setPrefsTableEnabled(enabled) {
   const table = document.querySelector('.prefs-table');
   if (table) {
@@ -293,19 +284,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     setPrefsTableEnabled(false);
     setUserinfoEnabled(false);
   };
-
-  // Hent evt. tidligere gemte oplysninger
-  let userinfo = {};
-try {
-  const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
-  if (res.ok) {
-    userinfo = await res.json();
-  }
-} catch (e) {
-  userinfo = {};
-}
-document.getElementById("obserkode").value = userinfo.obserkode || "";
-document.getElementById("navn").value = userinfo.navn || "";
 
 // Sørg for store bogstaver i obserkode
 const obserkodeInput = document.getElementById("obserkode");

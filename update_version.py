@@ -16,7 +16,10 @@ FILES = [
     "web/sw.js",
     "web/threads.js",
     "web/traad.html",
-    "web/traad.js"
+    "web/traad.js",
+    "web/validate.js",
+    "web/adminpanel.html",
+    "web/admin.js"
 ]
 
 VERSION = sys.argv[1] if len(sys.argv) > 1 else '1.0.0'

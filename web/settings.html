@@ -1,4 +1,4 @@
-<!-- Version: 4.2.5.1 - 2025-11-05 19.05.47 -->
+<!-- Version: 4.3.3.7 - 2025-11-06 22.16.51 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.2.5.1">
+  <link rel="stylesheet" href="/style.css?v=4.3.3.7">
 </head>
 <body>
   <header class="wrap">
@@ -34,25 +34,42 @@
   </header>
   <main class="wrap">
 
-    <h2>Mit abonnement</h2>
-    <p class="sub">Her administrerer du dit abonnement. <br>Et abonnement er nødvendigt for at modtage notifikationer.</p>
-    <button id="subscribe-btn">Abonnér</button>
-    <button id="unsubscribe-btn">Afmeld</button>
+    <div class="card" id="abonnement-card">
+      <h2>Mit abonnement</h2>
+      <p class="sub">Her administrerer du dit abonnement. <br>Et abonnement er nødvendigt for at modtage notifikationer.</p>
+      <button id="subscribe-btn">Abonnér</button>
+      <button id="unsubscribe-btn">Afmeld</button>
+    </div>
 
     <h2>Mine oplysninger</h2>
 
     <p class="sub">Ved indtastning af din DOF-obserkode, vil du få adgang til chat samt notifikationer på sjældne fugle du selv indtaster i DOFbasen.</p>
 
-    <div class="card" id="obserkode-card">
-      <label for="obserkode">1. Skriv din DOF-obserkode (fx 7000SKF):</label>
-      <input type="text" id="obserkode" maxlength="16" autocomplete="off" />
-      <button id="hent-navn-btn" type="button">Hent navn</button>
+    <div class="card" id="login-card" style="display:none;">
+      <h3>Loginoplysninger</h3>
+      <form id="login-form" autocomplete="off" onsubmit="return false;">
+        <label for="obserkode">DOF-obserkode:</label>
+        <input type="text" id="obserkode" maxlength="16" autocomplete="off" placeholder="Obserkode" style="display:block; margin-bottom:12px;" />
+
+        <label for="adgangskode">Adgangskode:</label>
+        <input type="password" id="adgangskode" maxlength="32" autocomplete="off" placeholder="Adgangskode" style="display:block; margin-bottom:12px;" />
+
+        <div style="text-align:right;">
+          <button id="hent-navn-btn" type="button">Login</button>
+        </div>
+      </form>
     </div>
 
-    <div class="card" id="navn-card">
-      <label for="navn">2. Check dit navn og gem:</label>
-      <input type="text" id="navn" readonly />
-      <button id="save-userinfo-btn">Gem oplysninger</button>
+    <div class="card" id="userinfo-card">
+      <label for="obserkode_greyed">DOF-obserkode:</label>
+      <input type="text" id="obserkode_greyed" readonly class="greyed" style="display:block; margin-bottom:12px;" />
+
+      <label for="navn">Navn:</label>
+      <input type="text" id="navn" readonly class="greyed" style="display:block; margin-bottom:12px;" />
+
+      <div style="text-align: right;">
+        <button id="remove-connection-btn" type="button" style="margin-top:8px;">Fjern forbindelse</button>
+      </div>
     </div>
 
     <h2>Mine præferencer</h2>
@@ -69,6 +86,7 @@
     <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div> --->
     
   </main>
-  <script src="app.js?v=4.2.5.1"></script>
+  <script src="app.js?v=4.3.3.7"></script>
+  <script src="validate.js?v=4.3.3.7"></script>
 </body>
 </html>

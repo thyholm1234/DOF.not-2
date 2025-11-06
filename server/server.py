@@ -1,10 +1,10 @@
 import sqlite3
-from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect, Body
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import json
 import os
 import glob
-import datetime
+from datetime import datetime, timedelta
 from fastapi.staticfiles import StaticFiles
 from pywebpush import webpush, WebPushException
 import unicodedata
@@ -24,6 +24,8 @@ load_dotenv()
 
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
 
 app = FastAPI()
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
@@ -77,13 +79,13 @@ def cleanup_user_prefs_without_subscriptions():
         conn.commit()
 
 def cleanup_dirs(base_dir, days=3):
-    now = datetime.datetime.now()
+    now = datetime.now()
     for name in os.listdir(base_dir):
         dir_path = os.path.join(base_dir, name)
         if not os.path.isdir(dir_path):
             continue
         try:
-            dir_date = datetime.datetime.strptime(name, "%d-%m-%Y")
+            dir_date = datetime.strptime(name, "%d-%m-%Y")
         except ValueError:
             continue
         if (now - dir_date).days >= days:
@@ -174,7 +176,7 @@ def get_prefs(user_id):
         return json.loads(row[0]) if row else {}
 
 def set_prefs(user_id, prefs):
-    ts = int(datetime.datetime.now().timestamp())
+    ts = int(datetime.now().timestamp())
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO user_prefs (user_id, prefs, ts) VALUES (?, ?, ?)",
@@ -244,12 +246,12 @@ def _parse_dt_from_row(row: dict) -> datetime:
     if not time_str:
         time_str = "00:00"
     try:
-        return datetime.datetime.strptime(f"{date_str} {time_str}", "%d-%m-%Y %H:%M")
+        return datetime.strptime(f"{date_str} {time_str}", "%d-%m-%Y %H:%M")
     except Exception:
         try:
-            return datetime.datetime.strptime(date_str, "%d-%m-%Y")
+            return datetime.strptime(date_str, "%d-%m-%Y")
         except Exception:
-            return datetime.datetime.min
+            return datetime.min
         
 def get_species_filters_for_user(user_id: str) -> dict:
     prefs = get_prefs(user_id)
@@ -283,11 +285,11 @@ def _latest_from_data(data):
     return {}
 
 def _ts() -> str:
-    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def _save_payload(payload) -> str:
     # Opret dato-mappe i format DD-MM-YYYY
-    today = datetime.datetime.now().strftime("%d-%m-%Y")
+    today = datetime.now().strftime("%d-%m-%Y")
     datedir = os.path.join(payload_dir, today)
     os.makedirs(datedir, exist_ok=True)
     fname = f"payload_{_ts()}.json"
@@ -541,7 +543,7 @@ async def update_data(request: Request):
             kat = obs.get("kategori")
             statechanged = int(obs.get("statechanged", 0))
             thread_id = obs.get("tag")  # eller brug obs.get("thread_id") hvis det findes
-            day = datetime.datetime.strptime(obs.get("Dato"), "%Y-%m-%d").strftime("%d-%m-%Y")
+            day = datetime.strptime(obs.get("Dato"), "%Y-%m-%d").strftime("%d-%m-%Y")
             title = f"{obs.get('Antal','?')} {obs.get('Artnavn','')}, {obs.get('Loknavn','')}"
             body = f"{obs.get('Adfbeskrivelse','')}, {obs.get('Fornavn','')} {obs.get('Efternavn','')}"
             push_payload = {
@@ -587,28 +589,47 @@ async def update_data(request: Request):
         for t in tasks:
             t.result()
     return {"ok": True}
-                
-   
-@app.get("/api/lookup_obserkode")
-async def lookup_obserkode(obserkode: str = Query(...)):
-    import requests
-    url = f"https://dofbasen.dk/popobser.php?obserkode={obserkode}"
+
+
+@app.post("/api/admin/blacklist")
+async def admin_get_blacklist(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    if not user_id:
+        return JSONResponse({"error": "Missing user_id"}, status_code=400)
+    prefs = get_prefs(user_id)
+    admins = load_admins()
+    if prefs.get("obserkode") not in admins:
+        return JSONResponse({"error": "Not admin"}, status_code=403)
     try:
-        r = requests.get(url, timeout=10)
-        if r.status_code != 200:
-            return {"navn": ""}
-        # Find linjen med "Navn" og tag næste <td>
-        html = r.text
-        navn = ""
-        idx = html.find("Navn</acronym>:</td><td valign=\"top\">")
-        if idx != -1:
-            start = idx + len("Navn</acronym>:</td><td valign=\"top\">")
-            end = html.find("</td>", start)
-            if end != -1:
-                navn = html[start:end].strip()
-        return {"navn": navn}
-    except Exception:
-        return {"navn": ""}
+        with open("./blacklist.json", "r", encoding="utf-8") as f:
+            bl = json.load(f)
+        return bl.get("blacklisted_obsids", [])
+    except Exception as e:
+        print("Blacklist read error:", e)
+        return []
+
+@app.post("/api/admin/unblacklist")
+async def admin_unblacklist(data: dict = Body(...)):
+    obsid = data.get("obsid")
+    user_id = data.get("user_id")
+    if not obsid or not user_id:
+        return {"ok": False, "error": "Missing obsid or user_id"}
+    # Tjek admin-status
+    prefs = get_prefs(user_id)
+    admins = load_admins()
+    if prefs.get("obserkode") not in admins:
+        return {"ok": False, "error": "Not admin"}
+    try:
+        with open("./blacklist.json", "r", encoding="utf-8") as f:
+            bl = json.load(f)
+        if obsid in bl["blacklisted_obsids"]:
+            bl["blacklisted_obsids"].remove(obsid)
+            with open("./blacklist.json", "w", encoding="utf-8") as f:
+                json.dump(bl, f, ensure_ascii=False, indent=2)
+        return {"ok": True}
+    except Exception as e:
+        print("Unblacklist error:", e)
+        return {"ok": False, "error": "Server error"}
 
 @app.get("/api/threads/{day}")
 async def api_threads_index(day: str):
@@ -653,6 +674,122 @@ async def api_threads_index(day: str):
         thread["comment_count"] = comment_count
 
     return JSONResponse(out)
+
+@app.post("/api/validate-login")
+async def validate_login(data: dict = Body(...)):
+    import requests
+
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    obserkode = data.get("obserkode")
+    adgangskode = data.get("adgangskode")
+
+    # Send til DOFbasen API
+    url = "https://krydslister.dofbasen.dk/api/v1/login"
+    payload = { "username": obserkode, "password": adgangskode }
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        if r.status_code != 200:
+            return { "ok": False, "error": "Login fejlede" }
+        token = r.json().get("token")
+        if not token:
+            return { "ok": False, "error": "Token mangler" }
+    except Exception as e:
+        return { "ok": False, "error": str(e) }
+
+    # Hent navn fra DOFbasen (valgfrit, hvis du vil vise det)
+    navn = ""
+    try:
+        navn_res = requests.get(f"https://dofbasen.dk/popobser.php?obserkode={obserkode}", timeout=10)
+        if navn_res.status_code == 200:
+            html = navn_res.text
+            idx = html.find("Navn</acronym>:</td><td valign=\"top\">")
+            if idx != -1:
+                start = idx + len("Navn</acronym>:</td><td valign=\"top\">")
+                end = html.find("</td>", start)
+                if end != -1:
+                    navn = html[start:end].strip()
+    except Exception:
+        navn = ""
+
+    # Gem obserkode og navn i prefs (adgangskode gemmes IKKE)
+    prefs = get_prefs(user_id)
+    prefs["obserkode"] = obserkode
+    prefs["navn"] = navn
+    set_prefs(user_id, prefs)
+
+    return { "ok": True, "token": token, "navn": navn }
+
+@app.post("/api/remove-connection")
+async def remove_connection(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    if not user_id:
+        return {"ok": False, "error": "user_id mangler"}
+    prefs = get_prefs(user_id)
+    prefs.pop("obserkode", None)
+    prefs.pop("navn", None)
+    set_prefs(user_id, prefs)
+    return {"ok": True}
+
+def load_admins():
+    try:
+        with open("./admin.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.get("admins", []))
+    except Exception:
+        return set()
+
+def get_obserkode_from_userprefs(user_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.execute("SELECT prefs FROM user_prefs WHERE user_id=?", (user_id,))
+        row = cur.fetchone()
+        if row:
+            try:
+                prefs = json.loads(row[0])
+                return prefs.get("obserkode", "")
+            except Exception:
+                return ""
+    return ""
+
+@app.get("/api/is-admin")
+async def is_admin(user_id: str = Query(...), device_id: str = Query(...)):
+    admins = load_admins()
+    obserkode = get_obserkode_from_userprefs(user_id)
+    if obserkode in admins:
+        return {"admin": True}
+    return {"admin": False}
+
+@app.get("/api/admin/comments")
+async def admin_comments():
+    today = datetime.now()
+    days = [(today - timedelta(days=i)).strftime("%d-%m-%Y") for i in range(2)]
+    threads = []
+
+    for day in days:
+        threads_dir = os.path.join(BASE_DIR, day, "threads")
+        print("Tjekker mappe:", threads_dir)
+        if not os.path.isdir(threads_dir):
+            print("Findes ikke:", threads_dir)
+            continue
+        for thread_folder in os.listdir(threads_dir):
+            thread_path = os.path.join(threads_dir, thread_folder)
+            kommentar_file = os.path.join(thread_path, "kommentar.json")
+            print("Tjekker fil:", kommentar_file)
+            if os.path.isfile(kommentar_file):
+                try:
+                    with open(kommentar_file, "r", encoding="utf-8") as f:
+                        comments = json.load(f)
+                    threads.append({
+                        "art_lokation": thread_folder.replace("-", " "),
+                        "day": day,
+                        "comments": comments
+                    })
+                    print("Fundet kommentarspor:", kommentar_file)
+                except Exception as e:
+                    print("Fejl ved læsning:", kommentar_file, e)
+                    continue
+    print("Antal fundne spor:", len(threads))
+    return threads
 
 @app.get("/api/thread/{day}/{thread_id}")
 async def api_thread(day: str, thread_id: str):
@@ -780,13 +917,11 @@ async def thumbs_up_comment(day: str, thread_id: str, request: Request):
     return {"ok": True, "thumbs": c["thumbs"]}
 
 @app.get("/api/thread/{day}/{thread_id}/comments")
-async def get_comments(day: str, thread_id: str):
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
-    comments_path = os.path.join(thread_dir, "kommentar.json")
-    if not os.path.isfile(comments_path):
-        return []
-    with open(comments_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+async def get_comments(day: str, thread_id: str, user_id: str = Query(None)):
+    thread_comments = get_comments_for_thread(day, thread_id)
+    if user_id:
+        return get_comments_for_user(thread_comments, user_id)
+    return thread_comments
 
 @app.post("/api/thread/{day}/{thread_id}/comments")
 async def post_comment(day: str, thread_id: str, request: Request):
@@ -802,9 +937,10 @@ async def post_comment(day: str, thread_id: str, request: Request):
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
 
-    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     comment = {
         "navn": navn,
+        "obserkode": data.get("obserkode", ""),  # <-- TILFØJ DENNE LINJE
         "body": body,
         "ts": ts,
         "thumbs": 0,
@@ -1045,6 +1181,14 @@ ws_connections: Dict[str, List[WebSocket]] = {}
 def ws_key(day, thread_id):
     return f"{day}::{thread_id}"
 
+def load_blacklisted_obsids():
+    try:
+        with open("./blacklist.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.get("blacklisted_obsids", []))
+    except Exception:
+        return set()
+
 def get_comments_for_thread(day, thread_id):
     thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
     comments_path = os.path.join(thread_dir, "kommentar.json")
@@ -1059,6 +1203,40 @@ def save_comments_for_thread(day, thread_id, comments):
     comments_path = os.path.join(thread_dir, "kommentar.json")
     with open(comments_path, "w", encoding="utf-8") as f:
         json.dump(comments, f, ensure_ascii=False, indent=2)
+
+def get_comments_for_user(thread_comments, current_user_id):
+    blacklisted = load_blacklisted_obsids()
+    filtered = []
+    for c in thread_comments:
+        if c.get("obserkode") in blacklisted:
+            if c.get("user_id") == current_user_id:
+                filtered.append(c)  # vis kun til afsender
+        else:
+            filtered.append(c)
+    return filtered
+
+@app.post("/api/admin/blacklist")
+async def admin_blacklist(data: dict = Body(...)):
+    obsid = data.get("obsid")
+    user_id = data.get("user_id")
+    if not obsid or not user_id:
+        return {"ok": False, "error": "Missing obsid or user_id"}
+    # Tjek admin-status
+    prefs = get_prefs(user_id)
+    admins = load_admins()
+    if prefs.get("obserkode") not in admins:
+        return {"ok": False, "error": "Not admin"}
+    try:
+        with open("./blacklist.json", "r", encoding="utf-8") as f:
+            bl = json.load(f)
+        if obsid not in bl["blacklisted_obsids"]:
+            bl["blacklisted_obsids"].append(obsid)
+            with open("./blacklist.json", "w", encoding="utf-8") as f:
+                json.dump(bl, f, ensure_ascii=False, indent=2)
+        return {"ok": True}
+    except Exception as e:
+        print("Blacklist error:", e)
+        return {"ok": False, "error": "Server error"}
 
 @app.websocket("/ws/thread/{day}/{thread_id}")
 async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
@@ -1077,7 +1255,8 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
             # Tilføj denne blok:
             if msg.get("type") == "get_comments":
                 comments = get_comments_for_thread(day, thread_id)
-                await websocket.send_json({"type": "comments", "comments": comments})
+                filtered = get_comments_for_user(comments, msg.get("user_id"))
+                await websocket.send_json({"type": "comments", "comments": filtered})
                 continue
 
             # Ny kommentar
@@ -1086,11 +1265,17 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                 body = (msg.get("body") or "").strip()
                 user_id = msg.get("user_id")
                 device_id = msg.get("device_id")
+                obserkode = msg.get("obserkode", "")
+                blacklisted = load_blacklisted_obsids()
+                if obserkode in blacklisted:
+                    await websocket.send_json({"type": "error", "message": "Du er blacklistet og kan ikke skrive kommentarer."})
+                    continue
                 if not body or not user_id or not device_id:
                     continue
-                ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 comment = {
                     "navn": navn,
+                    "obserkode": msg.get("obserkode", ""),  # <-- TILFØJ DENNE LINJE
                     "body": body,
                     "ts": ts,
                     "thumbs": 0,
@@ -1144,7 +1329,7 @@ async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
                             vapid_private_key=VAPID_PRIVATE_KEY,
                             vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
                             ttl=3600,
-                            headers={"Urgency": "high"}
+                            headers={"Urgency": "high"}  # <-- Tilføj urgency high
                         )
                     except Exception as ex:
                         print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
