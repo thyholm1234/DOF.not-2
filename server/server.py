@@ -833,14 +833,11 @@ async def admin_comments():
 
     for day in days:
         threads_dir = os.path.join(BASE_DIR, day, "threads")
-        print("Tjekker mappe:", threads_dir)
         if not os.path.isdir(threads_dir):
-            print("Findes ikke:", threads_dir)
             continue
         for thread_folder in os.listdir(threads_dir):
             thread_path = os.path.join(threads_dir, thread_folder)
             kommentar_file = os.path.join(thread_path, "kommentar.json")
-            print("Tjekker fil:", kommentar_file)
             if os.path.isfile(kommentar_file):
                 try:
                     with open(kommentar_file, "r", encoding="utf-8") as f:
@@ -850,11 +847,8 @@ async def admin_comments():
                         "day": day,
                         "comments": comments
                     })
-                    print("Fundet kommentarspor:", kommentar_file)
-                except Exception as e:
-                    print("Fejl ved læsning:", kommentar_file, e)
+                except Exception:
                     continue
-    print("Antal fundne spor:", len(threads))
     return threads
 
 @app.get("/api/thread/{day}/{thread_id}")
