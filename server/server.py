@@ -1306,6 +1306,9 @@ def is_blacklisted_obserkode(obserkode):
 @app.websocket("/ws/thread/{day}/{thread_id}")
 async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
     await websocket.accept()
+    key = ws_key(day, thread_id)  # Tilføj denne linje
+    ws_connections.setdefault(key, []).append(websocket)
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)  # Tilføj denne linje
     try:
         while True:
             data = await websocket.receive_text()

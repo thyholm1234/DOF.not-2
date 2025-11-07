@@ -1,6 +1,6 @@
-// Version: 4.3.5.0 - 2025-11-07 09.51.18
+// Version: 4.3.5.6 - 2025-11-07 10.24.28
 // © Christian Vemmelund Helligsø
-const CACHE_NAME = 'dofnot-v4.3.5.0';
+const CACHE_NAME = 'dofnot-v4.3.5.6';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -89,11 +89,12 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'DOF Notifikation';
   const options = {
     body: payload.body || JSON.stringify(payload),
-    icon: '/icons/maskable-512.png', // <-- Brug det nye ikon her
-    badge: '/icons/icon-512.png', // <-- Og her, hvis ønsket
+    icon: '/icons/icon-512.png',
+    badge: '/icons/maskable-512.png', // Brug ikke maskable til badge
     data: payload,
-    tag: payload.tag || undefined // <-- tilføj denne linje
+    tag: payload.tag || undefined
   };
+
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
