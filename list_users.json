@@ -1,5 +1,6 @@
 {
   "unikke_navne": [
+    "Alex Sand Frich",
     "Christian Michael Villadsen",
     "Christian Vemmelund Helligsø",
     "Emil Skovgaard Brandtoft",
@@ -110,21 +111,45 @@
       "avanceret_count": 0
     },
     {
+      "user_id": "user-8cipgvpxkqg",
+      "obserkode": "7300ASF",
+      "navn": "Alex Sand Frich",
+      "SU": 0,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-94ikqws8icq",
+      "obserkode": "8220CVH",
+      "navn": "Christian Vemmelund Helligsø",
+      "SU": 11,
+      "SUB": 1,
+      "Bemærk": 1,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 222,
+      "avanceret_count": 15
+    },
+    {
       "user_id": "user-djby9vqb4iw",
       "obserkode": "2450JEH",
       "navn": "Joshua Haahr",
-      "SU": 11,
-      "SUB": 2,
+      "SU": 12,
+      "SUB": 1,
       "Bemærk": 0,
       "laveste_kategori": "SUB",
-      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland",
+      "afdelinger_med_laveste": "DOF København",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
     {
       "user_id": "user-dlo6zpwjz8o",
-      "obserkode": "-",
-      "navn": "-",
+      "obserkode": "8220CVH",
+      "navn": "Christian Vemmelund Helligsø",
       "SU": 13,
       "SUB": 0,
       "Bemærk": 0,
@@ -216,18 +241,6 @@
       "afdelinger_med_laveste": "DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
-    },
-    {
-      "user_id": "user-l9jni82pewk",
-      "obserkode": "8220CVH",
-      "navn": "Christian Vemmelund Helligsø",
-      "SU": 11,
-      "SUB": 1,
-      "Bemærk": 1,
-      "laveste_kategori": "Bemærk",
-      "afdelinger_med_laveste": "DOF Østjylland",
-      "avanceret_exclude": 223,
-      "avanceret_count": 16
     },
     {
       "user_id": "user-navxpc1qeam",

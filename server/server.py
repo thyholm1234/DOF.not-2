@@ -26,6 +26,8 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
+BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.json")
+
 
 app = FastAPI()
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
@@ -1243,9 +1245,9 @@ def ws_key(day, thread_id):
 
 def load_blacklisted_obsids():
     try:
-        with open("./blacklist.json", "r", encoding="utf-8") as f:
+        with open(BLACKLIST_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return set(data.get("blacklisted_obsids", []))
+        return set(entry["obserkode"] for entry in data if "obserkode" in entry)
     except Exception:
         return set()
 
@@ -1297,20 +1299,25 @@ async def admin_blacklist(data: dict = Body(...)):
     except Exception as e:
         print("Blacklist error:", e)
         return {"ok": False, "error": "Server error"}
+    
+def is_blacklisted_obserkode(obserkode):
+    return obserkode in load_blacklisted_obsids()
 
 @app.websocket("/ws/thread/{day}/{thread_id}")
-async def ws_thread_comments(websocket: WebSocket, day: str, thread_id: str):
+async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
     await websocket.accept()
-    key = ws_key(day, thread_id)
-    ws_connections.setdefault(key, []).append(websocket)
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)  # <-- Tilføj denne linje
     try:
         while True:
             data = await websocket.receive_text()
-            try:
-                msg = json.loads(data)
-            except Exception:
-                continue
+            msg = json.loads(data)
+            if msg.get("type") == "new_comment":
+                obserkode = msg.get("obserkode")
+                if is_blacklisted_obserkode(obserkode):
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Du er blacklistet og kan ikke skrive kommentarer."
+                    })
+                    continue
 
             # Tilføj denne blok:
             if msg.get("type") == "get_comments":
