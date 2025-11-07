@@ -1,4 +1,4 @@
-/* Version: 4.3.5.6 - 2025-11-07 10.24.28 */
+/* Version: 4.3.7.0 - 2025-11-07 13.08.30 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1591,4 +1591,18 @@ label[for="show-only-filtered"] {
 }
 .remove-comment-btn:hover {
   background: #ffd43b !important;
+}
+
+input:disabled,
+button:disabled {
+  background: inherit;
+  color: #888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.btn-green {
+  background: #2ea043 !important;
+  color: #fff !important;
+  border-color: #2ea043 !important;
 }

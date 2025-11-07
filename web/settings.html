@@ -1,4 +1,4 @@
-<!-- Version: 4.3.5.6 - 2025-11-07 10.24.28 -->
+<!-- Version: 4.3.7.0 - 2025-11-07 13.08.30 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,13 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.3.5.6">
+  <link rel="stylesheet" href="/style.css?v=4.3.7.0">
+  <style>
+  .card h3,
+  .card > .sub {
+    margin-top: 0;
+  }
+</style>
 </head>
 <body>
   <header class="wrap">
@@ -27,6 +33,10 @@
               onclick="window.location.reload()">
         <span id="refresh-icon">🔄</span>
       </button>
+      <button id="info-btn" aria-label="Info" title="Info" type="button"
+              onclick="window.location.href='./info.html'">
+        <span id="info-icon">ℹ️</span>
+      </button>
       <button id="theme-toggle" aria-label="Skift tema">
         <span id="theme-icon">☀️</span>
       </button>
@@ -34,19 +44,30 @@
   </header>
   <main class="wrap">
 
+    <h2>Mit abonnement</h2>
+    <p class="sub">
+      Her kan du administrere dit abonnement.
+    </p>
     <div class="card" id="abonnement-card">
-      <h2>Mit abonnement</h2>
-      <p class="sub">Her administrerer du dit abonnement. <br>Et abonnement er nødvendigt for at modtage notifikationer.</p>
-      <button id="subscribe-btn">Abonnér</button>
+      <p class="sub">
+        Et aktivt abonnement er påkrævet for at modtage notifikationer og nødvendigt for andre funktioner i app'en.
+      </p>
+      <button id="subscribe-btn">Opret</button>
       <button id="unsubscribe-btn">Afmeld</button>
     </div>
 
     <h2>Mine oplysninger</h2>
 
-    <p class="sub">Ved indtastning af din DOF-obserkode, vil du få adgang til chat samt notifikationer på sjældne fugle du selv indtaster i DOFbasen.</p>
+    <p class="sub">Ved at oprette forbindelse til din DOFbasen-bruger, vil du få adgang til chat-funktionen samt notifikationer på sjældne fugle du selv indtaster i DOFbasen.</p>
 
     <div class="card" id="login-card" style="display:none;">
       <h3>Loginoplysninger</h3>
+      <p class="sub" style="margin-bottom:10px;">
+        Dine loginoplysninger (obserkode og adgangskode) bruges kun til at validere din adgang og hentes ikke eller gemmes permanent – adgangskoden opbevares aldrig i appen eller på serveren.
+      </p>
+      <p class="sub" style="margin-bottom:10px;">
+        Når du opretter forbindelse til din DOFbasen-profil og kommenterer, skal du overholde <a href="info.html#retningslinjer-for-debat-og-kommentarer">retningslinjerne</a>.
+      </p>
       <form id="login-form" autocomplete="off" onsubmit="return false;">
         <label for="obserkode">DOF-obserkode:</label>
         <input type="text" id="obserkode" maxlength="16" autocomplete="off" placeholder="Obserkode" style="display:block; margin-bottom:12px;" />
@@ -73,9 +94,27 @@
     </div>
 
     <h2>Mine præferencer</h2>
-    <p class="sub">Her vælger du, hvilke observationer du ønsker notifikationer for. SUB indeholder SU osv.</p>
-    <p class="sub">Siden gemmer automatisk dine præferencer.</p>
-    <button type="button" onclick="location.href='./advanced.html'">Avanceret filtrering</button>
+    <div class="card">
+      <h3>Sådan virker filtrene</h3>
+      <p class="sub">
+        I præference-tabellen kan du for hver DOF-afdeling vælge, hvilke kategorier af observationer du vil have notifikationer om:
+      </p>
+      <ul>
+        <li><strong>Ingen</strong>: Du modtager ingen notifikationer for denne afdeling.</li>
+        <li><strong>Bemærk</strong>: Du får notifikationer om alle observationer, der er markeret som "Bemærk", "SUB" eller "SU".</li>
+        <li><strong>SUB</strong>: Du får notifikationer om observationer markeret som "SUB" eller "SU".</li>
+        <li><strong>SU</strong>: Du får kun notifikationer om observationer markeret som "SU" (Sjældenhedsudvalget).</li>
+      </ul>
+      <p class="sub">
+        Hvis du vælger en højere kategori (fx "SUB"), får du automatisk notifikationer for alle underliggende kategorier ("SU"). Dine valg gemmes automatisk.
+      </p>
+      <p class="sub" style="margin-bottom:0.5em;">
+        Du kan også tilføje ekstra filtre under avanceret filtrering.
+      </p>
+      <div style="text-align:right;">
+        <button id="advanced-filter-btn" type="button" onclick="location.href='./advanced.html'">Avanceret filtrering</button>
+      </div>
+    </div>
     
     <div id="prefs-matrix"></div>
 
@@ -86,7 +125,7 @@
     <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div> --->
     
   </main>
-  <script src="app.js?v=4.3.5.6"></script>
-  <script src="validate.js?v=4.3.5.6"></script>
+  <script src="app.js?v=4.3.7.0"></script>
+  <script src="validate.js?v=4.3.7.0"></script>
 </body>
 </html>

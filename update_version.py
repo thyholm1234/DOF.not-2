@@ -18,6 +18,7 @@ FILES = [
     "web/traad.html",
     "web/traad.js",
     "web/validate.js",
+    "web/info.html",
     "web/adminpanel.html",
     "web/admin.js"
 ]

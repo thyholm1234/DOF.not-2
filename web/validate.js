@@ -1,4 +1,4 @@
-// Version: 4.3.5.6 - 2025-11-07 10.24.28
+// Version: 4.3.7.0 - 2025-11-07 13.08.30
 // © Christian Vemmelund Helligsø
 async function validateLogin(user_id, device_id, obserkode, adgangskode) {
   const res = await fetch('/api/validate-login', {
@@ -19,6 +19,16 @@ function getOrCreateUserId() {
   return userid;
 }
 
+
+function setLoginFormEnabled(enabled) {
+  const obserkodeInput = document.getElementById('obserkode');
+  const adgangskodeInput = document.getElementById('adgangskode');
+  const hentNavnBtn = document.getElementById('hent-navn-btn');
+  [obserkodeInput, adgangskodeInput, hentNavnBtn].forEach(el => {
+    if (el) el.disabled = !enabled;
+  });
+}
+
 function getOrCreateDeviceId() {
   let deviceid = localStorage.getItem("deviceid");
   if (!deviceid) {
@@ -37,13 +47,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const obserkodeGreyed = document.getElementById('obserkode_greyed');
   const navnInput = document.getElementById('navn');
   const removeBtn = document.getElementById('remove-connection-btn');
-  
 
   function showLogin() {
     loginCard.style.display = '';
     userinfoCard.style.display = 'none';
     obserkodeInput.value = '';
     adgangskodeInput.value = '';
+    // Disable login-formularen hvis ikke abonnement
+    setLoginFormEnabled(localStorage.getItem("isSubscribed") === "1");
   }
 
   function showUserinfo(obserkode, navn) {
@@ -51,6 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     userinfoCard.style.display = '';
     obserkodeGreyed.value = obserkode;
     navnInput.value = navn;
+    // Når brugerinfo vises, skal login-formularen ikke kunne bruges
+    setLoginFormEnabled(false);
   }
 
   hentNavnBtn.addEventListener('click', async () => {
@@ -75,9 +88,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         showUserinfo(data.obserkode || obserkode, data.navn || '');
       } else {
         alert(data.error || 'Login fejlede');
+        setLoginFormEnabled(localStorage.getItem("isSubscribed") === "1");
       }
     } catch (e) {
       alert('Netværksfejl');
+      setLoginFormEnabled(localStorage.getItem("isSubscribed") === "1");
     }
     hentNavnBtn.disabled = false;
     hentNavnBtn.textContent = 'Login';

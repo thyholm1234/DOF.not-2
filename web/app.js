@@ -1,4 +1,4 @@
-// Version: 4.3.5.6 - 2025-11-07 10.24.28
+// Version: 4.3.7.0 - 2025-11-07 13.08.30
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -192,12 +192,13 @@ async function subscribeUser(userid, deviceid) {
 
 function setPrefsTableEnabled(enabled) {
   const table = document.querySelector('.prefs-table');
-  if (table) {
-    if (enabled) {
-      table.classList.remove('disabled');
-    } else {
-      table.classList.add('disabled');
-    }
+  if (!table) return;
+  if (enabled) {
+    table.classList.remove('disabled');
+    table.querySelectorAll('input, select, button').forEach(el => el.disabled = false);
+  } else {
+    table.classList.add('disabled');
+    table.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
   }
 }
 
@@ -253,15 +254,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let prefs = await loadPrefs();
   renderPrefsMatrix(prefs);
+  setPrefsTableEnabled(localStorage.getItem("isSubscribed") === "1");
+  setUserinfoEnabled(localStorage.getItem("isSubscribed") === "1");
 
-  document.getElementById("unsubscribe-btn").onclick = async () => {
-    await fetch("/api/unsubscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userid, device_id: deviceid })
-    });
-    alert("Du er nu afmeldt!");
-  };
+
+
 
   document.getElementById("subscribe-btn").onclick = async () => {
     const ok = await subscribeUser(userid, deviceid);
@@ -274,15 +271,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   document.getElementById("unsubscribe-btn").onclick = async () => {
+    const confirmDelete = confirm("Er du sikker på, at du vil afmelde og slette alle lokale data? Dette kan ikke fortrydes.");
+    if (!confirmDelete) return;
+
     await fetch("/api/unsubscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userid, device_id: deviceid })
     });
-    alert("Du er nu afmeldt!");
-    localStorage.setItem("isSubscribed", "0");
+
+    // Slet alle lokale data
+    localStorage.clear();
+
+    // Afinstaller service worker og slet caches
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        await reg.unregister();
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          await caches.delete(name);
+        }
+      }
+    }
+
+    // Disable UI med det samme
     setPrefsTableEnabled(false);
     setUserinfoEnabled(false);
+    document.getElementById("unsubscribe-btn").disabled = true;
+    document.getElementById("subscribe-btn").disabled = false;
+
+    alert("Du er nu afmeldt! Alle data er nu slettet.");
+    location.reload();
   };
 
 // Sørg for store bogstaver i obserkode
@@ -341,4 +363,27 @@ setUserinfoEnabled(localStorage.getItem("isSubscribed") === "1");
 
   await ensureServiceWorker(); // Vent på SW
   // Nu kan du kalde subscribeUser(...)
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const advancedBtn = document.getElementById('advanced-filter-btn');
+  if (advancedBtn) {
+    advancedBtn.disabled = localStorage.getItem("isSubscribed") !== "1";
+  }
+  const unsubscribeBtn = document.getElementById("unsubscribe-btn");
+  if (unsubscribeBtn) {
+    unsubscribeBtn.disabled = localStorage.getItem("isSubscribed") !== "1";
+  }
+  const subscribeBtn = document.getElementById("subscribe-btn");
+  if (subscribeBtn) {
+    if (localStorage.getItem("isSubscribed") === "1") {
+      subscribeBtn.classList.add("btn-green");
+      subscribeBtn.disabled = false;
+      subscribeBtn.textContent = "Abonnement: Aktivt";
+    } else {
+      subscribeBtn.classList.remove("btn-green");
+      subscribeBtn.disabled = false;
+      subscribeBtn.textContent = "Opret";
+    }
+  }
 });

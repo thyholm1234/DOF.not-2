@@ -117,7 +117,7 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             obsdate_fmt = f"{d}-{m}-{y}"
         else:
             obsdate_fmt = obsdate
-        dofnot_url = f"https://dofnot.chfotofilm.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
+        dofnot_url = f"https://notifikation.dofbasen.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
         dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
         if kat in ("SU", "SUB"):
             r["url"] = dofnot_url

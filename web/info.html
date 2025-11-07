@@ -1,0 +1,110 @@
+<!-- Version: 4.3.7.0 - 2025-11-07 13.08.30 -->
+<!-- © Christian Vemmelund Helligsø -->
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seneste observation</title>
+  <meta name="theme-color" content="#0b3d91" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/style.css?v=4.3.7.0">
+  <style>
+  .card h2 {
+    margin-top: 0;
+  }
+</style>
+</head>
+
+<body>
+  <header class="wrap">
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
+    <div class="toolbar">
+      <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
+              onclick="window.location.reload()">
+        <span id="refresh-icon">🔄</span>
+      </button>
+      <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
+              onclick="window.location.href='./settings.html'">
+        <span id="settings-icon">⚙️</span>
+      </button>
+      <button id="theme-toggle" aria-label="Skift tema" type="button">
+        <span id="theme-icon">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card">
+      <h2>DOFbasen</h2>
+      <p>
+        <strong>DOFbasen</strong> er Dansk Ornitologisk Forenings (DOF) internetbaserede database til registrering af observationer af fugle og andre udvalgte dyr i Danmark.<br><br>
+        Alle kan indtaste og udsøge data i DOFbasen, når man er oprettet som bruger. Prøv fx <a href="https://app.dofbasen.dk" target="_blank" rel="noopener">DOFbasens indtastningsapp (PWA)</a> på din smartphone eller tablet.<br><br>
+        DOFbasen er grundlaget for dataindsamlingen i DOFs projekter og dermed fugle- og naturbeskyttelse i Danmark. Der sker løbende kvalitetssikring af data, og DOF har fuld råderet over alle data i DOFbasen.<br><br>
+        Der kan indtastes på over 20.000 lokaliteter, og databasen rummer mere end 37 millioner observationer.
+
+        <br><br>
+
+        <strong>Sådan kommer du i gang:</strong>
+        <ul>
+          <li>Læs mere på <a href="https://dofbasen.dk" target="_blank" rel="noopener">dofbasen.dk</a></li>
+          <li>Opret dig som bruger: <a href="https://dofbasen.dk/opretmig.php" target="_blank" rel="noopener">Opret bruger</a></li>
+          <li>Bliv medlem af DOF: <a href="https://minside.dof.dk/bliv-medlem/" target="_blank" rel="noopener">Bliv medlem</a></li>
+          <li>Støt naturen: <a href="https://minside.dof.dk/stoet-naturen/" target="_blank" rel="noopener">Giv en gave</a></li>
+          <li>Læs mere om DOF: <a href="https://www.dof.dk/" target="_blank" rel="noopener">dof.dk</a></li>
+        </ul>
+        <strong>DOFbasen er central for dansk fugleovervågning og naturbeskyttelse – og alle kan bidrage!</strong>
+      </p>
+    </div>
+    <div class="card">
+      <h2 id="retningslinjer-for-debat-og-kommentarer">Retningslinjer for debat og kommentarer</h2>
+      <p>
+        For at sikre et konstruktivt, fugleorienteret og trygt debatmiljø gælder følgende regler for kommentarer i DOF.not:
+      </p>
+      <ul>
+        <li>
+          <strong>Omgangstone:</strong> Omgangstonen skal altid være sober, venlig og respektfuld. Udokumenterede beskyldninger, nedladende, hånende eller spydige kommentarer tolereres ikke. Hold ekstreme holdninger for dig selv og undgå diskussioner for diskussionens skyld.
+        </li>
+        <li>
+          <strong>Humor og sprog:</strong> Humor er velkommen, men vær varsom med ironi og sarkasme, da det let kan misforstås i skrift. Skriv gerne indlægget i et tekstbehandlingsprogram først for at undgå fejl og misforståelser.
+        </li>
+        <li>
+          <strong>Ingen diskrimination:</strong> Kommentarer med racistisk, sexistisk, truende eller på anden måde diskriminerende indhold er forbudt.
+        </li>
+        <li>
+          <strong>Ingen spam eller reklame:</strong> Reklame for brugerbetalte kurser, arrangerede rejser eller lignende er ikke tilladt uden forudgående aftale.
+        </li>
+        <li>
+          <strong>Privatliv:</strong> Del ikke andres personlige oplysninger uden samtykke.
+        </li>
+        <li>
+          <strong>Moderation og advarsler:</strong> Kommentarer kan blive fjernet, og brugere kan blive udelukket, hvis reglerne overtrædes. Ved overtrædelse kan du modtage en advarsel via mail. Gentagne eller grove overtrædelser kan føre til permanent udelukkelse.
+        </li>
+        <li>
+          <strong>Rapportering:</strong> Upassende kommentarer kan rapporteres til moderatorerne via “Tip moderator”-funktionen under hvert indlæg. Moderatorerne vurderer og håndterer sagen.
+        </li>
+      </ul>
+      <p>
+        Reglerne er til for at sikre et åbent, sagligt og inkluderende miljø for alle fugleinteresserede brugere af DOF.not. Vær høflig, brug almindelig sund fornuft og overhold loven.
+      </p>
+    </div>
+    <div class="card">
+      <h2>DOF.not</h2>
+      <p>
+        <strong>DOF.not</strong> er udviklet af Christian Vemmelund Helligsø ud fra ønsket om en app, der kan give notifikationer fra DOFbasen og samtidig tilbyde kommentarspor på observationer. Appen er skabt for at gøre det nemmere og mere engagerende for fugleinteresserede at følge med i nye observationer og deltage i diskussioner – et behov, som flere danske fuglekiggere har givet udtryk for.
+      </p>
+    </div>
+  </main>
+
+  <script src="app.js?v=4.3.7.0"></script>
+</body>
+</html>
