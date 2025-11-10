@@ -804,8 +804,10 @@ def get_obserkode_from_userprefs(user_id):
                 return ""
     return ""
 
-@app.get("/api/is-admin")
-async def is_admin(user_id: str = Query(...), device_id: str = Query(...)):
+@app.post("/api/is-admin")
+async def is_admin(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
     admins = load_admins()
     obserkode = get_obserkode_from_userprefs(user_id)
     if obserkode in admins:

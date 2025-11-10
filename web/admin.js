@@ -204,7 +204,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user_id = getOrCreateUserId();
   const device_id = getOrCreateDeviceId();
   try {
-    const res = await fetch(`/api/is-admin?user_id=${encodeURIComponent(user_id)}&device_id=${encodeURIComponent(device_id)}`);
+    const res = await fetch('/api/is-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, device_id })
+    });
     const data = await res.json();
     if (data.admin) {
       document.getElementById("admin-content").style.display = "";

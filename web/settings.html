@@ -176,18 +176,22 @@
   <script src="validate.js?v=4.3.10.15"></script>
   <script src="install.js?v=4.3.10.15"></script>
   <script>
-    async function checkAdmin() {
-      const user_id = localStorage.getItem("userid") || "";
-      const device_id = localStorage.getItem("deviceid") || "";
-      try {
-        const res = await fetch(`/api/is-admin?user_id=${encodeURIComponent(user_id)}&device_id=${encodeURIComponent(device_id)}`);
-        const data = await res.json();
-        if (data.admin) {
-          document.getElementById("admin-link").style.display = "";
-        }
-      } catch {}
-    }
-    checkAdmin();
-  </script>
+  async function checkAdmin() {
+    const user_id = localStorage.getItem("userid") || "";
+    const device_id = localStorage.getItem("deviceid") || "";
+    try {
+      const res = await fetch('/api/is-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id, device_id })
+      });
+      const data = await res.json();
+      if (data.admin) {
+        document.getElementById("admin-link").style.display = "";
+      }
+    } catch {}
+  }
+  checkAdmin();
+</script>
 </body>
 </html>

@@ -115,7 +115,7 @@
       h2.innerHTML = `${artLink} - ${lokLink}`;
       titleRow.appendChild(h2);
 
-      // Del-knap (🔗)
+      // Del-knap (🔗)cl
       const shareBtn = document.createElement('button');
       shareBtn.id = "thread-share-btn";
       shareBtn.textContent = "🔗 Del";
