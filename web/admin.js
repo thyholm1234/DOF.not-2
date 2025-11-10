@@ -1,4 +1,4 @@
-// Version: 4.4.0.1 - 2025-11-10 23.53.41
+// Version: 4.5 - 2025-11-11 00.02.27
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");

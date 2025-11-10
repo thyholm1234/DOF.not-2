@@ -1,4 +1,4 @@
-// Version: 4.4.0.1 - 2025-11-10 23.53.41
+// Version: 4.5 - 2025-11-11 00.02.27
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -341,7 +341,11 @@ let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
     }
     loadFrontState();
     try {
-      const res = await fetch('/api/prefs?user_id=' + encodeURIComponent(localStorage.getItem('userid')));
+      const res = await fetch('/api/prefs', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: localStorage.getItem('userid') })
+      });
       if (res.ok) userPrefs = await res.json();
     } catch (e) {}
     // Hent artsfiltre hvis brugerfiltrering er valgt

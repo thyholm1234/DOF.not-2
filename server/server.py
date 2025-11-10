@@ -19,7 +19,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 import threading
 from collections import defaultdict
-from time import time
 import time
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -759,7 +758,7 @@ async def validate_login(data: dict = Body(...)):
     adgangskode = data.get("adgangskode")
 
     # --- RATE LIMITING: max 5 forsøg pr. 10 min pr. user_id ---
-    now = time()
+    now = time.time()
     attempts = login_attempts[user_id]
     # Fjern forsøg ældre end 10 min (600 sek)
     attempts = [t for t in attempts if now - t < 600]
