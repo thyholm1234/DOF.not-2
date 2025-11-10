@@ -142,7 +142,11 @@
       const deviceid = localStorage.getItem("deviceid");
       let isSubscribed = false;
       try {
-        const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+        const subRes = await fetch(`/api/thread/${day}/${id}/subscription`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userid, device_id: deviceid })
+        });
         if (subRes.ok) {
           const subData = await subRes.json();
           isSubscribed = !!subData.subscribed;

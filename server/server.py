@@ -474,8 +474,10 @@ async def unsubscribe_thread(day: str, thread_id: str, request: Request):
         )
     return {"ok": True}
 
-@app.get("/api/thread/{day}/{thread_id}/subscription")
-async def get_subscription(day: str, thread_id: str, user_id: str, device_id: str):
+@app.post("/api/thread/{day}/{thread_id}/subscription")
+async def get_subscription_post(day: str, thread_id: str, data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
     with sqlite3.connect(DB_PATH) as conn:
         row = conn.execute(
             "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
