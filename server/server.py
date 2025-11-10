@@ -850,31 +850,21 @@ async def api_thread(day: str, thread_id: str):
         data = json.load(f)
     return JSONResponse(data)
 
-@app.get("/api/userinfo")
-async def get_userinfo(user_id: str, device_id: str):
-    prefs = get_prefs(user_id)
-    return {
-        "user_id": user_id,
-        "device_id": device_id,
-        "obserkode": prefs.get("obserkode", ""),
-        "navn": prefs.get("navn", "")
-    }
-
 @app.post("/api/userinfo")
-async def save_userinfo(data: dict):
+async def get_or_save_userinfo(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
-    obserkode = data.get("obserkode", "")
-    navn = data.get("navn", "")
+    # Hvis der er obserkode/navn, så gem, ellers hent
+    obserkode = data.get("obserkode")
+    navn = data.get("navn")
     prefs = get_prefs(user_id)
-    prefs["obserkode"] = obserkode
-    prefs["navn"] = navn
-    set_prefs(user_id, prefs)
-    return {"ok": True}
-
-@app.get("/api/userinfo")
-async def get_userinfo(user_id: str, device_id: str):
-    prefs = get_prefs(user_id)
+    if obserkode is not None or navn is not None:
+        if obserkode is not None:
+            prefs["obserkode"] = obserkode
+        if navn is not None:
+            prefs["navn"] = navn
+        set_prefs(user_id, prefs)
+        return {"ok": True}
     return {
         "user_id": user_id,
         "device_id": device_id,

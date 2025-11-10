@@ -396,7 +396,11 @@
         const deviceid = localStorage.getItem("deviceid");
         let userinfo = {};
         try {
-          const res = await fetch(`/api/userinfo?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+          const res = await fetch('/api/userinfo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userid, device_id: deviceid })
+          });
           if (res.ok) userinfo = await res.json();
         } catch {}
         const obserkode = userinfo.obserkode || "";

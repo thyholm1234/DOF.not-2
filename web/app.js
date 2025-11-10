@@ -193,6 +193,7 @@ function renderSummary(latest) {
 
 const publicVapidKey = "BHU3aBbXkYu7_KGJtKMEWCPU43gF1b6L0DKGVv-n_5-iybitwM5dodQdR2GkIec8OOWcJlwCEMSMzpfRX_RBUkA"; // Generér med web-push
 
+
 async function ensureServiceWorker() {
   if ('serviceWorker' in navigator) {
     const reg = await navigator.serviceWorker.register('/sw.js');
@@ -360,36 +361,11 @@ if (obserkodeInput) {
   });
 }
 
-// Gem oplysninger ved klik
-document.getElementById("save-userinfo-btn").onclick = async () => {
-  const userid = getOrCreateUserId();
-  const deviceid = localStorage.getItem("deviceid");
-  const obserkode = document.getElementById("obserkode").value.trim();
-  const navn = document.getElementById("navn").value.trim();
-
-  // Fjern lokal gemning:
-  // localStorage.setItem("obserkode", obserkode);
-  // localStorage.setItem("navn", navn);
-
-  // Gem kun på serveren
-  await fetch("/api/userinfo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: userid,
-      device_id: deviceid,
-      obserkode,
-      navn
-    })
-  });
-  alert("Oplysninger gemt!");
-};
-
 // Ved load:
 setPrefsTableEnabled(localStorage.getItem("isSubscribed") === "1");
 setUserinfoEnabled(localStorage.getItem("isSubscribed") === "1");
-
-  // Hent og vis seneste observation
+  
+// Hent og vis seneste observation
   const latest = await loadLatest();
   renderSummary(latest);
 
