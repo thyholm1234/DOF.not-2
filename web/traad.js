@@ -524,9 +524,18 @@
         msg.comments.forEach(c => {
           const row = document.createElement('div');
           row.className = "comment-row";
+          // Escape-funktion til at forhindre XSS
+          function escapeHTML(str) {
+            return String(str)
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+          }
           row.innerHTML = `
-            <div class="comment-title"><b>${c.navn}</b>, <span class="comment-time">${c.ts.split(' ')[1]}</span></div>
-            <div class="comment-body">${linkify(c.body)}</div>
+            <div class="comment-title"><b>${escapeHTML(c.navn)}</b>, <span class="comment-time">${escapeHTML(c.ts.split(' ')[1])}</span></div>
+            <div class="comment-body">${linkify(escapeHTML(c.body))}</div>
             <div class="comment-thumbs">👍 <span>${c.thumbs || 0}</span></div>
           `;
           row.querySelector('.comment-thumbs').onclick = () => {

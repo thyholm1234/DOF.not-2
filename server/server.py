@@ -1,6 +1,6 @@
 import sqlite3
 from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect, Body
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse
 import json
 import os
 import glob
@@ -12,13 +12,15 @@ import re
 import html
 import urllib.request
 from urllib.parse import urljoin, urlparse, parse_qs
-from fastapi import Query, Depends
-import threading
-import time
+from fastapi import Query  # Kun hvis du stadig bruger Query i nogle endpoints
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
+import threading
+from collections import defaultdict
+from time import time
+import time
 
 load_dotenv()
 
@@ -730,6 +732,10 @@ async def api_threads_index(day: str):
 
     return JSONResponse(out)
 
+
+# In-memory rate limiting: user_id -> [timestamps]
+login_attempts = defaultdict(list)
+
 @app.post("/api/validate-login")
 async def validate_login(data: dict = Body(...)):
     import requests
@@ -738,6 +744,17 @@ async def validate_login(data: dict = Body(...)):
     device_id = data.get("device_id")
     obserkode = data.get("obserkode")
     adgangskode = data.get("adgangskode")
+
+    # --- RATE LIMITING: max 5 forsøg pr. 10 min pr. user_id ---
+    now = time()
+    attempts = login_attempts[user_id]
+    # Fjern forsøg ældre end 10 min (600 sek)
+    attempts = [t for t in attempts if now - t < 600]
+    if len(attempts) >= 5:
+        return {"ok": False, "error": "For mange loginforsøg. Prøv igen om 10 minutter."}
+    attempts.append(now)
+    login_attempts[user_id] = attempts
+    # ---------------------------------------------------------
 
     # Send til DOFbasen API
     url = "https://krydslister.dofbasen.dk/api/v1/login"
