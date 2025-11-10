@@ -77,8 +77,8 @@ async function loadCommentThreads() {
         commentCard.style.marginBottom = "1em";
         commentCard.style.position = "relative";
         commentCard.innerHTML = `
-          <strong>${comment.navn}${comment.obserkode ? " (" + comment.obserkode + ")" : ""}</strong><br>
-          ${comment.body}
+          <strong>${escapeHTML(comment.navn)}${comment.obserkode ? " (" + escapeHTML(comment.obserkode) + ")" : ""}</strong><br>
+          ${escapeHTML(comment.body)}
         `;
         if (comment.obserkode) {
           // Wrapper til knapper
@@ -254,4 +254,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 

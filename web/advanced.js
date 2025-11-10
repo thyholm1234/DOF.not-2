@@ -178,6 +178,10 @@ document.getElementById('export-filters').addEventListener('click', () => {
 document.getElementById('import-filters').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert("Filen er for stor (max 2 MB)");
+    return;
+  }
   const reader = new FileReader();
   reader.onload = evt => {
     try {

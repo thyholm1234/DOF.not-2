@@ -21,6 +21,7 @@ import threading
 from collections import defaultdict
 from time import time
 import time
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -29,9 +30,26 @@ VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
 BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.json")
+MAX_BODY_SIZE = 2 * 1024 * 1024  # 2 MB
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://notifikation.dofbasen.dk"],  # eller ["*"] for test, men ikke i produktion!
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    body = await request.body()
+    if len(body) > MAX_BODY_SIZE:
+        return JSONResponse({"error": "Request body for stor"}, status_code=413)
+    request._body = body  # så body stadig kan læses senere
+    return await call_next(request)
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
 def db_init():
@@ -827,6 +845,18 @@ async def is_admin(data: dict = Body(...)):
         return {"admin": True}
     return {"admin": False}
 
+def safe_comment(comment):
+    return {
+        "navn": html.escape(comment.get("navn", "")),
+        "obserkode": html.escape(comment.get("obserkode", "")),
+        "body": html.escape(comment.get("body", "")),
+        "ts": comment.get("ts", ""),
+        "thumbs": comment.get("thumbs", 0),
+        "thumbs_users": comment.get("thumbs_users", []),
+        "user_id": comment.get("user_id", ""),
+        "device_id": comment.get("device_id", "")
+    }
+
 @app.get("/api/admin/comments")
 async def admin_comments():
     today = datetime.now()
@@ -844,14 +874,16 @@ async def admin_comments():
                 try:
                     with open(kommentar_file, "r", encoding="utf-8") as f:
                         comments = json.load(f)
+                    # Escape alle kommentarer server-side
+                    safe_comments = [safe_comment(c) for c in comments]
                     threads.append({
                         "art_lokation": thread_folder.replace("-", " "),
                         "day": day,
-                        "comments": comments
+                        "comments": safe_comments
                     })
                 except Exception:
                     continue
-    return threads
+    return JSONResponse(threads)
 
 @app.get("/api/thread/{day}/{thread_id}")
 async def api_thread(day: str, thread_id: str):
@@ -1158,7 +1190,9 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
             if msg.get("type") == "get_comments":
                 comments = get_comments_for_thread(day, thread_id)
                 filtered = get_comments_for_user(comments, msg.get("user_id"))
-                await websocket.send_json({"type": "comments", "comments": filtered})
+                # Escape alle kommentarer før de sendes til klienten
+                safe_comments = [safe_comment(c) for c in filtered]
+                await websocket.send_json({"type": "comments", "comments": safe_comments})
                 continue
 
             # Ny kommentar
