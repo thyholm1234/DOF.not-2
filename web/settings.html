@@ -1,4 +1,4 @@
-<!-- Version: 4.3.10.5 - 2025-11-10 20.58.25 -->
+<!-- Version: 4.3.10.15 - 2025-11-10 21.52.00 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.3.10.5">
+  <link rel="stylesheet" href="/style.css?v=4.3.10.15">
   <style>
   .card h2,
   .card h3,
@@ -41,6 +41,7 @@
       <button id="theme-toggle" aria-label="Skift tema" onclick="this.blur()">
         <span id="theme-icon">☀️</span>
       </button>
+      <a id="admin-link" href="./adminpanel.html" style="display:none; margin-left:8px;" aria-label="Admin">🛡️</a>
     </div>
   </header>
   <main class="wrap">
@@ -90,13 +91,13 @@
       </div>
     </div>
 
-    <h2>Mit abonnement</h2>
+    <h2 id="sub-header">Mit abonnement</h2>
     <p class="sub">
       Her kan du administrere dit abonnement.
     </p>
     <div class="card" id="abonnement-card">
       <p class="sub">
-        Et aktivt abonnement er påkrævet for at modtage notifikationer og nødvendigt for andre funktioner i app'en.
+        Et abonnement er nødvendigt for at kunne modtage notifikationer samt andre funktioner i appen.
       </p>
       <button id="subscribe-btn">Opret</button>
       <button id="unsubscribe-btn">Afmeld</button>
@@ -139,7 +140,7 @@
       </div>
     </div>
 
-    <h2>Mine præferencer</h2>
+    <h2 id="prefs-header">Mine præferencer</h2>
     <div class="card">
       <h3>Sådan virker filtrene</h3>
       <p class="sub">
@@ -171,8 +172,22 @@
     <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div> --->
     
   </main>
-  <script src="app.js?v=4.3.10.5"></script>
-  <script src="validate.js?v=4.3.10.5"></script>
-  <script src="install.js?v=4.3.10.5"></script>
+  <script src="app.js?v=4.3.10.15"></script>
+  <script src="validate.js?v=4.3.10.15"></script>
+  <script src="install.js?v=4.3.10.15"></script>
+  <script>
+    async function checkAdmin() {
+      const user_id = localStorage.getItem("userid") || "";
+      const device_id = localStorage.getItem("deviceid") || "";
+      try {
+        const res = await fetch(`/api/is-admin?user_id=${encodeURIComponent(user_id)}&device_id=${encodeURIComponent(device_id)}`);
+        const data = await res.json();
+        if (data.admin) {
+          document.getElementById("admin-link").style.display = "";
+        }
+      } catch {}
+    }
+    checkAdmin();
+  </script>
 </body>
 </html>

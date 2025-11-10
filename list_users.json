@@ -1,12 +1,18 @@
 {
   "unikke_navne": [
     "Alex Sand Frich",
+    "Anders Wiig Nielsen",
+    "Arne Bo Larsen",
     "Christian Michael Villadsen",
     "Christian Vemmelund Helligsø",
     "Emil Skovgaard Brandtoft",
     "Jesper Pabst Stiem",
+    "Jonas Kjærgaard",
     "Joshua Haahr",
+    "Kevin Kuhlmann Clausen",
     "Lars Refsgaard",
+    "Lasse Albrechtsen",
+    "Leif Schack-Nielsen",
     "Maria Rasmussen",
     "Michael Brunhøj Hansen",
     "Mikkel Jessen",
@@ -27,6 +33,18 @@
       "avanceret_count": 0
     },
     {
+      "user_id": "user-0r5j7tnm0e3r",
+      "obserkode": "8960JODK",
+      "navn": "Jonas Kjærgaard",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
       "user_id": "user-1dlqld7lcaz",
       "obserkode": "-",
       "navn": "-",
@@ -39,14 +57,26 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-239tcch08oo",
-      "obserkode": "8230ESB",
-      "navn": "Emil Skovgaard Brandtoft",
-      "SU": 0,
-      "SUB": 13,
+      "user_id": "user-2d1ea568q9e",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 12,
+      "SUB": 1,
       "Bemærk": 0,
       "laveste_kategori": "SUB",
-      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-2e196q5rkp4",
+      "obserkode": "2610LA",
+      "navn": "Lasse Albrechtsen",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 0,
+      "laveste_kategori": null,
+      "afdelinger_med_laveste": "",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -99,6 +129,18 @@
       "avanceret_count": 0
     },
     {
+      "user_id": "user-6nx336hinhp",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 13,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
       "user_id": "user-71pqifq5km3",
       "obserkode": "5000MARA",
       "navn": "Maria Rasmussen",
@@ -107,6 +149,18 @@
       "Bemærk": 0,
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København, DOF Vestsjælland, DOF Fyn, DOF Sydvestjylland, DOF Vestjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-89v67qq8wfb",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 0,
+      "laveste_kategori": null,
+      "afdelinger_med_laveste": "",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -123,16 +177,52 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-94ikqws8icq",
-      "obserkode": "8220CVH",
-      "navn": "Christian Vemmelund Helligsø",
-      "SU": 11,
-      "SUB": 1,
+      "user_id": "user-ax3vqpjbcma",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 13,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-b3qaiprl8gh",
+      "obserkode": "4000AWN",
+      "navn": "Anders Wiig Nielsen",
+      "SU": 9,
+      "SUB": 3,
       "Bemærk": 1,
       "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF København",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-bgjeavounxv",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF Østjylland",
-      "avanceret_exclude": 222,
-      "avanceret_count": 15
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-de6jf9v5quh",
+      "obserkode": "8220CVH",
+      "navn": "Christian Vemmelund Helligsø",
+      "SU": 9,
+      "SUB": 2,
+      "Bemærk": 2,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF Østjylland, DOF Nordvestjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
     },
     {
       "user_id": "user-djby9vqb4iw",
@@ -143,18 +233,6 @@
       "Bemærk": 0,
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København",
-      "avanceret_exclude": 0,
-      "avanceret_count": 0
-    },
-    {
-      "user_id": "user-dlo6zpwjz8o",
-      "obserkode": "8220CVH",
-      "navn": "Christian Vemmelund Helligsø",
-      "SU": 13,
-      "SUB": 0,
-      "Bemærk": 0,
-      "laveste_kategori": "SU",
-      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -195,16 +273,28 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-gphzysi1b3n",
-      "obserkode": "1663TNY",
-      "navn": "Timme Nyegaard",
-      "SU": 12,
-      "SUB": 1,
+      "user_id": "user-fgolw27y0p7",
+      "obserkode": "2860LRE",
+      "navn": "Lars Refsgaard",
+      "SU": 11,
+      "SUB": 2,
       "Bemærk": 0,
       "laveste_kategori": "SUB",
-      "afdelinger_med_laveste": "DOF København",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
+    },
+    {
+      "user_id": "user-h2ghaeuwj54",
+      "obserkode": "2000MIBH",
+      "navn": "Michael Brunhøj Hansen",
+      "SU": 9,
+      "SUB": 3,
+      "Bemærk": 1,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF Fyn",
+      "avanceret_exclude": 178,
+      "avanceret_count": 6
     },
     {
       "user_id": "user-ih6xh30uqer",
@@ -215,6 +305,18 @@
       "Bemærk": 0,
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København, DOF Nordsjælland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-ioibi292kw",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Østjylland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -243,7 +345,7 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-navxpc1qeam",
+      "user_id": "user-l9ckes0mnbj",
       "obserkode": "2000MIBH",
       "navn": "Michael Brunhøj Hansen",
       "SU": 9,
@@ -252,7 +354,55 @@
       "laveste_kategori": "Bemærk",
       "afdelinger_med_laveste": "DOF Fyn",
       "avanceret_exclude": 178,
-      "avanceret_count": 8
+      "avanceret_count": 7
+    },
+    {
+      "user_id": "user-mlk03f8f8ma",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 4,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Vestjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-momdc301xa",
+      "obserkode": "8000KECL",
+      "navn": "Kevin Kuhlmann Clausen",
+      "SU": 0,
+      "SUB": 4,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-n71m7z1kzn",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 0,
+      "laveste_kategori": null,
+      "afdelinger_med_laveste": "",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-njoop3i5sws",
+      "obserkode": "1663TNY",
+      "navn": "Timme Nyegaard",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
     },
     {
       "user_id": "user-nsxgi1jxozr",
@@ -291,16 +441,124 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-zx6rjfgxsmr",
-      "obserkode": "2000MIBH",
-      "navn": "Michael Brunhøj Hansen",
-      "SU": 9,
-      "SUB": 3,
+      "user_id": "user-p6wh8nexkqq",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 11,
+      "SUB": 2,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Sønderjylland, DOF Østjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-q2y25conah",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 11,
+      "SUB": 2,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-s1pa4w6594c",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 13,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-s6gdocohijq",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-sok10e9q2kl",
+      "obserkode": "8230ESB",
+      "navn": "Emil Skovgaard Brandtoft",
+      "SU": 0,
+      "SUB": 13,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-sstk85gk0sm",
+      "obserkode": "4791LSN",
+      "navn": "Leif Schack-Nielsen",
+      "SU": 0,
+      "SUB": 0,
       "Bemærk": 1,
       "laveste_kategori": "Bemærk",
-      "afdelinger_med_laveste": "DOF Fyn",
-      "avanceret_exclude": 178,
-      "avanceret_count": 6
+      "afdelinger_med_laveste": "DOF Storstrøm",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-tdbd6p83b6h",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-u5c5kuws78",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 0,
+      "laveste_kategori": null,
+      "afdelinger_med_laveste": "",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-xe0wyymorb",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 0,
+      "SUB": 0,
+      "Bemærk": 0,
+      "laveste_kategori": null,
+      "afdelinger_med_laveste": "",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-yzgr58b3tg",
+      "obserkode": "8550ABL",
+      "navn": "Arne Bo Larsen",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
     }
   ]
 }

@@ -1,4 +1,4 @@
-// Version: 4.3.10.5 - 2025-11-10 20.58.25
+// Version: 4.3.10.15 - 2025-11-10 21.52.00
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -96,6 +96,15 @@
         : lok;
 
       document.title = `${art} - ${lok}`;
+      document.querySelector('title').textContent = `${art} - ${lok}`;
+      let ogTitle = document.querySelector('meta[property="og:title"]');
+      if (!ogTitle) {
+        ogTitle = document.createElement('meta');
+        ogTitle.setAttribute('property', 'og:title');
+        document.head.appendChild(ogTitle);
+      }
+      ogTitle.setAttribute('content', `${art} - ${lok}`);
+
       $title.innerHTML = "";
       const titleRow = document.createElement('div');
       titleRow.className = "thread-title-row";
@@ -105,6 +114,28 @@
       h2.id = "thread-title";
       h2.innerHTML = `${artLink} - ${lokLink}`;
       titleRow.appendChild(h2);
+
+      // Del-knap (🔗)
+      const shareBtn = document.createElement('button');
+      shareBtn.id = "thread-share-btn";
+      shareBtn.textContent = "🔗 Del";
+      shareBtn.className = "share-btn";
+      shareBtn.style.margin = "0";
+      shareBtn.onclick = () => {
+        const shareUrl = window.location.href;
+        const shareTitle = art ? `${art} - ${lok}` : document.title;
+        if (navigator.share) {
+          navigator.share({
+            title: shareTitle,
+            url: shareUrl
+          });
+        } else {
+          navigator.clipboard.writeText(shareUrl);
+          shareBtn.textContent = "Kopieret!";
+          setTimeout(() => (shareBtn.textContent = "🔗 Del"), 1500);
+        }
+      };
+      titleRow.appendChild(shareBtn);
 
       // Abonner-knap (🔔)
       const userid = getOrCreateUserId();
@@ -302,7 +333,9 @@
               const badge = el('span', 'badge', 'Turnote');
               badge.style.marginRight = "8px";
               noteRow.appendChild(badge);
-              const noteText = el('span', 'note-text', ev.Turnoter);
+              const noteText = document.createElement('span');
+              noteText.className = 'note-text';
+              noteText.innerHTML = linkify(ev.Turnoter.replace(/\n/g, '<br>'));
               noteRow.appendChild(noteText);
               obsRow.appendChild(noteRow);
           }
@@ -313,7 +346,9 @@
               const badge = el('span', 'badge', 'Obsnote');
               badge.style.marginRight = "8px";
               noteRow.appendChild(badge);
-              const noteText = el('span', 'note-text', ev.Fuglnoter);
+              const noteText = document.createElement('span');
+              noteText.className = 'note-text';
+              noteText.innerHTML = linkify(ev.Fuglnoter.replace(/\n/g, '<br>'));
               noteRow.appendChild(noteText);
               obsRow.appendChild(noteRow);
           }

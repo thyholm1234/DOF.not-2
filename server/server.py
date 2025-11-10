@@ -442,21 +442,6 @@ async def api_obs_full(obsid: str = Query(..., min_length=3, description="DOFbas
         "sound_urls": sound_urls
     }
 
-@app.get("/api/notifications/enabled")
-async def notifications_enabled(user_id: str, device_id: str):
-    """
-    Returnerer om notifikationer er slået til for denne bruger+device.
-    """
-    # Findes der et subscription for denne user+device?
-    with sqlite3.connect(DB_PATH) as conn:
-        row = conn.execute(
-            "SELECT 1 FROM subscriptions WHERE user_id=? AND device_id=?",
-            (user_id, device_id)
-        ).fetchone()
-    # Tjek også om brugeren har slået notificationsEnabled fra i localStorage (valgfrit, hvis du vil synkronisere)
-    enabled = bool(row)
-    return {"enabled": enabled}
-
 @app.post("/api/thread/{day}/{thread_id}/subscribe")
 async def subscribe_thread(day: str, thread_id: str, request: Request):
     data = await request.json()
