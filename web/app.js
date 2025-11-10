@@ -159,8 +159,11 @@ function getOrCreateUserId() {
 
 async function loadPrefs() {
   const user_id = getOrCreateUserId();
-  const url = `/api/prefs?user_id=${encodeURIComponent(user_id)}`; // <-- RET HER
-  const res = await fetch(url, { cache: 'no-cache' });
+  const res = await fetch("/api/prefs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id })
+  });
   if (!res.ok) return {};
   const data = await res.json();
   return data || {};

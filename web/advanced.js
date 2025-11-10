@@ -34,7 +34,11 @@ document.getElementById('toggle-advanced-filter').addEventListener('click', () =
 
 async function fetchUserFilters() {
   const user_id = localStorage.getItem('userid') || prompt("Indtast bruger-id:");
-  const res = await fetch('/api/prefs/user/species?user_id=' + encodeURIComponent(user_id));
+  const res = await fetch('/api/prefs/user/species', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id })
+  });
   if (res.ok) {
     userFilters = await res.json();
     if (!userFilters.include) userFilters.include = [];
@@ -49,8 +53,8 @@ async function saveUserFilters() {
   const user_id = localStorage.getItem('userid') || prompt("Indtast bruger-id:");
   await fetch('/api/prefs/user/species', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ user_id, ...userFilters })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, filters: userFilters })
   });
 }
 

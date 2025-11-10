@@ -67,7 +67,11 @@
   let speciesFilters = null; // globalt i filen
 
   async function fetchSpeciesFilters(userId) {
-    const res = await fetch(`/api/prefs/user/species?user_id=${encodeURIComponent(userId)}`);
+    const res = await fetch("/api/prefs/user/species", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId })
+    });
     if (res.ok) {
       return await res.json();
     }

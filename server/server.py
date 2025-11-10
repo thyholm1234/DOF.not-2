@@ -188,20 +188,18 @@ def set_prefs(user_id, prefs):
         )
 
 @app.post("/api/prefs")
-async def api_set_prefs(request: Request):
+async def api_prefs(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
     new_prefs = data.get("prefs")
-    # Hent eksisterende prefs og opdater kun afdelingsvalg
-    old_prefs = get_prefs(user_id)
-    # Opdater kun afdelingsnøgler
-    for afd in new_prefs:
-        old_prefs[afd] = new_prefs[afd]
-    set_prefs(user_id, old_prefs)
-    return {"ok": True}
-
-@app.get("/api/prefs")
-async def api_get_prefs(user_id: str):
+    if new_prefs is not None:
+        # Opdater kun afdelingsnøgler
+        old_prefs = get_prefs(user_id)
+        for afd in new_prefs:
+            old_prefs[afd] = new_prefs[afd]
+        set_prefs(user_id, old_prefs)
+        return {"ok": True}
+    # Hvis ingen prefs i body, returner prefs for user
     prefs = get_prefs(user_id)
     return JSONResponse(prefs)
     
@@ -257,10 +255,6 @@ def _parse_dt_from_row(row: dict) -> datetime:
         except Exception:
             return datetime.min
         
-def get_species_filters_for_user(user_id: str) -> dict:
-    prefs = get_prefs(user_id)
-    return prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}        
-
 def should_include_obs(obs, species_filters):
     artnavn = (obs.get("Artnavn") or "").strip().lower()
     # Ekskluderede arter har altid højeste prioritet
@@ -972,171 +966,21 @@ async def thumbs_up_comment(day: str, thread_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Kommentar ikke fundet")
     with open(comments_path, "w", encoding="utf-8") as f:
         json.dump(comments, f, ensure_ascii=False, indent=2)
-    return {"ok": True, "thumbs": c["thumbs"]}
-
-@app.get("/api/thread/{day}/{thread_id}/comments")
-async def get_comments(day: str, thread_id: str, user_id: str = Query(None)):
-    thread_comments = get_comments_for_thread(day, thread_id)
-    if user_id:
-        return get_comments_for_user(thread_comments, user_id)
-    return thread_comments
-
-@app.post("/api/thread/{day}/{thread_id}/comments")
-async def post_comment(day: str, thread_id: str, request: Request):
-    import sqlite3
-
-    data = await request.json()
-    navn = data.get("navn", "Ukendt")
-    body = data.get("body", "").strip()
-    user_id = data.get("user_id")
-    device_id = data.get("device_id")
-    if not body:
-        raise HTTPException(status_code=400, detail="Besked må ikke være tom")
-    if not user_id or not device_id:
-        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
-
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    comment = {
-        "navn": navn,
-        "obserkode": data.get("obserkode", ""),  # <-- TILFØJ DENNE LINJE
-        "body": body,
-        "ts": ts,
-        "thumbs": 0,
-        "thumbs_users": [],
-        "user_id": user_id,
-        "device_id": device_id
-    }
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
-    os.makedirs(thread_dir, exist_ok=True)
-    comments_path = os.path.join(thread_dir, "kommentar.json")
-    comments = []
-    if os.path.isfile(comments_path):
-        with open(comments_path, "r", encoding="utf-8") as f:
-            comments = json.load(f)
-    comments.append(comment)
-    with open(comments_path, "w", encoding="utf-8") as f:
-        json.dump(comments, f, ensure_ascii=False, indent=2)
-
-    # Tilføj forfatteren som abonnent på tråden (hvis ikke allerede)
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
-            (day, thread_id, user_id, device_id)
-        )
-
-    # --- AUTO-SUBSCRIBE ALLE OBSERKODER FRA EVENTS PÅ TRÅDEN ---
-    thread_path = os.path.join(thread_dir, "thread.json")
-    obserkoder_on_thread = set()
-    if os.path.isfile(thread_path):
-        try:
-            with open(thread_path, "r", encoding="utf-8") as f:
-                thread_data = json.load(f)
-            events = thread_data.get("events", [])
-            for ev in events:
-                kode = (ev.get("Obserkode") or ev.get("obserkode") or "").strip().upper()
-                if kode:
-                    obserkoder_on_thread.add(kode)
-        except Exception:
-            pass
-
-    if obserkoder_on_thread:
-        with sqlite3.connect(DB_PATH) as conn:
-            for kode in obserkoder_on_thread:
-                rows = conn.execute("SELECT user_id, prefs FROM user_prefs").fetchall()
-                for u_id, prefs_json in rows:
-                    try:
-                        prefs = json.loads(prefs_json)
-                        bruger_kode = (prefs.get("obserkode") or "").strip().upper()
-                        if bruger_kode == kode:
-                            dev_rows = conn.execute("SELECT device_id FROM subscriptions WHERE user_id=?", (u_id,)).fetchall()
-                            for (dev_id,) in dev_rows:
-                                # Tjek om brugeren har afmeldt denne tråd
-                                skip = conn.execute(
-                                    "SELECT 1 FROM thread_unsubs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
-                                    (day, thread_id, u_id, dev_id)
-                                ).fetchone()
-                                if skip:
-                                    continue  # Brugeren har aktivt afmeldt, så spring over
-                                conn.execute(
-                                    "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
-                                    (day, thread_id, u_id, dev_id)
-                                )
-                    except Exception:
-                        continue
-            conn.commit()
-    # --- SLUT AUTO-SUBSCRIBE ---
-
-    # Find alle abonnenter for tråden (for dagen)
-    with sqlite3.connect(DB_PATH) as conn:
-        subs = conn.execute(
-            "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
-            (day, thread_id)
-        ).fetchall()
-
-    # Find artnavn og loknavn fra thread.json (hvis muligt)
-    thread_path = os.path.join(thread_dir, "thread.json")
-    artnavn = ""
-    loknavn = ""
-    if os.path.isfile(thread_path):
-        try:
-            with open(thread_path, "r", encoding="utf-8") as f:
-                thread_data = json.load(f)
-            thread_info = thread_data.get("thread", {})
-            artnavn = thread_info.get("art", "")
-            loknavn = thread_info.get("lok", "")
-        except Exception:
-            pass
-
-    # Send push til alle abonnenter
-    for sub_user_id, sub_device_id in subs:
-        # Spring forfatteren over
-        if sub_user_id == user_id and sub_device_id == device_id:
-            continue
-        # Find subscription-info
-        with sqlite3.connect(DB_PATH) as conn:
-            row = conn.execute(
-                "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
-                (sub_user_id, sub_device_id)
-            ).fetchone()
-        if not row:
-            continue
-        sub = json.loads(row[0])
-        payload = {
-            "title": f"Nyt indlæg på: {artnavn} - {loknavn}",
-            "body": f"{navn}: {body}",
-            "url": f"/traad.html?date={day}&id={thread_id}",
-            "tag": f"{thread_id}-comment-{ts.replace(' ', '_').replace(':', '-')}"
-        }
-        try:
-            webpush(
-                subscription_info=sub,
-                data=json.dumps(payload, ensure_ascii=False),
-                vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-                ttl=3600,
-                headers={"Urgency": "high"}  # <-- Tilføj urgency high
-            )
-        except Exception as ex:
-            print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
-
-    return {"ok": True}   
-
-@app.get("/api/prefs/user/species")
-async def get_species_filters(user_id: str):
-    prefs = get_prefs(user_id)
-    # Returner kun artsfilter-delen hvis den findes, ellers tomt format
-    return JSONResponse(prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}})
+    return {"ok": True, "thumbs": c["thumbs"]} 
 
 @app.post("/api/prefs/user/species")
-async def set_species_filters(request: Request):
+async def species_filters(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
-    filters = data
-    # Hent eksisterende prefs og opdater artsfilter-delen
+    filters = data.get("filters")
     prefs = get_prefs(user_id)
-    prefs["species_filters"] = filters
-    set_prefs(user_id, prefs)
-    return {"ok": True}
+    if filters is not None:
+        # Opdater artsfilter
+        prefs["species_filters"] = filters
+        set_prefs(user_id, prefs)
+        return {"ok": True}
+    # Returner artsfilter
+    return JSONResponse(prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}})
 
 @app.get("/api/payload")
 async def api_payload():
@@ -1302,23 +1146,15 @@ def is_blacklisted_obserkode(obserkode):
 @app.websocket("/ws/thread/{day}/{thread_id}")
 async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
     await websocket.accept()
-    key = ws_key(day, thread_id)  # Tilføj denne linje
+    key = ws_key(day, thread_id)
     ws_connections.setdefault(key, []).append(websocket)
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)  # Tilføj denne linje
+    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
     try:
         while True:
             data = await websocket.receive_text()
             msg = json.loads(data)
-            if msg.get("type") == "new_comment":
-                obserkode = msg.get("obserkode")
-                if is_blacklisted_obserkode(obserkode):
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "Du er blacklistet og kan ikke skrive kommentarer."
-                    })
-                    continue
 
-            # Tilføj denne blok:
+            # Hent kommentarer
             if msg.get("type") == "get_comments":
                 comments = get_comments_for_thread(day, thread_id)
                 filtered = get_comments_for_user(comments, msg.get("user_id"))
@@ -1341,7 +1177,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                 ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 comment = {
                     "navn": navn,
-                    "obserkode": msg.get("obserkode", ""),  # <-- TILFØJ DENNE LINJE
+                    "obserkode": obserkode,
                     "body": body,
                     "ts": ts,
                     "thumbs": 0,
@@ -1353,7 +1189,56 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                 comments.append(comment)
                 save_comments_for_thread(day, thread_id, comments)
 
-                # --- SEND PUSH TIL ALLE ABONNENTER (undtagen forfatteren) ---
+                # Tilføj forfatteren som abonnent på tråden (hvis ikke allerede)
+                with sqlite3.connect(DB_PATH) as conn:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
+                        (day, thread_id, user_id, device_id)
+                    )
+
+                # --- AUTO-SUBSCRIBE ALLE OBSERKODER FRA EVENTS PÅ TRÅDEN ---
+                thread_path = os.path.join(thread_dir, "thread.json")
+                obserkoder_on_thread = set()
+                if os.path.isfile(thread_path):
+                    try:
+                        with open(thread_path, "r", encoding="utf-8") as f:
+                            thread_data = json.load(f)
+                        events = thread_data.get("events", [])
+                        for ev in events:
+                            kode = (ev.get("Obserkode") or ev.get("obserkode") or "").strip().upper()
+                            if kode:
+                                obserkoder_on_thread.add(kode)
+                    except Exception:
+                        pass
+
+                if obserkoder_on_thread:
+                    with sqlite3.connect(DB_PATH) as conn:
+                        for kode in obserkoder_on_thread:
+                            rows = conn.execute("SELECT user_id, prefs FROM user_prefs").fetchall()
+                            for u_id, prefs_json in rows:
+                                try:
+                                    prefs = json.loads(prefs_json)
+                                    bruger_kode = (prefs.get("obserkode") or "").strip().upper()
+                                    if bruger_kode == kode:
+                                        dev_rows = conn.execute("SELECT device_id FROM subscriptions WHERE user_id=?", (u_id,)).fetchall()
+                                        for (dev_id,) in dev_rows:
+                                            # Tjek om brugeren har afmeldt denne tråd
+                                            skip = conn.execute(
+                                                "SELECT 1 FROM thread_unsubs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+                                                (day, thread_id, u_id, dev_id)
+                                            ).fetchone()
+                                            if skip:
+                                                continue
+                                            conn.execute(
+                                                "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
+                                                (day, thread_id, u_id, dev_id)
+                                            )
+                                except Exception:
+                                    continue
+                        conn.commit()
+                # --- SLUT AUTO-SUBSCRIBE ---
+
+                # Send push til alle abonnenter (undtagen forfatteren)
                 with sqlite3.connect(DB_PATH) as conn:
                     subs = conn.execute(
                         "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
@@ -1395,11 +1280,10 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                             vapid_private_key=VAPID_PRIVATE_KEY,
                             vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
                             ttl=3600,
-                            headers={"Urgency": "high"}  # <-- Tilføj urgency high
+                            headers={"Urgency": "high"}
                         )
                     except Exception as ex:
                         print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
-                # --- SLUT PUSH ---
 
                 # Broadcast til alle websockets
                 for ws in ws_connections.get(key, []):
@@ -1428,7 +1312,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                         c["thumbs"] = len(thumbs_users)
                         found = True
 
-                        # --- SEND PUSH HVIS NY THUMBS UP OG IKKE FRA EJEREN SELV ---
+                        # Send push hvis ny thumbs up og ikke fra ejeren selv
                         if not already_thumbed and user_id != c.get("user_id"):
                             owner_user_id = c.get("user_id")
                             owner_device_id = c.get("device_id")
@@ -1475,7 +1359,6 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                                             )
                                         except Exception as ex:
                                             print(f"Push-fejl til {owner_user_id}/{owner_device_id}: {ex}")
-                        # --- SLUT PUSH ---
                         break
                 if found:
                     save_comments_for_thread(day, thread_id, comments)
