@@ -1,4 +1,4 @@
-<!-- Version: 4.3.7.0 - 2025-11-07 13.08.30 -->
+<!-- Version: 4.3.10.5 - 2025-11-10 20.58.25 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,8 +17,9 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.3.7.0">
+  <link rel="stylesheet" href="/style.css?v=4.3.10.5">
   <style>
+  .card h2,
   .card h3,
   .card > .sub {
     margin-top: 0;
@@ -27,7 +28,7 @@
 </head>
 <body>
   <header class="wrap">
-    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF🔔</a></h1>
     <div class="toolbar">
       <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
               onclick="window.location.reload()">
@@ -37,12 +38,57 @@
               onclick="window.location.href='./info.html'">
         <span id="info-icon">ℹ️</span>
       </button>
-      <button id="theme-toggle" aria-label="Skift tema">
+      <button id="theme-toggle" aria-label="Skift tema" onclick="this.blur()">
         <span id="theme-icon">☀️</span>
       </button>
     </div>
   </header>
   <main class="wrap">
+
+    <div id="install-card">
+      <h2>Installer app</h2>
+      <p>
+        Her kan du se, hvordan du installerer appen på din telefon eller computer.
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 1em;">
+        <div class="card" style="flex:1; min-width:220px;" id="ios-card">
+          <h3>Installationsvejledning</h3>
+          <p style="color:#b91c1c;">
+            <b>Vigtigt:</b> Appen skal installeres på hjemmeskærmen for at notifikationer virker på iOS og macOS.
+          </p>
+          <ol>
+            <li>Tryk på " Del<img src="/icons/share.svg" alt="Del-ikon" style="height:1.2em;vertical-align:middle;">" i Safari.</li>
+            <li>Vælg " <img src="/icons/plus.svg" alt="Føj til hjemmeskærm" style="height:1.2em;vertical-align:middle;"> <b>Føj til hjemmeskærm</b> ".</li>
+            <li>Følg vejledningen på skærmen.</li>
+          </ol>
+        </div>
+        <div class="card" style="flex:1; min-width:220px; display:none;" id="chrome-card">
+          <h3>Installationsvejledning</h3>
+          <button id="install-app-btn" type="button" style="padding: 0.5em 1.5em; font-size:1em;">Installer app</button>
+          <p style="font-size:smaller; margin-top:0.5em;">
+            Klik på knappen herover for at installere appen.
+          </p>
+        </div>
+        <div class="card" style="flex:1; min-width:220px; display:none;" id="firefox-card">
+          <h3>Installationsvejledning</h3>
+          <p style="font-size:smaller; color:#b91c1c;">
+            <b>Brug Chrome for den bedste oplevelse.</b>
+          </p>
+          <div id="firefox-guide-android" style="display:none;">
+            <p>
+              På Android:<br>
+              Tryk på <b>de tre prikker</b> ved adresselinjen, vælg <b>"Mere"</b> og derefter <b>"Føj app til startskærm"</b>.
+            </p>
+          </div>
+          <div id="firefox-guide-desktop" style="display:none;">
+            <p>
+              På Windows/Linux:<br>
+              Klik på <b>Føj faneblad til proceslinjen</b>-ikonet i adresselinjen for at installere appen.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <h2>Mit abonnement</h2>
     <p class="sub">
@@ -58,7 +104,7 @@
 
     <h2>Mine oplysninger</h2>
 
-    <p class="sub">Ved at oprette forbindelse til din DOFbasen-bruger, vil du få adgang til chat-funktionen samt notifikationer på sjældne fugle du selv indtaster i DOFbasen.</p>
+    <p class="sub">Ved at oprette forbindelse til din DOFbasen-bruger, vil du få adgang til chat-funktionen samt notifikationer på sjældne fugle du selv indtaster i DOFbasen. Du kan altid afmelde notifikationer ved at tilgå den enkelte tråd og afmelde.</p>
 
     <div class="card" id="login-card" style="display:none;">
       <h3>Loginoplysninger</h3>
@@ -66,7 +112,7 @@
         Dine loginoplysninger (obserkode og adgangskode) bruges kun til at validere din adgang og hentes ikke eller gemmes permanent – adgangskoden opbevares aldrig i appen eller på serveren.
       </p>
       <p class="sub" style="margin-bottom:10px;">
-        Når du opretter forbindelse til din DOFbasen-profil og kommenterer, skal du overholde <a href="info.html#retningslinjer-for-debat-og-kommentarer">retningslinjerne</a>.
+        Når du opretter forbindelse til din DOFbasen-profil og kommenterer, skal du til enhver tid overholde <a href="info.html#retningslinjer-for-debat-og-kommentarer">retningslinjerne</a>.
       </p>
       <form id="login-form" autocomplete="off" onsubmit="return false;">
         <label for="obserkode">DOF-obserkode:</label>
@@ -125,7 +171,8 @@
     <div class="card"><h3>Rå payload</h3><pre id="payload">{}</pre></div> --->
     
   </main>
-  <script src="app.js?v=4.3.7.0"></script>
-  <script src="validate.js?v=4.3.7.0"></script>
+  <script src="app.js?v=4.3.10.5"></script>
+  <script src="validate.js?v=4.3.10.5"></script>
+  <script src="install.js?v=4.3.10.5"></script>
 </body>
 </html>

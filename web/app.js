@@ -1,4 +1,4 @@
-// Version: 4.3.7.0 - 2025-11-07 13.08.30
+// Version: 4.3.10.5 - 2025-11-10 20.58.25
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -16,6 +16,50 @@ const afdelinger = [
   "DOF Nordjylland"
 ];
 const kategorier = ["Ingen", "SU", "SUB", "Bemærk"];
+
+function isFirstVisit() {
+  if (!localStorage.getItem("hasVisited")) {
+    localStorage.setItem("hasVisited", "1");
+    return true;
+  }
+  return false;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (isFirstVisit()) {
+    // Lav en simpel custom dialog med Ja/Nej
+    const box = document.createElement('div');
+    box.style.position = 'fixed';
+    box.style.left = '0';
+    box.style.top = '0';
+    box.style.width = '100vw';
+    box.style.height = '100vh';
+    box.style.background = 'rgba(0,0,0,0.4)';
+    box.style.display = 'flex';
+    box.style.alignItems = 'center';
+    box.style.justifyContent = 'center';
+    box.style.zIndex = '9999';
+
+    box.innerHTML = `
+      <div style="background:#fff; color:#222; padding:2em 1.5em; border-radius:10px; max-width:90vw; box-shadow:0 4px 24px #0002;">
+        <h2 style="margin-top:0;">Velkommen til DOF.not!</h2>
+        <p>Vil du sætte app'en op til brug nu?</p>
+        <div style="display:flex; gap:1em; justify-content:center; margin-top:1.5em;">
+          <button id="firstvisit-yes" style="padding:0.5em 2em;">Ja</button>
+          <button id="firstvisit-no" style="padding:0.5em 2em;">Nej</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(box);
+
+    document.getElementById('firstvisit-yes').onclick = () => {
+      window.location.href = "/settings.html";
+    };
+    document.getElementById('firstvisit-no').onclick = () => {
+      box.remove();
+    };
+  }
+});
 
 function renderPrefsMatrix(prefs) {
   const table = document.createElement("table");
@@ -100,6 +144,7 @@ if (themeToggle) {
     const cur = document.documentElement.dataset.theme || systemTheme();
     const next = cur === 'dark' ? 'light' : 'dark';
     applyTheme(next);
+    themeToggle.blur(); // <-- Fjerner fokus fra knappen efter klik
   });
 }
 

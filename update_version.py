@@ -20,6 +20,7 @@ FILES = [
     "web/validate.js",
     "web/info.html",
     "web/adminpanel.html",
+    "web/install.js",
     "web/admin.js"
 ]
 

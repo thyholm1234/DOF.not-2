@@ -1,4 +1,4 @@
-<!-- Version: 4.3.7.0 - 2025-11-07 13.08.30 -->
+<!-- Version: 4.3.10.5 - 2025-11-10 20.58.25 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,17 +17,28 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.3.7.0">
+  <link rel="stylesheet" href="/style.css?v=4.3.10.5">
   <style>
   .card h2 {
     margin-top: 0;
+  }
+  .card ul {
+    margin: 0 0 1em 0;
+    padding: 0 0 0 1.2em;
+  }
+  .card ul li {
+    margin-bottom: 1em;
+    line-height: 1.0;
+  }
+  .card ul li:last-child {
+    margin-bottom: 0;
   }
 </style>
 </head>
 
 <body>
   <header class="wrap">
-    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF.not</a></h1>
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF🔔</a></h1>
     <div class="toolbar">
       <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
               onclick="window.location.reload()">
@@ -68,7 +79,7 @@
     <div class="card">
       <h2 id="retningslinjer-for-debat-og-kommentarer">Retningslinjer for debat og kommentarer</h2>
       <p>
-        For at sikre et konstruktivt, fugleorienteret og trygt debatmiljø gælder følgende regler for kommentarer i DOF.not:
+        For at sikre et konstruktivt, fugleorienteret og trygt debatmiljø gælder følgende regler for kommentarer i app'en:
       </p>
       <ul>
         <li>
@@ -76,6 +87,9 @@
         </li>
         <li>
           <strong>Humor og sprog:</strong> Humor er velkommen, men vær varsom med ironi og sarkasme, da det let kan misforstås i skrift. Skriv gerne indlægget i et tekstbehandlingsprogram først for at undgå fejl og misforståelser.
+        </li>
+        <li>
+          <strong>Ved mistanke om fejlbestemmelse:</strong> Hvis du mener, at en observation er fejlbestemt, så vær venlig at påpege det konstruktivt. Undgå at angribe den, der har indtastet observationen. Husk, at vi alle kan begå fejl og at det ikke er din opgave at være <a href="https://dofbasen.dk/kvalitet/" target="_blank" rel="noopener">DKU</a>.
         </li>
         <li>
           <strong>Ingen diskrimination:</strong> Kommentarer med racistisk, sexistisk, truende eller på anden måde diskriminerende indhold er forbudt.
@@ -89,22 +103,27 @@
         <li>
           <strong>Moderation og advarsler:</strong> Kommentarer kan blive fjernet, og brugere kan blive udelukket, hvis reglerne overtrædes. Ved overtrædelse kan du modtage en advarsel via mail. Gentagne eller grove overtrædelser kan føre til permanent udelukkelse.
         </li>
-        <li>
-          <strong>Rapportering:</strong> Upassende kommentarer kan rapporteres til moderatorerne via “Tip moderator”-funktionen under hvert indlæg. Moderatorerne vurderer og håndterer sagen.
-        </li>
       </ul>
       <p>
-        Reglerne er til for at sikre et åbent, sagligt og inkluderende miljø for alle fugleinteresserede brugere af DOF.not. Vær høflig, brug almindelig sund fornuft og overhold loven.
+        Reglerne er til for at sikre et åbent, sagligt og inkluderende miljø for alle fugleinteresserede brugere af appen. Vær høflig, brug almindelig sund fornuft og overhold loven.
       </p>
     </div>
     <div class="card">
-      <h2>DOF.not</h2>
+      <h2>Hvem står bag?</h2>
       <p>
-        <strong>DOF.not</strong> er udviklet af Christian Vemmelund Helligsø ud fra ønsket om en app, der kan give notifikationer fra DOFbasen og samtidig tilbyde kommentarspor på observationer. Appen er skabt for at gøre det nemmere og mere engagerende for fugleinteresserede at følge med i nye observationer og deltage i diskussioner – et behov, som flere danske fuglekiggere har givet udtryk for.
+        <strong>Appen</strong> er udviklet af Christian Vemmelund Helligsø ud fra ønsket om en app, der kan give notifikationer fra DOFbasen og samtidig tilbyde kommentarspor på observationer. Appen er skabt for at gøre det nemmere og mere engagerende for fugleinteresserede at følge med i nye observationer og deltage i diskussioner – et behov, som flere danske fuglekiggere har givet udtryk for.
+      </p>
+    </div>
+    <div class="card">
+      <h2>Feedback og idéer</h2>
+      <p>
+        Har du forslag, idéer eller ønsker til forbedringer af appen, så vil jeg meget gerne høre fra dig!<br><br>
+        Du er velkommen til at sende feedback, kommentarer eller idéer til nye funktioner. Jeg kan ikke tilbyde egentlig support, men alle konstruktive input læses og bruges til at gøre appen bedre for alle brugere.<br><br>
+        Skriv til mig på: <a href="mailto:cvh.privat@gmail.com">cvh.privat@gmail.com</a>
       </p>
     </div>
   </main>
 
-  <script src="app.js?v=4.3.7.0"></script>
+  <script src="app.js?v=4.3.10.5"></script>
 </body>
 </html>

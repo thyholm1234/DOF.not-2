@@ -1,4 +1,4 @@
-/* Version: 4.3.7.0 - 2025-11-07 13.08.30 */
+/* Version: 4.3.10.5 - 2025-11-10 20.58.25 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1605,4 +1605,36 @@ button:disabled {
   background: #2ea043 !important;
   color: #fff !important;
   border-color: #2ea043 !important;
+}
+
+:root[data-theme="dark"] #install-card img[alt="Del-ikon"],
+:root[data-theme="dark"] #install-card img[alt="Føj til hjemmeskærm"] {
+  filter: invert(1) brightness(2);
+}
+
+@media (pointer: coarse) {
+  #theme-toggle:focus,
+  #theme-toggle:active {
+    outline: none !important;
+    box-shadow: none !important;
+    background: inherit !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+#theme-toggle {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+#theme-toggle {
+  -webkit-tap-highlight-color: transparent !important;
+  background-color: inherit !important;
+}
+#theme-toggle:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: inherit !important;
+}
+#theme-toggle:active {
+  background-color: inherit !important;
 }
