@@ -1,4 +1,4 @@
-// Version: 4.4.0 - 2025-11-10 23.29.13
+// Version: 4.4.0.1 - 2025-11-10 23.53.41
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -413,7 +413,11 @@
         // Tjek abonnement
         let isSubscribed = false;
         try {
-          const subRes = await fetch(`/api/thread/${day}/${id}/subscription?user_id=${encodeURIComponent(userid)}&device_id=${encodeURIComponent(deviceid)}`);
+          const subRes = await fetch(`/api/thread/${day}/${id}/subscription`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userid, device_id: deviceid })
+          });
           if (subRes.ok) {
             const subData = await subRes.json();
             isSubscribed = !!subData.subscribed;

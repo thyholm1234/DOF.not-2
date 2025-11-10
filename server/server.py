@@ -32,6 +32,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", 
 BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.json")
 MAX_BODY_SIZE = 2 * 1024 * 1024  # 2 MB
 
+comment_file_locks = defaultdict(threading.Lock)
 
 app = FastAPI()
 app.add_middleware(
@@ -1122,21 +1123,28 @@ def load_blacklisted_obsids():
         return set(entry["obserkode"] for entry in data if "obserkode" in entry)
     except Exception:
         return set()
+    
+def get_comment_lock(day, thread_id):
+    return comment_file_locks[(day, thread_id)]
 
 def get_comments_for_thread(day, thread_id):
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
-    comments_path = os.path.join(thread_dir, "kommentar.json")
-    if not os.path.isfile(comments_path):
-        return []
-    with open(comments_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    lock = get_comment_lock(day, thread_id)
+    with lock:
+        thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+        comments_path = os.path.join(thread_dir, "kommentar.json")
+        if not os.path.isfile(comments_path):
+            return []
+        with open(comments_path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
 def save_comments_for_thread(day, thread_id, comments):
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
-    os.makedirs(thread_dir, exist_ok=True)
-    comments_path = os.path.join(thread_dir, "kommentar.json")
-    with open(comments_path, "w", encoding="utf-8") as f:
-        json.dump(comments, f, ensure_ascii=False, indent=2)
+    lock = get_comment_lock(day, thread_id)
+    with lock:
+        thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
+        os.makedirs(thread_dir, exist_ok=True)
+        comments_path = os.path.join(thread_dir, "kommentar.json")
+        with open(comments_path, "w", encoding="utf-8") as f:
+            json.dump(comments, f, ensure_ascii=False, indent=2)
 
 def get_comments_for_user(thread_comments, current_user_id):
     blacklisted = load_blacklisted_obsids()
@@ -1175,6 +1183,24 @@ async def admin_blacklist(data: dict = Body(...)):
 def is_blacklisted_obserkode(obserkode):
     return obserkode in load_blacklisted_obsids()
 
+def is_valid_user_device(user_id, device_id):
+    """Tjek at user_id/device_id findes i subscriptions-tabellen."""
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM subscriptions WHERE user_id=? AND device_id=?",
+            (user_id, device_id)
+        ).fetchone()
+    return bool(row)
+
+def is_thread_subscriber(day, thread_id, user_id, device_id):
+    """Tjek at user_id/device_id er abonnent på tråden."""
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+            (day, thread_id, user_id, device_id)
+        ).fetchone()
+    return bool(row)
+
 @app.websocket("/ws/thread/{day}/{thread_id}")
 async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
     await websocket.accept()
@@ -1186,17 +1212,25 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
             data = await websocket.receive_text()
             msg = json.loads(data)
 
-            # Hent kommentarer
-            if msg.get("type") == "get_comments":
+            msg_type = msg.get("type")
+            user_id = msg.get("user_id")
+            device_id = msg.get("device_id")
+
+            # Alle må læse kommentarer
+            if msg_type == "get_comments":
                 comments = get_comments_for_thread(day, thread_id)
-                filtered = get_comments_for_user(comments, msg.get("user_id"))
-                # Escape alle kommentarer før de sendes til klienten
+                filtered = get_comments_for_user(comments, user_id)
                 safe_comments = [safe_comment(c) for c in filtered]
                 await websocket.send_json({"type": "comments", "comments": safe_comments})
                 continue
 
+            # Kun brugere med gyldig user_id/device_id må skrive/like
+            if not user_id or not device_id or not is_valid_user_device(user_id, device_id):
+                await websocket.send_json({"type": "error", "message": "Du skal være logget ind for at skrive eller like."})
+                continue
+
             # Ny kommentar
-            if msg.get("type") == "new_comment":
+            if msg_type == "new_comment":
                 navn = msg.get("navn", "Ukendt")
                 body = (msg.get("body") or "").strip()
                 user_id = msg.get("user_id")
