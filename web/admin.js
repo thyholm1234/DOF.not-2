@@ -465,6 +465,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 });
 
+document.getElementById("sync-threads-btn").onclick = function() {
+  document.getElementById("sync-modal").style.display = "flex";
+};
+document.getElementById("sync-cancel-btn").onclick = function() {
+  document.getElementById("sync-modal").style.display = "none";
+};
+
+async function sendSyncRequest(syncType) {
+  const user_id = getOrCreateUserId();
+  const res = await fetch("/api/request_sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sync: syncType, user_id })
+  });
+  if (res.ok) {
+    alert("Sync-anmodning sendt: " + syncType);
+  } else {
+    alert("Kunne ikke sende sync-anmodning (mangler admin-rettigheder?)");
+  }
+  document.getElementById("sync-modal").style.display = "none";
+}
+
+document.getElementById("sync-today-btn").onclick = function() { sendSyncRequest("today"); };
+document.getElementById("sync-yesterday-btn").onclick = function() { sendSyncRequest("yesterday"); };
+document.getElementById("sync-both-btn").onclick = function() { sendSyncRequest("both"); };
+
 function escapeHTML(str) {
   return String(str)
     .replace(/&/g, "&amp;")

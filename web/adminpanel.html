@@ -36,9 +36,10 @@
   <main class="wrap">
     <!-- Admin action card: kun for hovedadmin -->
     <div id="admin-action-card" class="card" style="display:none; margin-bottom:1em; padding:1em; gap:1em; display:flex; flex-wrap:wrap;">
-      <button id="show-csv-files-btn" style="margin: 0;">Rediger Artsdata</button>
-      <button id="add-art-btn" style="margin: 0;">Tilføj ny art</button>
-      <button id="show-admins-btn" style="margin: 0;">Administrer admins</button>
+      <button id="show-csv-files-btn" style="margin: 0;">Artsdata</button>
+      <button id="add-art-btn" style="margin: 0;">Ny art</button>
+      <button id="show-admins-btn" style="margin: 0;">Admins</button>
+      <button id="sync-threads-btn" style="margin-bottom: 0;">Sync</button>
     </div>
 
     <!-- Indhold under admin-action-card -->
@@ -61,6 +62,19 @@
           <button type="submit">Gem</button>
           <button type="button" id="cancel-edit-art">Annullér</button>
         </form>
+      </div>
+    </div>
+
+    <div id="sync-modal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
+      <div class="modal-content card" style="max-width:350px; margin:auto; text-align:center;">
+        <h3>Opdater threads/index</h3>
+        <p>Hvilken periode vil du synkronisere?</p>
+        <div style="display:flex; flex-direction:column; gap:1em;">
+          <button id="sync-today-btn" class="primary-btn">I dag</button>
+          <button id="sync-yesterday-btn" class="primary-btn">I går</button>
+          <button id="sync-both-btn" class="primary-btn">Begge</button>
+          <button id="sync-cancel-btn" type="button">Annullér</button>
+        </div>
       </div>
     </div>
 

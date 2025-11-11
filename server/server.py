@@ -30,6 +30,7 @@ VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
 BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.json")
 MAX_BODY_SIZE = 2 * 1024 * 1024  # 2 MB
+SYNC_PATH = os.path.join(os.path.dirname(__file__), "request_sync.json")
 
 comment_file_locks = defaultdict(threading.Lock)
 
@@ -1014,6 +1015,23 @@ def get_obserkode_from_userprefs(user_id):
             except Exception:
                 return ""
     return ""
+
+@app.post("/api/request_sync")
+async def api_request_sync(request: Request):
+    data = await request.json()
+    user_id = data.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id mangler")
+
+    obserkode = get_obserkode_from_userprefs(user_id)
+    admins = load_admins()
+    if obserkode not in admins:
+        raise HTTPException(status_code=403, detail="Ikke admin")
+
+    # Skriv sync-request (overskriver evt. eksisterende)
+    with open(SYNC_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+    return {"status": "ok", "written": data}
 
 @app.post("/api/is-admin")
 async def is_admin(data: dict = Body(...)):

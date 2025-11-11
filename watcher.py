@@ -7,9 +7,11 @@ import time
 import os
 import re
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Set
 from collections import defaultdict
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 # DOF "excel"-endpoint. Dato indsættes dynamisk i DD-MM-YYYY
 BASE_URL = (
@@ -32,6 +34,39 @@ COLUMNS = [
     "lok_laengdegrad", "lok_breddegrad", "obs_laengdegrad", "obs_breddegrad", "radius",
     "obser_laengdegrad", "obser_breddegrad",
 ]
+
+class SyncHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        if event.src_path.endswith("request_sync.json"):
+            try:
+                with open(event.src_path, "r", encoding="utf-8") as f:
+                    req = json.load(f)
+            except FileNotFoundError:
+                print(f"[watcher] (watchdog) Filen {event.src_path} findes ikke (måske allerede slettet).")
+                return
+            except Exception as e:
+                print(f"[watcher] (watchdog) Fejl ved læsning af {event.src_path}: {e}")
+                return
+            sync = (req.get("sync") or "").lower()
+            today = datetime.now().strftime("%d-%m-%Y")
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%d-%m-%Y")
+            if sync == "today":
+                print("[watcher] (watchdog) Sync-request: i dag")
+                run_once(today, send_notifications=True)
+            elif sync == "yesterday":
+                print("[watcher] (watchdog) Sync-request: i går")
+                run_once(yesterday, send_notifications=False)
+            elif sync == "both":
+                print("[watcher] (watchdog) Sync-request: både i dag og i går")
+                run_once(today, send_notifications=True)
+                run_once(yesterday, send_notifications=False)
+            else:
+                print(f"[watcher] (watchdog) Sync-request: ukendt værdi '{sync}'")
+            try:
+                os.remove(event.src_path)
+                print(f"[watcher] (watchdog) Slettede {event.src_path}")
+            except Exception as e:
+                print(f"[watcher] (watchdog) Kunne ikke slette sync-request: {e}")
 
 # --- NYT: Klassifikation (SU/SUB) + bemærk-tærskler pr. afdeling ---
 def load_klassifikation_map() -> Dict[str, str]:
@@ -592,7 +627,7 @@ def latest_row_for_key(k: str, rows_by_key: Dict[str, List[Dict[str, str]]]) -> 
     return max(lst, key=_parse_dt_from_row)
 
 
-def run_once(date_str=None) -> None:
+def run_once(date_str=None, send_notifications=True):
     old_state = load_state()
 
     text = fetch_excel_text(date_str)
@@ -618,6 +653,11 @@ def run_once(date_str=None) -> None:
 
     today = date_str or today_date_str()
     save_threads_and_index(enriched_all, today)
+
+    # Hvis vi kører i date-mode (dvs. date_str er angivet), skal vi ikke sende notifikationer
+    if date_str and not send_notifications:
+        print(f"[watcher] Kørte i date-mode for {date_str}: kun threads/index skrevet.")
+        return
 
     # grupper til opslag
     rows_by_key, rows_by_obsid = group_rows(enriched_all)
@@ -725,14 +765,54 @@ def main():
     args = parser.parse_args()
 
     if not args.watch:
-        run_once(args.date)
+        # Hvis der gives en dato, send kun notifikationer hvis det er i dag
+        today = datetime.now().strftime("%d-%m-%Y")
+        send_notif = (args.date is None) or (args.date == today)
+        run_once(args.date, send_notifications=send_notif)
         return
 
     print(f"[watcher] Starter i watch-mode. Interval: {args.interval}s. Ctrl+C for stop.")
     try:
+        last_yesterday_run = 0
         while True:
             try:
-                run_once(args.date)
+                # 1. Kør for i dag (normal drift, med notifikationer)
+                run_once(None, send_notifications=True)
+                # 2. Kør for gårsdagen én gang i timen (uden notifikationer)
+                now = time.time()
+                if now - last_yesterday_run >= 3600:
+                    yesterday = (datetime.now() - timedelta(days=1)).strftime("%d-%m-%Y")
+                    run_once(yesterday, send_notifications=False)
+                    last_yesterday_run = now
+
+                # 3. Tjek for sync-request i server/request_sync.json
+                sync_path = os.path.join("server", "request_sync.json")
+                if os.path.exists(sync_path):
+                    with open(sync_path, "r", encoding="utf-8") as f:
+                        try:
+                            req = json.load(f)
+                            sync = (req.get("sync") or "").lower()
+                        except Exception:
+                            sync = ""
+                    today = datetime.now().strftime("%d-%m-%Y")
+                    yesterday = (datetime.now() - timedelta(days=1)).strftime("%d-%m-%Y")
+                    if sync == "today":
+                        print("[watcher] Sync-request: i dag")
+                        run_once(today, send_notifications=True)
+                    elif sync == "yesterday":
+                        print("[watcher] Sync-request: i går")
+                        run_once(yesterday, send_notifications=False)
+                    elif sync == "both":
+                        print("[watcher] Sync-request: både i dag og i går")
+                        run_once(today, send_notifications=True)
+                        run_once(yesterday, send_notifications=False)
+                    else:
+                        print(f"[watcher] Sync-request: ukendt værdi '{sync}'")
+                    try:
+                        os.remove(sync_path)
+                        print(f"[watcher] Slettede {sync_path}")
+                    except Exception as e:
+                        print(f"[watcher] Kunne ikke slette sync-request: {e}")
             except Exception as e:
                 print(f"[watcher] Fejl: {e}")
             time.sleep(max(1, args.interval))
@@ -740,5 +820,19 @@ def main():
         print("\n[watcher] Stopper.")
 
 
+
+
 if __name__ == "__main__":
-    main()
+    # Start watchdog for instant sync
+    path = "server"
+    event_handler = SyncHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=False)
+    observer.start()
+
+    # Start polling-loop for normal drift
+    try:
+        main()  # din eksisterende main-loop
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
