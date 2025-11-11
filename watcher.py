@@ -76,8 +76,49 @@ def build_bemaerk_maps() -> Dict[str, Dict[str, int]]:
         print(f"[watcher] Kunne ikke læse bemærk-filer: {e}")
     return region_maps
 
+def load_faenologi_perioder() -> Dict[str, List[Tuple[str, str]]]:
+    """Indlæs faenologi.csv -> artsnavn -> [(datofra, datotil), ...]"""
+    path = os.path.join(DATA_DIR, "faenologi.csv")
+    mapping: Dict[str, List[Tuple[str, str]]] = {}
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            for row in reader:
+                art = (row.get("Artnavn") or "").strip()
+                fra = (row.get("Datofra") or "").strip()
+                til = (row.get("Datotil") or "").strip()
+                if not art or not fra or not til:
+                    continue
+                mapping.setdefault(art, []).append((fra, til))
+    except Exception as e:
+        print(f"[watcher] Kunne ikke læse faenologi-fil: {e}")
+    return mapping
+
 KLASS_MAP = load_klassifikation_map()
 BEMAERK_BY_REGION = build_bemaerk_maps()
+FAENOLOGI_PERIODER = load_faenologi_perioder()
+
+def _dato_in_faenologi_periode(obsdato: str, perioder: List[Tuple[str, str]]) -> bool:
+    """Returnér True hvis obsdato (DD-MM-YYYY) ligger i en af perioderne (DD-MM til DD-MM)."""
+    try:
+        obs_dt = datetime.strptime(obsdato[:5], "%d-%m")
+    except Exception:
+        return False
+    for fra, til in perioder:
+        try:
+            fra_dt = datetime.strptime(fra, "%d-%m")
+            til_dt = datetime.strptime(til, "%d-%m")
+        except Exception:
+            continue
+        # Periode over nytår?
+        if fra_dt <= til_dt:
+            if fra_dt <= obs_dt <= til_dt:
+                return True
+        else:
+            # Fx 30-09 til 10-04 (over nytår)
+            if obs_dt >= fra_dt or obs_dt <= til_dt:
+                return True
+    return False
 
 def to_region_slug(dept: str) -> str:
     s = (dept or "").strip()
@@ -86,19 +127,21 @@ def to_region_slug(dept: str) -> str:
     return slugify(s)
 
 def compute_kategori(row: Dict[str, str]) -> str:
-    """Returnér 'SU'/'SUB'/'bemaerk'/'alm' for en observation."""
     art = (row.get("Artnavn") or "").strip()
-    # 1) Klassifikation SU/SUB fra arter_filter_klassificeret.csv
     klass = KLASS_MAP.get(art)
-    if klass in ("SU", "SUB"):
-        return klass
-    # 2) Bemærk: pr. DOF-afdeling hvis antal >= tærskel
+    if klass == "SUB":
+        return "SUB"
+    # Fænologi-tjek
+    perioder = FAENOLOGI_PERIODER.get(art)
+    obsdato = (row.get("Dato") or "").strip()
+    if perioder and obsdato and _dato_in_faenologi_periode(obsdato, perioder):
+        return "bemaerk"  # <-- Sæt mærkatet til "bemaerk"
+    # Bemærk-tærskel-tjek
     region_slug = to_region_slug(row.get("DOF_afdeling") or "")
     thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
     thr = thresholds.get(art)
     if thr is not None and parse_float(row.get("Antal")) >= float(thr):
         return "bemaerk"
-    # 3) Fallback
     return "alm"
 
 def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
@@ -375,9 +418,10 @@ def parse_float(val: str) -> float:
 
 
 def _key(row: Dict[str, str]) -> str:
-    """Entydig nøgle for en observation i state: Art x Loknr."""
-    return f"{(row.get('Artnavn') or '').strip()}\n{(row.get('Loknr') or '').strip()}"
-
+    return "\n".join([
+        (row.get('Artnavn') or '').strip(),
+        (row.get('Loknr') or '').strip(),
+    ])
 
 def _obsid(row: Dict[str, str]) -> str:
     return (row.get("Obsid") or "").strip()
@@ -437,6 +481,24 @@ def _state_get_antal(state_val) -> float | None:
         return float(state_val)
     except Exception:
         return None
+    
+def group_max_by_art_lok(obs_list):
+    # key = (Artnavn, Loknr)
+    grouped = {}
+    for row in obs_list:
+        key = (
+            row.get("Artnavn", "").strip(),
+            row.get("Loknr", "").strip(),
+        )
+        antal = parse_float(row.get("Antal"))
+        if key not in grouped or antal > grouped[key]["Antal"]:
+            grouped[key] = dict(row)
+            grouped[key]["Antal"] = antal
+    # Konverter Antal til string igen for konsistens
+    for row in grouped.values():
+        antal = row["Antal"]
+        row["Antal"] = str(int(antal)) if isinstance(antal, float) and antal.is_integer() else str(antal)
+    return list(grouped.values())    
 
 
 def _state_get_obsids(state_val) -> Set[str]:
@@ -534,6 +596,7 @@ def run_once() -> None:
     normalized_rows = normalize_rows(parsed_rows)
     # berig med kategori for SU/SUB/bemaerk/alm
     enriched_all = enrich_with_kategori(normalized_rows)
+    enriched_all = group_max_by_art_lok(enriched_all)
 
     birthtimes_path = os.path.join("web", "obsid_birthtimes.json")
     if os.path.exists(birthtimes_path):

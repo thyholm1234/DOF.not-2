@@ -517,7 +517,13 @@ async def update_data(request: Request):
             )
         except WebPushException as ex:
             should_delete = False
-            if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
+            status = None
+            if hasattr(ex, "response") and ex.response:
+                status = getattr(ex.response, "status_code", None)
+                if status is None:
+                    status = getattr(ex.response, "status", None)
+                print(f"[DEBUG] WebPushException status={status}, body={getattr(ex.response, 'content', '')}")
+            if status == 410:
                 should_delete = True
             elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
                 should_delete = True

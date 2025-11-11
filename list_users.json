@@ -1,23 +1,29 @@
 {
   "unikke_navne": [
     "Alex Sand Frich",
+    "Alexander Nyholm",
     "Anders Wiig Nielsen",
     "Arne Bo Larsen",
+    "August Horsten",
     "Christian Michael Villadsen",
     "Christian Vemmelund Helligsø",
     "Emil Skovgaard Brandtoft",
     "Jesper Pabst Stiem",
+    "Jonas Fahrendorff",
     "Jonas Kjærgaard",
     "Joshua Haahr",
     "Kevin Kuhlmann Clausen",
     "Lars Refsgaard",
     "Lasse Albrechtsen",
     "Leif Schack-Nielsen",
+    "Louis Poulsen",
     "Maria Rasmussen",
     "Michael Brunhøj Hansen",
     "Mikkel Jessen",
+    "Nikolai Nielsen",
     "Rikke Jakobsen",
-    "Timme Nyegaard"
+    "Timme Nyegaard",
+    "Xander Bauer"
   ],
   "brugere": [
     {
@@ -105,6 +111,18 @@
       "avanceret_count": 0
     },
     {
+      "user_id": "user-5d1rt601cgb",
+      "obserkode": "4000AEN",
+      "navn": "Alexander Nyholm",
+      "SU": 0,
+      "SUB": 13,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
       "user_id": "user-5ijerai8fu2",
       "obserkode": "8240RJ",
       "navn": "Rikke Jakobsen",
@@ -153,6 +171,18 @@
       "avanceret_count": 0
     },
     {
+      "user_id": "user-7czjfblb6ci",
+      "obserkode": "9520APS",
+      "navn": "August Horsten",
+      "SU": 10,
+      "SUB": 1,
+      "Bemærk": 2,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF Østjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
       "user_id": "user-89v67qq8wfb",
       "obserkode": "-",
       "navn": "-",
@@ -177,9 +207,9 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-ax3vqpjbcma",
-      "obserkode": "8550ABL",
-      "navn": "Arne Bo Larsen",
+      "user_id": "user-930gtxauhhp",
+      "obserkode": "2630NN",
+      "navn": "Nikolai Nielsen",
       "SU": 0,
       "SUB": 0,
       "Bemærk": 13,
@@ -193,10 +223,10 @@
       "obserkode": "4000AWN",
       "navn": "Anders Wiig Nielsen",
       "SU": 9,
-      "SUB": 3,
-      "Bemærk": 1,
-      "laveste_kategori": "Bemærk",
-      "afdelinger_med_laveste": "DOF København",
+      "SUB": 4,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -321,6 +351,42 @@
       "avanceret_count": 0
     },
     {
+      "user_id": "user-ivl9mgug4",
+      "obserkode": "-",
+      "navn": "-",
+      "SU": 13,
+      "SUB": 0,
+      "Bemærk": 0,
+      "laveste_kategori": "SU",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-kjqilwy9pr",
+      "obserkode": "3700XWB",
+      "navn": "Xander Bauer",
+      "SU": 12,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Bornholm",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-kmr2fbixoe8",
+      "obserkode": "6600JF",
+      "navn": "Jonas Fahrendorff",
+      "SU": 0,
+      "SUB": 13,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
       "user_id": "user-kxdclsjrw",
       "obserkode": "8000CMM",
       "navn": "Christian Michael Villadsen",
@@ -381,16 +447,28 @@
       "avanceret_count": 0
     },
     {
-      "user_id": "user-n71m7z1kzn",
+      "user_id": "user-mtkv5ykgbuj",
       "obserkode": "-",
       "navn": "-",
-      "SU": 0,
-      "SUB": 0,
+      "SU": 12,
+      "SUB": 1,
       "Bemærk": 0,
-      "laveste_kategori": null,
-      "afdelinger_med_laveste": "",
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Fyn",
       "avanceret_exclude": 0,
       "avanceret_count": 0
+    },
+    {
+      "user_id": "user-n71m7z1kzn",
+      "obserkode": "8220CVH",
+      "navn": "Christian Vemmelund Helligsø",
+      "SU": 11,
+      "SUB": 1,
+      "Bemærk": 1,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 222,
+      "avanceret_count": 15
     },
     {
       "user_id": "user-njoop3i5sws",
@@ -461,6 +539,30 @@
       "Bemærk": 0,
       "laveste_kategori": "SUB",
       "afdelinger_med_laveste": "DOF København, DOF Nordsjælland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-rdkk7tz6rol",
+      "obserkode": "2630NN",
+      "navn": "Nikolai Nielsen",
+      "SU": 0,
+      "SUB": 13,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
+      "avanceret_exclude": 0,
+      "avanceret_count": 0
+    },
+    {
+      "user_id": "user-re8hrickupe",
+      "obserkode": "3700LKP",
+      "navn": "Louis Poulsen",
+      "SU": 0,
+      "SUB": 1,
+      "Bemærk": 0,
+      "laveste_kategori": "SUB",
+      "afdelinger_med_laveste": "DOF Bornholm",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -538,13 +640,13 @@
     },
     {
       "user_id": "user-xe0wyymorb",
-      "obserkode": "-",
-      "navn": "-",
-      "SU": 0,
+      "obserkode": "8220CVH",
+      "navn": "Christian Vemmelund Helligsø",
+      "SU": 13,
       "SUB": 0,
       "Bemærk": 0,
-      "laveste_kategori": null,
-      "afdelinger_med_laveste": "",
+      "laveste_kategori": "SU",
+      "afdelinger_med_laveste": "DOF København, DOF Nordsjælland, DOF Vestsjælland, DOF Storstrøm, DOF Bornholm, DOF Fyn, DOF Sønderjylland, DOF Sydvestjylland, DOF Sydøstjylland, DOF Vestjylland, DOF Østjylland, DOF Nordvestjylland, DOF Nordjylland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
     },
@@ -559,6 +661,18 @@
       "afdelinger_med_laveste": "DOF Østjylland",
       "avanceret_exclude": 0,
       "avanceret_count": 0
+    },
+    {
+      "user_id": "user-z1kfqh7bpl",
+      "obserkode": "8220CVH",
+      "navn": "Christian Vemmelund Helligsø",
+      "SU": 12,
+      "SUB": 0,
+      "Bemærk": 1,
+      "laveste_kategori": "Bemærk",
+      "afdelinger_med_laveste": "DOF Østjylland",
+      "avanceret_exclude": 220,
+      "avanceret_count": 1
     }
   ]
 }
