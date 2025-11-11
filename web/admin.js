@@ -1,4 +1,4 @@
-// Version: 4.4.0.3 - 2025-11-11 00.13.06
+// Version: 4.5.1.4 - 2025-11-11 22.11.51
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -203,6 +203,112 @@ function hideBlacklistModal() {
 document.addEventListener('DOMContentLoaded', async () => {
   const user_id = getOrCreateUserId();
   const device_id = getOrCreateDeviceId();
+  let isSuperAdmin = false;
+
+  // Tjek om bruger er hovedadmin
+  try {
+    const res = await fetch('/api/is-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, device_id })
+    });
+    const data = await res.json();
+    if (data.admin && data.obserkode === "8220CVH") {
+      isSuperAdmin = true;
+    }
+  } catch {}
+
+  // Vis admins-knap kun for hovedadmin
+  if (isSuperAdmin) {
+    document.getElementById("show-admins-btn").style.display = "";
+    document.getElementById("add-admin-btn").style.display = "";
+    document.getElementById("add-art-btn").style.display = "";
+  }
+
+  // "Administrer admins"-knap
+  document.getElementById("show-admins-btn").onclick = async function() {
+    const adminsPanel = document.getElementById("admins-panel");
+    const csvPanel = document.getElementById("csv-file-list");
+    const csvEditor = document.getElementById("csv-editor");
+    // Luk CSV-panel hvis åbent
+    if (csvPanel) csvPanel.style.display = "none";
+    if (csvEditor) csvEditor.style.display = "none";
+    // Toggle admins-panel
+    if (adminsPanel.style.display === "none" || adminsPanel.style.display === "") {
+      await loadAdminsList();
+      adminsPanel.style.display = "block";
+    } else {
+      adminsPanel.style.display = "none";
+    }
+  };
+
+  async function loadAdminsList() {
+    const res = await fetch("/api/admin/list-admins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id })
+    });
+    const data = await res.json();
+    const admins = data.admins || [];
+    const listDiv = document.getElementById("admins-list");
+    listDiv.innerHTML = "";
+    admins.forEach(obserkode => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.display = "flex";
+      card.style.justifyContent = "space-between";
+      card.style.alignItems = "center";
+      card.style.marginBottom = "8px";
+      card.innerHTML = `
+        <span>${escapeHTML(obserkode)}</span>
+        <button class="remove-admin-btn" data-obserkode="${escapeHTML(obserkode)}" style="margin-left:1em;">Slet</button>
+      `;
+      listDiv.appendChild(card);
+    });
+    // Slet-knapper
+    listDiv.querySelectorAll(".remove-admin-btn").forEach(btn => {
+      btn.onclick = async function() {
+        const kode = btn.getAttribute("data-obserkode");
+        if (kode === "8220CVH") {
+          alert("Du kan ikke fjerne hovedadmin.");
+          return;
+        }
+        if (!confirm("Er du sikker på, at du vil fjerne admin: " + kode + "?")) return;
+        await fetch("/api/admin/remove-admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id, obserkode: kode })
+        });
+        await loadAdminsList();
+      };
+    });
+  }
+
+  // Modal tilføj admin
+  document.getElementById("add-admin-btn").onclick = function() {
+    document.getElementById("add-admin-obserkode").value = "";
+    document.getElementById("add-admin-modal").style.display = "flex";
+    setTimeout(() => document.getElementById("add-admin-obserkode").focus(), 50);
+  };
+  document.getElementById("add-admin-cancel-btn").onclick = function() {
+    document.getElementById("add-admin-modal").style.display = "none";
+  };
+  document.getElementById("add-admin-save-btn").onclick = async function() {
+    const kode = document.getElementById("add-admin-obserkode").value.trim().toUpperCase();
+    if (!kode) {
+      alert("Indtast en obserkode.");
+      return;
+    }
+    if (!confirm("Er du sikker på, at du vil tilføje admin: " + kode + "?")) return;
+    await fetch("/api/admin/add-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id, obserkode: kode })
+    });
+    document.getElementById("add-admin-modal").style.display = "none";
+    await loadAdminsList();
+  };
+
   try {
     const res = await fetch('/api/is-admin', {
       method: 'POST',
@@ -253,6 +359,110 @@ document.addEventListener('DOMContentLoaded', async () => {
       saveBlacklistModal();
     }
   });
+
+  // CSV-fil editor
+  const csvFiles = [
+    { file: "data/arter_filter_klassificeret.csv", title: "Arter - Kategori" },
+    { file: "data/faenologi.csv", title: "Arter - Fænologi" },
+    { file: "data/bornholm_bemaerk_parsed.csv", title: "Bornholm - Bemærkelsesværdig" },
+    { file: "data/fyn_bemaerk_parsed.csv", title: "Fyn - Bemærkelsesværdig" },
+    { file: "data/koebenhavn_bemaerk_parsed.csv", title: "København - Bemærkelsesværdig" },
+    { file: "data/nordjylland_bemaerk_parsed.csv", title: "Nordjylland - Bemærkelsesværdig" },
+    { file: "data/nordsjaelland_bemaerk_parsed.csv", title: "Nordsjælland - Bemærkelsesværdig" },
+    { file: "data/nordvestjylland_bemaerk_parsed.csv", title: "Nordvestjylland - Bemærkelsesværdig" },
+    { file: "data/oestjylland_bemaerk_parsed.csv", title: "Østjylland - Bemærkelsesværdig" },
+    { file: "data/soenderjylland_bemaerk_parsed.csv", title: "Sønderjylland - Bemærkelsesværdig" },
+    { file: "data/storstroem_bemaerk_parsed.csv", title: "Storstrøm - Bemærkelsesværdig" },
+    { file: "data/sydoestjylland_bemaerk_parsed.csv", title: "Sydøstjylland - Bemærkelsesværdig" },
+    { file: "data/sydvestjylland_bemaerk_parsed.csv", title: "Sydvestjylland - Bemærkelsesværdig" },
+    { file: "data/vestjylland_bemaerk_parsed.csv", title: "Vestjylland - Bemærkelsesværdig" },
+    { file: "data/vestsjaelland_bemaerk_parsed.csv", title: "Vestsjælland - Bemærkelsesværdig" }
+  ];
+
+  // "Rediger Artsdata"-knap
+  document.getElementById("show-csv-files-btn").onclick = function() {
+    const adminsPanel = document.getElementById("admins-panel");
+    const csvPanel = document.getElementById("csv-file-list");
+    const csvEditor = document.getElementById("csv-editor");
+    // Luk admins-panel hvis åbent
+    if (adminsPanel) adminsPanel.style.display = "none";
+    // Toggle CSV-panel
+    if (csvPanel.style.display === "" || csvPanel.style.display === "block") {
+      csvPanel.style.display = "none";
+      if (csvEditor) csvEditor.style.display = "none";
+    } else {
+      csvPanel.innerHTML = "<h2>Vælg en fil</h2><ul>" +
+        csvFiles.map(f => `<li><a href=\"#\" onclick=\"loadCsvEditor('${f.file}', '${f.title}');return false;\">${f.title}</a></li>`).join("") +
+        "</ul>";
+      csvPanel.style.display = "block";
+      if (csvEditor) csvEditor.style.display = "none";
+    }
+  };
+
+  window.loadCsvEditor = async function(filename, title) {
+    const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
+    const res = await fetch("/api/admin/csv", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file: filename, user_id, device_id, action: "read" })
+    });
+    if (!res.ok) {
+      alert("Du har ikke adgang eller filen findes ikke.");
+      return;
+    }
+    const text = await res.text();
+    document.getElementById("csv-editor").innerHTML = `
+      <h3>Rediger: ${title}</h3>
+      <textarea id="csv-edit-area" style="width:100%;height:300px;">${text}</textarea><br>
+      <button onclick="saveCsvFile('${filename}', '${title}')">Gem</button>
+      <button onclick="document.getElementById('csv-editor').style.display='none'">Luk</button>
+    `;
+    document.getElementById("csv-editor").style.display = "";
+  };
+
+  window.saveCsvFile = async function(filename, title) {
+    const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
+    const content = document.getElementById("csv-edit-area").value;
+    const res = await fetch("/api/admin/csv", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file: filename, user_id, device_id, action: "write", content })
+    });
+    if (res.ok) {
+      alert(`Filen "${title}" er gemt!`);
+    } else {
+      alert("Kunne ikke gemme filen (mangler admin-rettigheder?)");
+    }
+  };
+
+  document.getElementById("add-art-btn").onclick = function() {
+    document.getElementById("add-art-modal").style.display = "flex";
+  };
+
+  document.getElementById("add-art-form").onsubmit = async function(e) {
+    e.preventDefault();
+    const artsid = document.getElementById("add-artsid").value.trim();
+    const artsnavn = document.getElementById("add-artsnavn").value.trim();
+    const klassifikation = document.getElementById("add-klassifikation").value;
+    const bemaerk_antal = document.getElementById("add-bemaerk-antal").value.trim();
+    const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
+
+    // Kald backend
+    const res = await fetch("/api/admin/add-art", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artsid, artsnavn, klassifikation, bemaerk_antal, user_id, device_id })
+    });
+    if (res.ok) {
+      alert("Art tilføjet!");
+      document.getElementById("add-art-modal").style.display = "none";
+    } else {
+      alert("Kunne ikke tilføje art (mangler admin-rettigheder?)");
+    }
+  };
 });
 
 function escapeHTML(str) {

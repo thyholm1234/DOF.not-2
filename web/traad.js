@@ -1,4 +1,4 @@
-// Version: 4.4.0.3 - 2025-11-11 00.13.06
+// Version: 4.5.1.4 - 2025-11-11 22.11.51
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -39,6 +39,7 @@
   }
 
   async function loadThread() {
+      await loadArterContentMap();
       const day = getParam('date');
       const id = getParam('id');
       const $status = document.getElementById('thread-status');
@@ -81,9 +82,12 @@
       } else if (data.events && data.events.length && data.events[0].Artnr) {
         artnr = String(data.events[0].Artnr).padStart(5, '0');
       }
-      const artLink = artnr
-        ? `<a href="https://dofbasen.dk/danmarksfugle/art/${artnr}" target="_blank" rel="noopener">${art}</a>`
-        : art;
+
+      // Kun lav link hvis content=1 for artnr
+      let artLink = art;
+      if (artnr && arterContentMap[artnr] === "1") {
+        artLink = `<a href="https://dofbasen.dk/danmarksfugle/art/${artnr}" target="_blank" rel="noopener">${art}</a>`;
+      }
 
       let loknr = '';
       if (thread.Loknr) {
@@ -464,6 +468,20 @@
           this.style.height = (this.scrollHeight) + 'px';
         });
       }
+  }
+
+  let arterContentMap = {};
+
+  async function loadArterContentMap() {
+    if (Object.keys(arterContentMap).length) return; // Allerede loaded
+    const res = await fetch('/data/arter_dof_content.csv');
+    const text = await res.text();
+    text.split('\n').forEach(line => {
+      const [artsid, , content] = line.trim().split(';');
+      if (artsid && content !== undefined) {
+        arterContentMap[artsid.padStart(5, '0')] = content.trim();
+      }
+    });
   }
 
 

@@ -1,6 +1,6 @@
 import sqlite3
 from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect, Body
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 import json
 import os
 import glob
@@ -247,6 +247,8 @@ async def api_unsubscribe(request: Request):
         )
     return {"ok": True}
 
+
+
 # Stier
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web"))
 payload_dir = os.path.join(web_dir, "payload")
@@ -419,6 +421,178 @@ def _extract_service_image_urls(html_text: str) -> list[str]:
         seen.add(key)
         out.append(svc)
     return out
+
+ALLOWED_CSV_FILES = {
+    "data/arter_filter_klassificeret.csv",
+    "data/bornholm_bemaerk_parsed.csv",
+    "data/faenologi.csv",
+    "data/fyn_bemaerk_parsed.csv",
+    "data/koebenhavn_bemaerk_parsed.csv",
+    "data/nordjylland_bemaerk_parsed.csv",
+    "data/nordsjaelland_bemaerk_parsed.csv",
+    "data/nordvestjylland_bemaerk_parsed.csv",
+    "data/oestjylland_bemaerk_parsed.csv",
+    "data/soenderjylland_bemaerk_parsed.csv",
+    "data/storstroem_bemaerk_parsed.csv",
+    "data/sydoestjylland_bemaerk_parsed.csv",
+    "data/sydvestjylland_bemaerk_parsed.csv",
+    "data/vestjylland_bemaerk_parsed.csv",
+    "data/vestsjaelland_bemaerk_parsed.csv",
+    "web/data/arter_filter_klassificeret.csv"
+}
+
+
+@app.post("/api/admin/csv")
+async def admin_csv(request: Request):
+    data = await request.json()
+    file = data.get("file")
+    user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    action = data.get("action", "read")  # "read" eller "write"
+    if file not in ALLOWED_CSV_FILES:
+        raise HTTPException(status_code=403, detail="Ugyldig filsti")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    admins = load_admins()
+    if obserkode not in admins:
+        raise HTTPException(status_code=403, detail="Ikke admin")
+
+    path = os.path.join(os.path.dirname(__file__), "..", file)
+    if action == "read":
+        if not os.path.isfile(path):
+            raise HTTPException(status_code=404, detail="File not found")
+        with open(path, "r", encoding="utf-8") as f:
+            return PlainTextResponse(f.read())
+    elif action == "write":
+        content = data.get("content", "")
+        # Skriv til begge hvis det er arter_filter_klassificeret.csv
+        if file.endswith("arter_filter_klassificeret.csv"):
+            path1 = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
+            path2 = os.path.join(os.path.dirname(__file__), "..", "web", "data", "arter_filter_klassificeret.csv")
+            for p in {path1, path2}:
+                with open(p, "w", encoding="utf-8") as f:
+                    f.write(content)
+        else:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(content)
+        return {"ok": True}
+    else:
+        raise HTTPException(status_code=400, detail="Ugyldig action")
+
+def append_line_robust(path, line):
+    needs_newline = False
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        with open(path, "rb") as f:
+            try:
+                f.seek(-1, os.SEEK_END)
+                last_char = f.read(1)
+                if last_char not in (b'\n', b'\r'):
+                    needs_newline = True
+            except OSError:
+                pass
+    with open(path, "a", encoding="utf-8") as f:
+        if needs_newline:
+            f.write("\n")
+        f.write(line if line.endswith("\n") else line + "\n")
+
+@app.post("/api/admin/add-art")
+async def add_art(data: dict = Body(...)):
+    artsid = data.get("artsid", "").strip()
+    artsnavn = data.get("artsnavn", "").strip()
+    klassifikation = data.get("klassifikation", "").strip()
+    bemaerk_antal = data.get("bemaerk_antal", "").strip()
+    user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+
+    # Admin-tjek
+    obserkode = get_obserkode_from_userprefs(user_id)
+    admins = load_admins()
+    if obserkode not in admins:
+        raise HTTPException(status_code=403, detail="Ikke admin")
+
+    # 1. Tilføj til arter_filter_klassificeret.csv hvis ikke findes
+    arter_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
+    with open(arter_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    exists = any(line.split(";")[0].strip() == artsid for line in lines)
+    if not exists:
+        append_line_robust(arter_path, f"{artsid};{artsnavn};{klassifikation}")
+        # Synkroniser til web/data også hvis nødvendigt
+        web_arter_path = os.path.join(os.path.dirname(__file__), "..", "web", "data", "arter_filter_klassificeret.csv")
+        if os.path.exists(web_arter_path):
+            append_line_robust(web_arter_path, f"{artsid};{artsnavn};{klassifikation}")
+
+    # 2. Tilføj til alle bemærk-filer (undtagen faenologi)
+    bemaerk_files = [
+        "bornholm_bemaerk_parsed.csv", "fyn_bemaerk_parsed.csv", "koebenhavn_bemaerk_parsed.csv",
+        "nordjylland_bemaerk_parsed.csv", "nordsjaelland_bemaerk_parsed.csv", "nordvestjylland_bemaerk_parsed.csv",
+        "oestjylland_bemaerk_parsed.csv", "soenderjylland_bemaerk_parsed.csv", "storstroem_bemaerk_parsed.csv",
+        "sydoestjylland_bemaerk_parsed.csv", "sydvestjylland_bemaerk_parsed.csv", "vestjylland_bemaerk_parsed.csv",
+        "vestsjaelland_bemaerk_parsed.csv"
+    ]
+    for fname in bemaerk_files:
+        path = os.path.join(os.path.dirname(__file__), "..", "data", fname)
+        # Tjek om artsnavn allerede findes
+        exists = False
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.split(";")[0].strip().lower() == artsnavn.lower():
+                        exists = True
+                        break
+        if not exists:
+            append_line_robust(path, f"{artsnavn};{bemaerk_antal}")
+
+    return {"ok": True}
+
+@app.post("/api/admin/add-art")
+async def add_art(data: dict = Body(...)):
+    artsid = data.get("artsid", "").strip()
+    artsnavn = data.get("artsnavn", "").strip()
+    klassifikation = data.get("klassifikation", "").strip()
+    bemaerk_antal = data.get("bemaerk_antal", "").strip()
+    user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+
+    # Admin-tjek
+    obserkode = get_obserkode_from_userprefs(user_id)
+    admins = load_admins()
+    if obserkode not in admins:
+        raise HTTPException(status_code=403, detail="Ikke admin")
+
+    # 1. Tilføj til arter_filter_klassificeret.csv hvis ikke findes
+    arter_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
+    with open(arter_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    exists = any(line.split(";")[0].strip() == artsid for line in lines)
+    if not exists:
+        append_line_robust(arter_path, f"{artsid};{artsnavn};{klassifikation}")
+        # Synkroniser til web/data også hvis nødvendigt
+        web_arter_path = os.path.join(os.path.dirname(__file__), "..", "web", "data", "arter_filter_klassificeret.csv")
+        if os.path.exists(web_arter_path):
+            append_line_robust(web_arter_path, f"{artsid};{artsnavn};{klassifikation}")
+
+    # 2. Tilføj til alle bemærk-filer (undtagen faenologi)
+    bemaerk_files = [
+        "bornholm_bemaerk_parsed.csv", "fyn_bemaerk_parsed.csv", "koebenhavn_bemaerk_parsed.csv",
+        "nordjylland_bemaerk_parsed.csv", "nordsjaelland_bemaerk_parsed.csv", "nordvestjylland_bemaerk_parsed.csv",
+        "oestjylland_bemaerk_parsed.csv", "soenderjylland_bemaerk_parsed.csv", "storstroem_bemaerk_parsed.csv",
+        "sydoestjylland_bemaerk_parsed.csv", "sydvestjylland_bemaerk_parsed.csv", "vestjylland_bemaerk_parsed.csv",
+        "vestsjaelland_bemaerk_parsed.csv"
+    ]
+    for fname in bemaerk_files:
+        path = os.path.join(os.path.dirname(__file__), "..", "data", fname)
+        # Tjek om artsnavn allerede findes
+        exists = False
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.split(";")[0].strip().lower() == artsnavn.lower():
+                        exists = True
+                        break
+        if not exists:
+            append_line_robust(path, f"{artsnavn};{bemaerk_antal}")
+
+    return {"ok": True}
 
 @app.get("/api/obs/full")
 async def api_obs_full(obsid: str = Query(..., min_length=3, description="DOFbasen observation id")):
@@ -847,9 +1021,64 @@ async def is_admin(data: dict = Body(...)):
     device_id = data.get("device_id")
     admins = load_admins()
     obserkode = get_obserkode_from_userprefs(user_id)
-    if obserkode in admins:
-        return {"admin": True}
-    return {"admin": False}
+    return {"admin": obserkode in admins, "obserkode": obserkode}
+
+@app.post("/api/admin/list-admins")
+async def list_admins(data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    if obserkode != "8220CVH":
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    try:
+        with open("./admin.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {"admins": data.get("admins", [])}
+    except Exception:
+        return {"admins": []}
+
+@app.post("/api/admin/add-admin")
+async def add_admin(data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    new_obserkode = (data.get("obserkode") or "").strip().upper()
+    obserkode = get_obserkode_from_userprefs(user_id)
+    if obserkode != "8220CVH":
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    if not new_obserkode or not re.match(r"^[A-Z0-9]+$", new_obserkode):
+        raise HTTPException(status_code=400, detail="Ugyldig obserkode")
+    try:
+        with open("./admin.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        admins = set(data.get("admins", []))
+        admins.add(new_obserkode)
+        data["admins"] = sorted(admins)
+        with open("./admin.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+@app.post("/api/admin/remove-admin")
+async def remove_admin(data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    remove_obserkode = (data.get("obserkode") or "").strip().upper()
+    obserkode = get_obserkode_from_userprefs(user_id)
+    if obserkode != "8220CVH":
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    if not remove_obserkode:
+        raise HTTPException(status_code=400, detail="Ugyldig obserkode")
+    try:
+        with open("./admin.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        admins = set(data.get("admins", []))
+        if remove_obserkode == "8220CVH":
+            raise HTTPException(status_code=400, detail="Kan ikke fjerne hovedadmin")
+        admins.discard(remove_obserkode)
+        data["admins"] = sorted(admins)
+        with open("./admin.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 def safe_comment(comment):
     return {

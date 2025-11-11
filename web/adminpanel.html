@@ -1,32 +1,129 @@
-<!-- Version: 4.4.0.3 - 2025-11-11 00.13.06 -->
+<!-- Version: 4.5.1.4 - 2025-11-11 22.11.51 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
 <head>
   <meta charset="UTF-8" />
-  <title>Adminpanel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="style.css?v=4.4.0.3" />
+  <title>Seneste observation</title>
+  <meta name="theme-color" content="#0b3d91" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/style.css?v=4.5.1.4">
 </head>
 <body>
+  <header class="wrap">
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">ADMIN</a></h1>
+    <div class="toolbar">
+      <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
+              onclick="window.location.reload()">
+        <span id="refresh-icon">🔄</span>
+      </button>
+      <button id="theme-toggle" aria-label="Skift tema" onclick="this.blur()">
+        <span id="theme-icon">☀️</span>
+      </button>
+      <a id="admin-link" href="./adminpanel.html" style="display:none; margin-left:8px;" aria-label="Admin">🛡️</a>
+    </div>
+  </header>
   <main class="wrap">
-    <div id="admin-content" style="display:none;">
-        <h2>Adminpanel</h2>
-        <div id="comment-threads"></div>
+    <!-- Admin action card: kun for hovedadmin -->
+    <div id="admin-action-card" class="card" style="display:none; margin-bottom:2em; padding:1.5em; gap:1em; display:flex; flex-wrap:wrap;">
+      <button id="show-csv-files-btn">Rediger Artsdata</button>
+      <button id="add-art-btn">Tilføj ny art</button>
+      <button id="show-admins-btn">Administrer admins</button>
+    </div>
 
-        <h2>Blacklist</h2>
-        <div class="card" id="blacklist-card">
-            <div id="blacklist-entries"></div>
+    <!-- Indhold under admin-action-card -->
+    <div id="csv-file-list" style="display:none;"></div>
+    <div id="csv-editor" style="display:none;"></div>
+    <div id="arter-editor" style="display:none;">
+      <h2>Rediger arter</h2>
+      <div id="arter-list"></div>
+      <div id="art-edit-modal" style="display:none;">
+        <form id="art-edit-form">
+          <label>artsid: <input id="edit-artsid" readonly></label><br>
+          <label>artsnavn: <input id="edit-artsnavn"></label><br>
+          <label>klassifikation: 
+            <select id="edit-klassifikation">
+              <option value="Alm">Alm</option>
+              <option value="SUB">SUB</option>
+              <option value="SU">SU</option>
+            </select>
+          </label><br>
+          <button type="submit">Gem</button>
+          <button type="button" id="cancel-edit-art">Annullér</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admins fold-ud -->
+    <div id="admins-panel" style="display:none; margin-top:1em;">
+      <button id="add-admin-btn" style="margin-bottom:1em;">Tilføj admin</button>
+      <div id="admins-list"></div>
+    </div>
+
+    <!-- Modal tilføj admin -->
+    <div id="add-admin-modal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
+      <div class="modal-content card" style="max-width:400px; margin:auto;">
+        <h3 style="margin-top:0;">Tilføj admin</h3>
+        <label for="add-admin-obserkode">Obserkode:</label>
+        <input id="add-admin-obserkode" style="width:100%;" maxlength="16">
+        <div style="margin-top:12px; text-align:right;">
+          <button id="add-admin-cancel-btn" type="button">Annullér</button>
+          <button id="add-admin-save-btn" type="button">Tilføj</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal tilføj ny art -->
+    <div id="add-art-modal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
+      <div class="modal-content card" style="max-width:400px; margin:auto;">
+        <h2 style="margin-top:0;">Tilføj ny art</h2>
+        <form id="add-art-form">
+          <label>artsid<br><input id="add-artsid" required style="width:100%"></label><br>
+          <label>artsnavn<br><input id="add-artsnavn" required style="width:100%"></label><br>
+          <label>klassifikation<br>
+            <select id="add-klassifikation" style="width:100%">
+              <option value="Alm">Alm</option>
+              <option value="SU">SU</option>
+              <option value="SUB">SUB</option>
+            </select>
+          </label><br>
+          <label>bemærk_antal (default = 1)<br><input id="add-bemaerk-antal" required style="width:100%"></label><br>
+          <div style="display:flex; gap:1em; margin-top:1em;">
+            <button type="submit" class="primary-btn">Tilføj</button>
+            <button type="button" onclick="document.getElementById('add-art-modal').style.display='none'">Annullér</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Adminpanel indhold -->
+    <div id="admin-content" style="display:none;">
+      <h2>Adminpanel</h2>
+      <div id="comment-threads"></div>
+      <h2>Blacklist</h2>
+      <div class="card" id="blacklist-card">
+        <div id="blacklist-entries"></div>
+      </div>
     </div>
     <div id="no-access" style="display:none;">
-        <h2>Ingen adgang</h2>
-        <p>Du har ikke adgang til adminpanelet.</p>
+      <h2>Ingen adgang</h2>
+      <p>Du har ikke adgang til adminpanelet.</p>
     </div>
-    </main>
-  <script src="admin.js?v=4.4.0.3"></script>
+  </main>
+  <script src="admin.js?v=4.5.1.4"></script>
+  <script src="app.js?v=4.5.1.4"></script>
   <div id="blacklist-modal" class="modal" style="display:none;">
-    <div class="modal-content card" style="max-width:400px;margin:auto;">
+    <div class="modal-content card" style="max-width:400px; margin:auto;">
       <h3>Blacklist observation</h3>
       <p id="blacklist-modal-obserkode"></p>
       <label for="blacklist-reason">Årsag:</label>

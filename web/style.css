@@ -1,4 +1,4 @@
-/* Version: 4.4.0.3 - 2025-11-11 00.13.06 */
+/* Version: 4.5.1.4 - 2025-11-11 22.11.51 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1654,4 +1654,11 @@ button:disabled {
   flex: 0 0 auto;
   min-width: unset;
   width: auto;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
 }
