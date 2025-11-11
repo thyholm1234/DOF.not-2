@@ -129,13 +129,15 @@ def to_region_slug(dept: str) -> str:
 def compute_kategori(row: Dict[str, str]) -> str:
     art = (row.get("Artnavn") or "").strip()
     klass = KLASS_MAP.get(art)
+    if klass == "SU":
+        return "SU"
     if klass == "SUB":
         return "SUB"
     # Fænologi-tjek
     perioder = FAENOLOGI_PERIODER.get(art)
     obsdato = (row.get("Dato") or "").strip()
     if perioder and obsdato and _dato_in_faenologi_periode(obsdato, perioder):
-        return "bemaerk"  # <-- Sæt mærkatet til "bemaerk"
+        return "bemaerk"
     # Bemærk-tærskel-tjek
     region_slug = to_region_slug(row.get("DOF_afdeling") or "")
     thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
@@ -329,8 +331,10 @@ def build_obsid_birthtimes(rows: List[Dict[str, str]], prev_birthtimes: dict) ->
     return birthtimes
 
 
-def fetch_excel_text() -> str:
-    url = BASE_URL.format(date=today_date_str())
+def fetch_excel_text(date_str=None) -> str:
+    if date_str is None:
+        date_str = today_date_str()
+    url = BASE_URL.format(date=date_str)
     resp = requests.get(url, timeout=30)
     resp.raise_for_status()
 
@@ -588,10 +592,10 @@ def latest_row_for_key(k: str, rows_by_key: Dict[str, List[Dict[str, str]]]) -> 
     return max(lst, key=_parse_dt_from_row)
 
 
-def run_once() -> None:
+def run_once(date_str=None) -> None:
     old_state = load_state()
 
-    text = fetch_excel_text()
+    text = fetch_excel_text(date_str)
     parsed_rows = parse_rows_from_text(text)
     normalized_rows = normalize_rows(parsed_rows)
     # berig med kategori for SU/SUB/bemaerk/alm
@@ -612,7 +616,7 @@ def run_once() -> None:
     with open(birthtimes_path, "w", encoding="utf-8") as f:
         json.dump(obsid_birthtimes, f, ensure_ascii=False, indent=2)
 
-    today = today_date_str()
+    today = date_str or today_date_str()
     save_threads_and_index(enriched_all, today)
 
     # grupper til opslag
@@ -712,17 +716,23 @@ def main():
         default=60,
         help="Interval i sekunder (kun med --watch). Default 60.",
     )
+    parser.add_argument(
+        "--date",
+        type=str,
+        default=None,
+        help="Dato i format DD-MM-YYYY (hvis ikke angivet bruges dags dato)",
+    )
     args = parser.parse_args()
 
     if not args.watch:
-        run_once()
+        run_once(args.date)
         return
 
     print(f"[watcher] Starter i watch-mode. Interval: {args.interval}s. Ctrl+C for stop.")
     try:
         while True:
             try:
-                run_once()
+                run_once(args.date)
             except Exception as e:
                 print(f"[watcher] Fejl: {e}")
             time.sleep(max(1, args.interval))
