@@ -1,4 +1,4 @@
-<!-- Version: 4.5.1.5 - 2025-11-11 22.14.18 -->
+<!-- Version: 4.5.1.6 - 2025-11-11 22.41.00 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <title>Tråd</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="style.css?v=4.5.1.5">
+  <link rel="stylesheet" href="style.css?v=4.5.1.6">
 </head>
 <body>
   <header class="wrap">
@@ -33,7 +33,30 @@
     <div id="thread-events"></div>
     <div id="thread-status"></div>
   </main>
-  <script src="traad.js?v=4.5.1.5"></script>
-  <script src="app.js?v=4.5.1.5"></script>
+  <script src="traad.js?v=4.5.1.6"></script>
+  <script src="app.js?v=4.5.1.6"></script>
+  <script type="module">
+  import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js'
+  import SpectrogramPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
+
+  window.createWaveSurferWithSpectrogram = (containerId, url) => {
+    const wavesurfer = WaveSurfer.create({
+      container: `#${containerId}`,
+      waveColor: '#a0c4ff',
+      progressColor: '#4361ee',
+      height: 64,
+      normalize: true,
+      url,
+      plugins: [
+        SpectrogramPlugin.create({
+          container: `#${containerId}-spectrogram`,
+          labels: true,
+          height: 96,
+        })
+      ]
+    });
+    return wavesurfer;
+  };
+  </script>
 </body>
 </html>
