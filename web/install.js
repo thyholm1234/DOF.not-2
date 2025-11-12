@@ -1,4 +1,4 @@
-// Version: 4.5.4.3 - 2025-11-12 15.07.45
+// Version: 4.5.4.4 - 2025-11-12 15.39.06
 // © Christian Vemmelund Helligsø
 
 let deferredPrompt = null;

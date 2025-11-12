@@ -206,6 +206,39 @@ def set_prefs(user_id, prefs):
             (user_id, json.dumps(prefs), ts)
         )
 
+@app.post("/api/admin/superadmin")
+async def superadmins(data: dict = Body(None)):
+    action = (data or {}).get("action", "get")
+    user_id = (data or {}).get("user_id", "")
+    obserkode = ((data or {}).get("obserkode") or "").strip().upper()
+    try:
+        with open("./superadmin.json", "r", encoding="utf-8") as f:
+            file_data = json.load(f)
+        superadmin_list = set(file_data.get("superadmins", []))
+        protected = set(file_data.get("protected", []))
+        if action == "get":
+            return {"superadmins": sorted(superadmin_list)}
+        elif action == "toggle":
+            requester_obserkode = get_obserkode_from_userprefs(user_id)
+            if requester_obserkode not in superadmin_list:
+                raise HTTPException(status_code=403, detail="Kun hovedadmin")
+            if not obserkode:
+                raise HTTPException(status_code=400, detail="Obserkode mangler")
+            if obserkode in protected:
+                raise HTTPException(status_code=400, detail="Denne superadmin kan ikke fjernes")
+            if obserkode in superadmin_list:
+                superadmin_list.remove(obserkode)
+            else:
+                superadmin_list.add(obserkode)
+            file_data["superadmins"] = sorted(superadmin_list)
+            with open("./superadmin.json", "w", encoding="utf-8") as f:
+                json.dump(file_data, f, ensure_ascii=False, indent=2)
+            return {"ok": True, "superadmins": file_data["superadmins"]}
+        else:
+            raise HTTPException(status_code=400, detail="Ugyldig action")
+    except Exception as e:
+        return {"ok": False, "error": str(e), "superadmins": []}
+
 @app.post("/api/prefs")
 async def api_prefs(request: Request):
     data = await request.json()

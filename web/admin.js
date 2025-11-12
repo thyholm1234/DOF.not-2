@@ -1,4 +1,4 @@
-// Version: 4.5.4.3 - 2025-11-12 15.07.45
+// Version: 4.5.4.4 - 2025-11-12 15.39.06
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -276,6 +276,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     const data = await res.json();
     const admins = data.admins || [];
+
+    const superRes = await fetch("/api/admin/superadmin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get", user_id })
+    });
+    const superData = await superRes.json();
+    const superadmins = superData.superadmins || [];
+
     const listDiv = document.getElementById("admins-list");
     listDiv.innerHTML = "";
     admins.forEach(obserkode => {
@@ -312,6 +321,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         );
       };
 
+      // Superadmin twostate-knap
+      const isSuper = superadmins.includes(obserkode);
+      const superBtn = document.createElement("button");
+      superBtn.type = "button";
+      superBtn.textContent = "Superadmin";
+      superBtn.style.padding = "2px 8px";
+      superBtn.style.margin = "0";
+      superBtn.style.verticalAlign = "middle";
+      superBtn.style.background = isSuper ? "#FFD700" : "#ccc";
+      superBtn.style.color = isSuper ? "#333" : "#000";
+      superBtn.onclick = async () => {
+        if (!confirm(`Vil du ${isSuper ? "fjerne" : "tilføje"} superadmin-status for ${obserkode}?`)) return;
+        await fetch("/api/admin/superadmin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "toggle", user_id, obserkode })
+        });
+        await loadAdminsList();
+      };
+
       // Slet-knap
       const delBtn = document.createElement("button");
       delBtn.className = "remove-admin-btn";
@@ -325,9 +354,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       delBtn.style.verticalAlign = "middle";
 
       btnWrap.appendChild(mailBtn);
+      btnWrap.appendChild(superBtn);
       btnWrap.appendChild(delBtn);
 
-      // Layout: navn | (knapper helt til højre)
       card.appendChild(span);
       card.appendChild(btnWrap);
       listDiv.appendChild(card);
@@ -337,7 +366,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     listDiv.querySelectorAll(".remove-admin-btn").forEach(btn => {
       btn.onclick = async function() {
         const kode = btn.getAttribute("data-obserkode");
-        // Forhindr at du fjerner dig selv hvis du er superadmin
         if (kode === window.myObserkode && window.isSuperadmin) {
           alert("Du kan ikke fjerne hovedadmin.");
           return;
