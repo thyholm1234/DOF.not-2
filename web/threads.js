@@ -209,9 +209,18 @@
 
     // info
     const info = el('div', 'info');
-    if (t.last_adf) info.appendChild(el('span', '', t.last_adf));
-    if (t.lok) info.appendChild(el('span', '', t.lok));
-    if (t.last_observer) info.appendChild(el('span', '', t.last_observer));
+    const infoParts = [];
+    if (t.last_adf) infoParts.push(el('span', 'adfaerd', t.last_adf));
+    if (t.lok) infoParts.push(el('span', '', t.lok));
+    if (t.last_observer) infoParts.push(el('span', 'observer-name', t.last_observer));
+
+    // Indsæt bullets mellem elementerne
+    for (let i = 0; i < infoParts.length; i++) {
+      info.appendChild(infoParts[i]);
+      if (i < infoParts.length - 1) {
+        info.appendChild(el('span', 'bullet', '•'));
+      }
+    }
     article.appendChild(info);
 
     $cards.appendChild(article);
