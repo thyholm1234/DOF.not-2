@@ -1177,8 +1177,28 @@ async def list_admins(data: dict = Body(...)):
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
     try:
         with open("./admin.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return {"admins": data.get("admins", [])}
+            admin_data = json.load(f)
+        admin_koder = admin_data.get("admins", [])
+        # Hent navn for hver admin fra user_prefs
+        admins = []
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+            kode_to_navn = {}
+            for (prefs_json,) in rows:
+                try:
+                    prefs = json.loads(prefs_json)
+                    kode = (prefs.get("obserkode") or "").strip().upper()
+                    navn = prefs.get("navn", "")
+                    if kode:
+                        kode_to_navn[kode] = navn
+                except Exception:
+                    continue
+        for kode in admin_koder:
+            admins.append({
+                "obserkode": kode,
+                "navn": kode_to_navn.get(kode, "")
+            })
+        return {"admins": admins}
     except Exception:
         return {"admins": []}
 

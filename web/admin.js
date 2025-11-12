@@ -275,6 +275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       body: JSON.stringify({ user_id })
     });
     const data = await res.json();
+    // Forvent: [{obserkode: "...", navn: "..."}]
     const admins = data.admins || [];
 
     const superRes = await fetch("/api/admin/superadmin", {
@@ -287,7 +288,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const listDiv = document.getElementById("admins-list");
     listDiv.innerHTML = "";
-    admins.forEach(obserkode => {
+    admins.forEach(admin => {
+      const obserkode = admin.obserkode || "";
+      const navn = admin.navn || "";
       const card = document.createElement("div");
       card.className = "card";
       card.style.display = "flex";
@@ -296,9 +299,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.style.marginBottom = "8px";
       card.style.gap = "8px";
 
-      // Admin navn
+      // Admin navn og obserkode
       const span = document.createElement("span");
-      span.textContent = escapeHTML(obserkode);
+      span.textContent = `${escapeHTML(obserkode)}${navn ? " - " + escapeHTML(navn) : ""}`;
 
       // Knap-wrapper
       const btnWrap = document.createElement("div");
