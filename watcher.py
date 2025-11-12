@@ -212,6 +212,29 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
                 del r["url2"]
     return rows
 
+def fix_smart_quotes(text: str) -> str:
+    # Erstat Windows-1252 smart quotes og typiske fejltegn
+    return (
+        text.replace('\x93', '“')
+            .replace('\x94', '”')
+            .replace('\x91', '‘')
+            .replace('\x92', '’')
+            .replace('\x96', '-')   # En dash
+            .replace('\x97', '—')  # Em dash
+            .replace('\x85', '…')  # Ellipsis
+            .replace('\x86', '†')
+            .replace('\x87', '‡')
+            .replace('\x8b', '‹')
+            .replace('\x9b', '›')
+            .replace('\x8c', 'Œ')
+            .replace('\x9c', 'œ')
+            .replace('\x80', '€')
+            .replace('\x82', ',')
+            .replace('\x84', '"')
+            .replace('\x99', '™')
+            .replace('\x9f', 'Ÿ')
+    )
+
 def slugify(s):
     s = s.lower()
     s = s.replace("æ", "ae").replace("ø", "oe").replace("å", "aa")
@@ -414,6 +437,8 @@ def parse_rows_from_text(text: str) -> List[Dict[str, str]]:
                 continue
             key = k.strip()
             val = v.strip() if isinstance(v, str) else ("" if v is None else str(v))
+            # Fix smart quotes
+            val = fix_smart_quotes(val)
             cleaned[key] = val
 
         # Skip helt tomme linjer

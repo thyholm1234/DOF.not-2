@@ -1,4 +1,4 @@
-/* Version: 4.6 - 2025-11-12 15.44.01 */
+/* Version: 4.6.2.6 - 2025-11-12 19.58.53 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -39,9 +39,13 @@
 /* ===== Base ===== */
 body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  margin: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
   background: var(--bg-page);
   color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 h1 {
   margin: 0 0 20px;
@@ -352,6 +356,7 @@ header.wrap {
   align-items: center;         /* Vertikal centrering */
   justify-content: space-between;
   gap: 32px;
+  padding: 4px 16px;      /* Mindre top/bund padding */
   background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
@@ -364,21 +369,28 @@ header.wrap {
 }
 
 header.wrap h1 {
+  display: flex;
+  align-items: center;
   margin: 0;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1.1;
   text-align: center;
+  height: 100%; /* Sikrer at flex virker */
 }
 
 header.wrap .brand {
   color: var(--text-main);
+  display:flex;
+  align-items: center;
   text-decoration: none;
   font-weight: 900;
   font-size: 2.5rem;
   letter-spacing: -0.02em;
   transition: color 0.15s;
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 
 header.wrap .brand:hover {
@@ -400,7 +412,6 @@ header.wrap .brand:hover {
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 30px 10px;      /* Mindre padding */
   font-size: 1em;
   font-weight: 600;
   cursor: pointer;
@@ -460,7 +471,7 @@ header.wrap .brand:hover {
     padding-right: 0;
   }
   header.wrap .brand {
-    font-size: 2rem;
+    font-size: 1.7rem;
     padding-left: 6px; /* Flyt teksten 6px ind til højre kun på mobil */
   }
   .card-top {
@@ -689,6 +700,9 @@ header.wrap .brand:hover {
 @media (max-width: 600px) {
   .twostate {
     padding: 7px 12px !important;
+  }
+  .page-title {
+    font-size: 1.4em;
   }
 }
 
@@ -1717,4 +1731,46 @@ button:disabled {
     margin-left: 0.1em;
     position: relative;
   }
+}
+
+.footer {
+  width: 100%;
+  background: var(--bg-page);
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--col-alm) !important;
+  margin-top: 0;
+  margin-bottom: 2em;
+  position: static;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+}
+.footer-content {
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.footer-link {
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+  color: var(--text-meta) !important; /* Skiller sig ud, men matcher tema */
+}
+.footer-link:visited,
+.footer-link:active,
+.footer-link:hover {
+  text-decoration: none;
+}
+
+.main-content {
+  flex: 1 0 auto;
+}
+
+iframe {
+  width: 100%;
+  min-height: 1000px;
+  max-height: 1400px;
+  border: none;
 }

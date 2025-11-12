@@ -1,4 +1,4 @@
-<!-- Version: 4.6 - 2025-11-12 15.44.01 -->
+<!-- Version: 4.6.2.6 - 2025-11-12 19.58.53 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,37 +17,43 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.6">
+  <link rel="stylesheet" href="/style.css?v=4.6.2.6">
 </head>
 
-<body>
-  <header class="wrap">
-    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF🔔</a></h1>
-    <div class="toolbar">
-      <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
-              onclick="window.location.reload()">
-        <span id="refresh-icon">🔄</span>
-      </button>
-      <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
-              onclick="window.location.href='./settings.html'">
-        <span id="settings-icon">⚙️</span>
-      </button>
-      <button id="theme-toggle" aria-label="Skift tema" type="button">
-        <span id="theme-icon">☀️</span>
-      </button>
+  <body>
+    <header class="wrap">
+      <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOFbasen</a></h1>
+      <div class="toolbar">
+        <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
+                onclick="window.location.reload()">
+          <span id="refresh-icon">🔄</span>
+        </button>
+        <button id="info-btn" aria-label="Info" title="Info" type="button"
+                onclick="window.location.href='./info.html'">
+          <span id="info-icon">ℹ️</span>
+        </button>
+        <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
+                onclick="window.location.href='./settings.html'">
+          <span id="settings-icon">⚙️</span>
+        </button>
+      </div>
+    </header>
+  
+    <div class="wrap main-content">
+      <h1 class="page-title">Dagens observationer</h1>
+      <div id="front-controls" class="controls-card"></div>
+      <div id="threads-status"></div>
+      <div id="threads-cards"></div>
     </div>
-  </header>
- 
-  <div class="wrap">
-  <h1 class="page-title">Dagens observationer</h1>
-  <div id="front-controls" class="controls-card"></div>
-  <div id="threads-status"></div>
-  <div id="threads-cards"></div>
-</div>
-  
-  <script src="threads.js?v=4.6"></script>
-  
-  <script src="app.js?v=4.6"></script>
     
+    <script src="threads.js?v=4.6.2.6"></script> 
+    <script src="app.js?v=4.6.2.6"></script>
+    <footer class="footer">
+      <a href="https://dofbasen.dk" target="_blank" rel="noopener" class="footer-link">
+        <div class="footer-content">
+          DOFbasen &copy; 2025 <br> Dansk Ornitologisk Forening<br>
+        </div>
+      </a>
+    </footer>
   </body>
 </html>

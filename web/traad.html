@@ -1,4 +1,4 @@
-<!-- Version: 4.6 - 2025-11-12 15.44.01 -->
+<!-- Version: 4.6.2.6 - 2025-11-12 19.58.53 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -6,23 +6,25 @@
   <meta charset="utf-8">
   <title>Tråd</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="style.css?v=4.6">
+  <link rel="stylesheet" href="style.css?v=4.6.2.6">
 </head>
 <body>
   <header class="wrap">
-    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOF🔔</a></h1>
+    <h1><a class="brand" href="/index.html" aria-label="Gå til forsiden">DOFbasen</a></h1>
     <div class="toolbar">
       <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
                 onclick="window.location.reload()">
         <span id="refresh-icon">🔄</span>
       </button>
+      <button id="info-btn" aria-label="Info" title="Info" type="button"
+              onclick="window.location.href='./info.html'">
+        <span id="info-icon">ℹ️</span>
+      </button>
       <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
               onclick="window.location.href='./settings.html'">
         <span id="settings-icon">⚙️</span>
       </button>
-      <button id="theme-toggle" aria-label="Skift tema" type="button">
-        <span id="theme-icon">☀️</span>
-      </button>
+
     </div>
   </header>
   <main class="wrap">
@@ -33,8 +35,8 @@
     <div id="thread-events"></div>
     <div id="thread-status"></div>
   </main>
-  <script src="traad.js?v=4.6"></script>
-  <script src="app.js?v=4.6"></script>
+  <script src="traad.js?v=4.6.2.6"></script>
+  <script src="app.js?v=4.6.2.6"></script>
   <script type="module">
   import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js'
   import SpectrogramPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'

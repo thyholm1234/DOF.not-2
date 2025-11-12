@@ -1,4 +1,4 @@
-// Version: 4.6 - 2025-11-12 15.44.01
+// Version: 4.6.2.6 - 2025-11-12 19.58.53
 // © Christian Vemmelund Helligsø
 async function validateLogin(user_id, device_id, obserkode, adgangskode) {
   const res = await fetch('/api/validate-login', {
@@ -37,6 +37,23 @@ function getOrCreateDeviceId() {
   }
   return deviceid;
 }
+
+async function checkAdmin() {
+    const user_id = localStorage.getItem("userid") || "";
+    const device_id = localStorage.getItem("deviceid") || "";
+    try {
+      const res = await fetch('/api/is-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id, device_id })
+      });
+      const data = await res.json();
+      if (data.admin) {
+        document.getElementById("admin-link").style.display = "";
+      }
+    } catch {}
+  }
+  checkAdmin();
 
 document.addEventListener('DOMContentLoaded', async () => {
   const loginCard = document.getElementById('login-card');
