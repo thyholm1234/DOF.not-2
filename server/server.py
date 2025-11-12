@@ -1220,6 +1220,9 @@ async def remove_admin(data: dict = Body(...)):
     try:
         with open("./admin.json", "r", encoding="utf-8") as f:
             data = json.load(f)
+        protected_admins = set(data.get("protected", []))
+        if remove_obserkode in protected_admins:
+            raise HTTPException(status_code=400, detail="Kan ikke fjerne beskyttet admin")
         admins = set(data.get("admins", []))
         admins.discard(remove_obserkode)
         data["admins"] = sorted(admins)
