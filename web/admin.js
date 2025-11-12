@@ -1,4 +1,4 @@
-// Version: 4.5.2 - 2025-11-12 00.58.59
+// Version: 4.5.3.18 - 2025-11-12 13.08.42
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -218,11 +218,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch {}
 
-  // Vis admins-knap kun for hovedadmin
+  // Vis admins-knapper kun for hovedadmin
   if (isSuperAdmin) {
+    document.getElementById("admin-action-card").style.display = "flex";
     document.getElementById("show-admins-btn").style.display = "";
     document.getElementById("add-admin-btn").style.display = "";
     document.getElementById("add-art-btn").style.display = "";
+    document.getElementById("sync-threads-btn").style.display = "";
+  } else {
+    document.getElementById("admin-action-card").style.display = "none";
   }
 
   // "Administrer admins"-knap
@@ -465,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 });
 
+// Modal-knapper og sync-request (udenfor DOMContentLoaded)
 document.getElementById("sync-threads-btn").onclick = function() {
   document.getElementById("sync-modal").style.display = "flex";
 };

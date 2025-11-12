@@ -1,4 +1,4 @@
-/* Version: 4.5.2 - 2025-11-12 00.58.59 */
+/* Version: 4.5.3.18 - 2025-11-12 13.08.42 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1661,4 +1661,60 @@ button:disabled {
     padding: 24px;
     border-radius: 8px;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+}
+
+.info img[alt="App-bruger"] {
+  height: 1em;
+  vertical-align: middle;
+  margin-left: 0em;   /* flyt tættere på navnet, evt. negativ for overlap */
+  position: relative;
+  top: 2px;              /* flyt lidt nedad */
+}
+
+.info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2em;
+}
+
+.observer-name-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
+  white-space: nowrap;
+}
+
+/* Skjul bullet hvis observer-name og adfaerd ikke er på samme linje */
+.info .bullet {
+  display: inline;
+}
+
+
+@media (max-width: 600px) {
+  .info {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 3px !important;
+  }
+  .info > span,
+  .observer-name-badge {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  
+  .info .bullet {
+    display: none !important;
+  }
+
+  .info img[alt="App-bruger"] {
+    height: 1em;
+    vertical-align: middle;
+    margin-left: 0.1em;
+    position: relative;
+  }
 }

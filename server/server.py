@@ -453,9 +453,8 @@ async def admin_csv(request: Request):
     if file not in ALLOWED_CSV_FILES:
         raise HTTPException(status_code=403, detail="Ugyldig filsti")
     obserkode = get_obserkode_from_userprefs(user_id)
-    admins = load_admins()
-    if obserkode not in admins:
-        raise HTTPException(status_code=403, detail="Ikke admin")
+    if obserkode != "8220CVH":
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
     path = os.path.join(os.path.dirname(__file__), "..", file)
     if action == "read":
@@ -1024,14 +1023,31 @@ async def api_request_sync(request: Request):
         raise HTTPException(status_code=400, detail="user_id mangler")
 
     obserkode = get_obserkode_from_userprefs(user_id)
-    admins = load_admins()
-    if obserkode not in admins:
-        raise HTTPException(status_code=403, detail="Ikke admin")
+    if obserkode != "8220CVH":
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
     # Skriv sync-request (overskriver evt. eksisterende)
     with open(SYNC_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return {"status": "ok", "written": data}
+
+@app.get("/api/is-app-user")
+async def api_is_app_user(obserkode: str = ""):
+    obserkode = (obserkode or "").strip().upper()
+    if not obserkode:
+        return {"is_app_user": False}
+    # Tjek i din database eller prefs
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+    for (prefs_json,) in rows:
+        try:
+            prefs = json.loads(prefs_json)
+            kode = (prefs.get("obserkode") or "").strip().upper()
+            if kode == obserkode:
+                return {"is_app_user": True}
+        except Exception:
+            continue
+    return {"is_app_user": False}
 
 @app.post("/api/is-admin")
 async def is_admin(data: dict = Body(...)):

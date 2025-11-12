@@ -1,4 +1,4 @@
-// Version: 4.5.2 - 2025-11-12 00.58.59
+// Version: 4.5.3.18 - 2025-11-12 13.08.42
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -36,6 +36,18 @@
       /(https?:\/\/[^\s<]+)/g,
       url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
     );
+  }
+
+  async function isAppUser(obserkode) {
+    if (!obserkode) return false;
+    try {
+      const res = await fetch(`/api/is-app-user?obserkode=${encodeURIComponent(obserkode)}`);
+      if (res.ok) {
+        const data = await res.json();
+        return !!data.is_app_user;
+      }
+    } catch {}
+    return false;
   }
 
   async function loadThread() {
@@ -252,7 +264,48 @@
 
           // --- Hent DKU-status, billeder og
           const infoRow = el('div', 'info');
-          infoRow.textContent = `${ev.Adfbeskrivelse || ''} • ${ev.Fornavn || ''} ${ev.Efternavn || ''}`;
+          let adfaerd = ev.Adfbeskrivelse || '';
+          let navn = `${ev.Fornavn || ''} ${ev.Efternavn || ''}`.trim();
+          let obserkode = (ev.Obserkode || ev.obserkode || "").trim().toUpperCase();
+
+          // Byg observer-name-badge wrapper
+          const observerNameBadge = document.createElement('span');
+          observerNameBadge.className = 'observer-name-badge';
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'observer-name';
+          nameSpan.textContent = navn;
+          observerNameBadge.appendChild(nameSpan);
+
+          if (adfaerd) {
+            infoRow.innerHTML = `<span class="adfaerd">${adfaerd}</span> <span class="bullet">•</span>`;
+            infoRow.appendChild(observerNameBadge);
+          } else {
+            infoRow.appendChild(observerNameBadge);
+          }
+
+          // Badge placeres altid direkte efter navnet
+          isAppUser(obserkode).then(isUser => {
+            if (isUser) {
+              observerNameBadge.insertAdjacentHTML('beforeend',
+                `<img src="/icons/verified-symbol-icon.svg" alt="App-bruger" title="App-bruger" class="verified-badge">`
+              );
+            }
+            function updateBulletVisibility() {
+              const bullet = infoRow.querySelector('.bullet');
+              const adfaerdSpan = infoRow.querySelector('.adfaerd');
+              const observerNameBadge = infoRow.querySelector('.observer-name-badge');
+              if (bullet && adfaerdSpan && observerNameBadge) {
+                if (bullet.getBoundingClientRect().top !== adfaerdSpan.getBoundingClientRect().top) {
+                  bullet.style.display = "none";
+                } else {
+                  bullet.style.display = "inline";
+                }
+              }
+            }
+            setTimeout(updateBulletVisibility, 0);
+            window.addEventListener('resize', updateBulletVisibility);
+            window.addEventListener('orientationchange', updateBulletVisibility);
+          });
           obsRow.appendChild(infoRow);
 
           // Vandret streg under body
