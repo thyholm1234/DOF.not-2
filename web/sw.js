@@ -1,6 +1,6 @@
-// Version: 4.5.3.18 - 2025-11-12 13.08.42
+// Version: 4.5.4 - 2025-11-12 13.15.49
 // © Christian Vemmelund Helligsø
-const CACHE_NAME = 'dofnot-v4.5.3.18';
+const CACHE_NAME = 'dofnot-v4.5.4';
 const CORE_ASSETS = [
   '/',
   '/index.html',
