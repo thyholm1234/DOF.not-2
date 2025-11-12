@@ -1,4 +1,4 @@
-// Version: 4.5.4.1 - 2025-11-12 13.20.44
+// Version: 4.5.4.3 - 2025-11-12 15.07.45
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -199,27 +199,47 @@ function hideBlacklistModal() {
   document.getElementById("blacklist-modal").style.display = "none";
 }
 
+async function isSuperadmin(user_id, device_id) {
+    const res = await fetch("/api/is-superadmin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, device_id })
+    });
+    const data = await res.json();
+    return !!data.superadmin;
+}
+
 // Tilføj event listeners til modal-knapperne
 document.addEventListener('DOMContentLoaded', async () => {
   const user_id = getOrCreateUserId();
   const device_id = getOrCreateDeviceId();
-  let isSuperAdmin = false;
 
-  // Tjek om bruger er hovedadmin
+  // Tjek admin og superadmin status
+  let isAdmin = false;
+  let isSuperadmin = false;
+  let myObserkode = "";
+
   try {
-    const res = await fetch('/api/is-admin', {
+    // Tjek admin-status
+    const adminRes = await fetch('/api/is-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id, device_id })
     });
-    const data = await res.json();
-    if (data.admin && data.obserkode === "8220CVH") {
-      isSuperAdmin = true;
-    }
+    const adminData = await adminRes.json();
+    isAdmin = !!adminData.admin;
+
+    // Tjek superadmin-status via din funktion
+    isSuperadmin = await isSuperadmin(user_id, device_id);
+    myObserkode = adminData.obserkode || "";
+
+    window.isAdmin = isAdmin;
+    window.isSuperadmin = isSuperadmin;
+    window.myObserkode = myObserkode;
   } catch {}
 
-  // Vis admins-knapper kun for hovedadmin
-  if (isSuperAdmin) {
+  // Vis adminpanel hvis admin eller superadmin
+  if (isAdmin || isSuperadmin) {
     document.getElementById("admin-action-card").style.display = "flex";
     document.getElementById("show-admins-btn").style.display = "";
     document.getElementById("add-admin-btn").style.display = "";
@@ -234,9 +254,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminsPanel = document.getElementById("admins-panel");
     const csvPanel = document.getElementById("csv-file-list");
     const csvEditor = document.getElementById("csv-editor");
-    // Luk CSV-panel hvis åbent
+    const usersPanel = document.getElementById("all-users-list");
+    // Skjul andre paneler
     if (csvPanel) csvPanel.style.display = "none";
     if (csvEditor) csvEditor.style.display = "none";
+    if (usersPanel) usersPanel.style.display = "none";
     // Toggle admins-panel
     if (adminsPanel.style.display === "none" || adminsPanel.style.display === "") {
       await loadAdminsList();
@@ -263,17 +285,60 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.style.justifyContent = "space-between";
       card.style.alignItems = "center";
       card.style.marginBottom = "8px";
-      card.innerHTML = `
-        <span>${escapeHTML(obserkode)}</span>
-        <button class="remove-admin-btn" data-obserkode="${escapeHTML(obserkode)}" style="margin-left:1em;">Slet</button>
-      `;
+      card.style.gap = "8px";
+
+      // Admin navn
+      const span = document.createElement("span");
+      span.textContent = escapeHTML(obserkode);
+
+      // Knap-wrapper
+      const btnWrap = document.createElement("div");
+      btnWrap.style.display = "flex";
+      btnWrap.style.gap = "8px";
+      btnWrap.style.justifyContent = "flex-end";
+      btnWrap.style.alignItems = "center";
+
+      // Mail-knap
+      const mailBtn = document.createElement("button");
+      mailBtn.type = "button";
+      mailBtn.textContent = "Mail";
+      mailBtn.style.padding = "2px 8px";
+      mailBtn.style.margin = "0";
+      mailBtn.style.verticalAlign = "middle";
+      mailBtn.onclick = () => {
+        window.open(
+          `https://dofbasen.dk/mine/sendmailtouser.php?obserkode=${encodeURIComponent(obserkode)}`,
+          "_blank"
+        );
+      };
+
+      // Slet-knap
+      const delBtn = document.createElement("button");
+      delBtn.className = "remove-admin-btn";
+      delBtn.type = "button";
+      delBtn.textContent = "Slet";
+      delBtn.setAttribute("data-obserkode", obserkode);
+      delBtn.style.margin = "0";
+      delBtn.style.padding = "2px 8px";
+      delBtn.style.background = "#c00";
+      delBtn.style.color = "#fff";
+      delBtn.style.verticalAlign = "middle";
+
+      btnWrap.appendChild(mailBtn);
+      btnWrap.appendChild(delBtn);
+
+      // Layout: navn | (knapper helt til højre)
+      card.appendChild(span);
+      card.appendChild(btnWrap);
       listDiv.appendChild(card);
     });
+
     // Slet-knapper
     listDiv.querySelectorAll(".remove-admin-btn").forEach(btn => {
       btn.onclick = async function() {
         const kode = btn.getAttribute("data-obserkode");
-        if (kode === "8220CVH") {
+        // Forhindr at du fjerner dig selv hvis du er superadmin
+        if (kode === window.myObserkode && window.isSuperadmin) {
           alert("Du kan ikke fjerne hovedadmin.");
           return;
         }
@@ -388,8 +453,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminsPanel = document.getElementById("admins-panel");
     const csvPanel = document.getElementById("csv-file-list");
     const csvEditor = document.getElementById("csv-editor");
-    // Luk admins-panel hvis åbent
+    const usersPanel = document.getElementById("all-users-list");
+    // Skjul andre paneler
     if (adminsPanel) adminsPanel.style.display = "none";
+    if (usersPanel) usersPanel.style.display = "none";
     // Toggle CSV-panel
     if (csvPanel.style.display === "" || csvPanel.style.display === "block") {
       csvPanel.style.display = "none";
@@ -466,6 +533,106 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       alert("Kunne ikke tilføje art (mangler admin-rettigheder?)");
     }
+  };
+  
+
+  document.getElementById("show-users-btn").onclick = async function() {
+    const container = document.getElementById("all-users-list");
+    const adminsPanel = document.getElementById("admins-panel");
+    const csvPanel = document.getElementById("csv-file-list");
+    const csvEditor = document.getElementById("csv-editor");
+    // Skjul andre paneler
+    if (adminsPanel) adminsPanel.style.display = "none";
+    if (csvPanel) csvPanel.style.display = "none";
+    if (csvEditor) csvEditor.style.display = "none";
+    // Toggle brugere-panel
+    if (container.style.display === "block") {
+      container.style.display = "none";
+      return;
+    }
+    // Ellers hent og vis listen
+    const user_id = getOrCreateUserId();
+    const res = await fetch(`/api/admin/all-users?user_id=${encodeURIComponent(user_id)}`);
+    if (!res.ok) {
+      alert("Kun hovedadmin kan se listen.");
+      return;
+    }
+    const users = await res.json();
+    if (!users.length) {
+      container.innerHTML = "<em>Ingen brugere registreret</em>";
+      container.style.display = "block";
+      return;
+    }
+    // Tjek om hovedadmin
+    const isHovedadmin = window.isSuperadmin; // Brug status fra backend!
+    let html = `<table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+      <thead>
+        <tr style="background:var(--card-bg);">
+          <th style="border:1px solid #eee;">Navn</th>
+          <th style="border:1px solid #eee;">Obserkode</th>
+          <th style="border:1px solid #eee;">Antal oprettede</th>
+          <th style="text-align:center;border:1px solid #eee;">Mail</th>
+          ${isHovedadmin ? '<th style="text-align:center;border:1px solid #eee;">Slet</th>' : ''}
+        </tr>
+      </thead>
+      <tbody>`;
+    users.forEach((u, idx) => {
+      html += `<tr>
+        <td style="border:1px solid #eee; padding-left:5px;">${escapeHTML(u.navn || "")}</td>
+        <td style="text-align:center;border:1px solid #eee;">${escapeHTML(u.obserkode || "")}</td>
+        <td style="text-align:center;border:1px solid #eee;">${u.antal_oprettede || 1}</td>
+        <td style="text-align:center;border:1px solid #eee; vertical-align:middle;" id="mailbtn-${idx}"></td>
+        ${isHovedadmin ? `<td style="text-align:center;border:1px solid #eee; vertical-align:middle;" id="deletebtn-${idx}"></td>` : ''}
+      </tr>`;
+    });
+    container.innerHTML = html;
+    container.style.display = "block";
+    // Tilføj knapper
+    users.forEach((u, idx) => {
+      if (u.obserkode) {
+        const td = document.getElementById(`mailbtn-${idx}`);
+        const mailBtn = document.createElement("button");
+        mailBtn.type = "button";
+        mailBtn.textContent = "Mail";
+        mailBtn.style.padding = "2px 8px";
+        mailBtn.style.verticalAlign = "middle";
+        mailBtn.style.margin = "0"; // <-- Tilføj denne linje
+        td.style.verticalAlign = "middle";
+        td.style.height = "40px";
+        td.appendChild(mailBtn);
+      }
+      // Slet-knap kun for hovedadmin
+      if (isHovedadmin) {
+        const tdDel = document.getElementById(`deletebtn-${idx}`);
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.textContent = "Slet";
+        delBtn.style.padding = "2px 8px";
+        delBtn.style.background = "#c00";
+        delBtn.style.color = "#fff";
+        delBtn.style.verticalAlign = "middle";
+        delBtn.style.margin = "0"; // <-- Tilføj denne linje
+        tdDel.style.verticalAlign = "middle";
+        tdDel.style.height = "40px";
+        delBtn.onclick = async () => {
+          if (confirm(`Er du sikker på at du vil slette brugeren "${u.navn || u.obserkode}" og alle data?`)) {
+            const res = await fetch("/api/admin/delete-user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ obserkode: u.obserkode, user_id })
+            });
+            const result = await res.json();
+            if (result.ok) {
+              alert("Bruger og alle data er slettet.");
+              container.style.display = "none";
+            } else {
+              alert("Kunne ikke slette bruger: " + (result.detail || result.error || "Ukendt fejl"));
+            }
+          }
+        };
+        tdDel.appendChild(delBtn);
+      }
+    });
   };
 });
 

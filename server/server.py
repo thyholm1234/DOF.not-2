@@ -453,7 +453,8 @@ async def admin_csv(request: Request):
     if file not in ALLOWED_CSV_FILES:
         raise HTTPException(status_code=403, detail="Ugyldig filsti")
     obserkode = get_obserkode_from_userprefs(user_id)
-    if obserkode != "8220CVH":
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
     path = os.path.join(os.path.dirname(__file__), "..", file)
@@ -1023,7 +1024,8 @@ async def api_request_sync(request: Request):
         raise HTTPException(status_code=400, detail="user_id mangler")
 
     obserkode = get_obserkode_from_userprefs(user_id)
-    if obserkode != "8220CVH":
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
     # Skriv sync-request (overskriver evt. eksisterende)
@@ -1049,6 +1051,63 @@ async def api_is_app_user(obserkode: str = ""):
             continue
     return {"is_app_user": False}
 
+@app.get("/api/admin/all-users")
+async def admin_all_users(user_id: str = Query(...)):
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    users = {}
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT user_id, prefs FROM user_prefs").fetchall()
+        for uid, prefs_json in rows:
+            try:
+                prefs = json.loads(prefs_json)
+                navn = prefs.get("navn", "")
+                kode = prefs.get("obserkode", "")
+                kode_norm = (kode or "").strip().upper()
+                if kode_norm:
+                    if kode_norm not in users:
+                        users[kode_norm] = {"navn": navn, "obserkode": kode, "antal_oprettede": 1}
+                    else:
+                        users[kode_norm]["antal_oprettede"] += 1
+            except Exception:
+                continue
+    user_list = list(users.values())
+    user_list.sort(key=lambda u: (u["navn"] or u["obserkode"] or "").upper())
+    return user_list
+
+@app.post("/api/admin/delete-user")
+async def admin_delete_user(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    obserkode = (data.get("obserkode") or "").strip().upper()
+    # Tjek om requester er superadmin
+    requester_obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if requester_obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin kan slette brugere")
+    if not obserkode:
+        raise HTTPException(status_code=400, detail="Obserkode mangler")
+    deleted = 0
+    with sqlite3.connect(DB_PATH) as conn:
+        # Find alle user_ids med denne obserkode
+        rows = conn.execute("SELECT user_id FROM user_prefs").fetchall()
+        user_ids = []
+        for (uid,) in rows:
+            prefs = get_prefs(uid)
+            kode = (prefs.get("obserkode") or "").strip().upper()
+            if kode == obserkode:
+                user_ids.append(uid)
+        # Slet fra alle relevante tabeller
+        for uid in user_ids:
+            conn.execute("DELETE FROM user_prefs WHERE user_id=?", (uid,))
+            conn.execute("DELETE FROM subscriptions WHERE user_id=?", (uid,))
+            conn.execute("DELETE FROM thread_subs WHERE user_id=?", (uid,))
+            conn.execute("DELETE FROM thread_unsubs WHERE user_id=?", (uid,))
+            deleted += 1
+        conn.commit()
+    return {"ok": True, "deleted_users": deleted}
+
 @app.post("/api/is-admin")
 async def is_admin(data: dict = Body(...)):
     user_id = data.get("user_id")
@@ -1057,11 +1116,31 @@ async def is_admin(data: dict = Body(...)):
     obserkode = get_obserkode_from_userprefs(user_id)
     return {"admin": obserkode in admins, "obserkode": obserkode}
 
+def load_superadmins():
+    try:
+        with open("./superadmin.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.get("superadmins", []))
+    except Exception:
+        return set()
+
+@app.post("/api/is-superadmin")
+async def is_superadmin(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    return {
+        "superadmin": obserkode in superadmins,
+        "obserkode": obserkode
+    }
+
 @app.post("/api/admin/list-admins")
 async def list_admins(data: dict = Body(...)):
     user_id = data.get("user_id", "")
     obserkode = get_obserkode_from_userprefs(user_id)
-    if obserkode != "8220CVH":
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
     try:
         with open("./admin.json", "r", encoding="utf-8") as f:
@@ -1075,7 +1154,8 @@ async def add_admin(data: dict = Body(...)):
     user_id = data.get("user_id", "")
     new_obserkode = (data.get("obserkode") or "").strip().upper()
     obserkode = get_obserkode_from_userprefs(user_id)
-    if obserkode != "8220CVH":
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
     if not new_obserkode or not re.match(r"^[A-Z0-9]+$", new_obserkode):
         raise HTTPException(status_code=400, detail="Ugyldig obserkode")
@@ -1096,16 +1176,18 @@ async def remove_admin(data: dict = Body(...)):
     user_id = data.get("user_id", "")
     remove_obserkode = (data.get("obserkode") or "").strip().upper()
     obserkode = get_obserkode_from_userprefs(user_id)
-    if obserkode != "8220CVH":
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
     if not remove_obserkode:
         raise HTTPException(status_code=400, detail="Ugyldig obserkode")
+    # Beskyt alle superadmins mod at blive fjernet
+    if remove_obserkode in superadmins:
+        raise HTTPException(status_code=400, detail="Kan ikke fjerne hovedadmin")
     try:
         with open("./admin.json", "r", encoding="utf-8") as f:
             data = json.load(f)
         admins = set(data.get("admins", []))
-        if remove_obserkode == "8220CVH":
-            raise HTTPException(status_code=400, detail="Kan ikke fjerne hovedadmin")
         admins.discard(remove_obserkode)
         data["admins"] = sorted(admins)
         with open("./admin.json", "w", encoding="utf-8") as f:
