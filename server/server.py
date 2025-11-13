@@ -1,6 +1,6 @@
 import sqlite3
-from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect, Body
-from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
+from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect, Body, Header
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse, HTMLResponse
 import json
 import os
 import glob
@@ -205,6 +205,54 @@ def set_prefs(user_id, prefs):
             "INSERT OR REPLACE INTO user_prefs (user_id, prefs, ts) VALUES (?, ?, ?)",
             (user_id, json.dumps(prefs), ts)
         )
+
+@app.get("/share/{day}/{thread_id}", response_class=HTMLResponse)
+async def share_thread(day: str, thread_id: str, user_agent: str = Header(None)):
+    import html
+    thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+    if not os.path.isfile(thread_path):
+        return HTMLResponse("<h1>Ikke fundet</h1>", status_code=404)
+    with open(thread_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    thread = data.get("thread", {})
+    art = thread.get("art", "")
+    lok = thread.get("lok", "")
+    images = thread.get("images", [])
+    og_image = images[0] if images else "https://notifikation.dofbasen.dk/icons/icon-512.png"
+    og_title = f"{art} - {lok}"
+    og_desc = f"Se observationen af {art} ved {lok} i DOFbasen Notifikationer."
+    url = f"https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}"
+
+    # Tjek om det er en kendt crawler
+    crawler_agents = [
+        "facebookexternalhit", "facebookcatalog", "meta-webindexer",
+        "meta-externalads", "meta-externalagent", "meta-externalfetcher"
+    ]
+    is_crawler = user_agent and any(a in user_agent.lower() for a in crawler_agents)
+
+    meta_refresh = "" if is_crawler else f'<meta http-equiv="refresh" content="0; url={html.escape(url)}">'
+    return f"""
+    <!DOCTYPE html>
+    <html lang="da">
+    <head>
+      <meta charset="utf-8">
+      <title>{html.escape(og_title)}</title>
+      <meta property="og:title" content="{html.escape(og_title)}">
+      <meta property="og:description" content="{html.escape(og_desc)}">
+      <meta property="og:image" content="{html.escape(og_image)}">
+      <meta property="og:url" content="{html.escape(url)}">
+      <meta property="og:type" content="website">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="{html.escape(og_title)}">
+      <meta name="twitter:description" content="{html.escape(og_desc)}">
+      <meta name="twitter:image" content="{html.escape(og_image)}">
+      {meta_refresh}
+    </head>
+    <body>
+      <p>Omdirigerer til <a href="{html.escape(url)}">{html.escape(url)}</a>...</p>
+    </body>
+    </html>
+    """
 
 @app.post("/api/admin/superadmin")
 async def superadmins(data: dict = Body(None)):

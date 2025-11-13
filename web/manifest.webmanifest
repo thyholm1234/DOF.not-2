@@ -1,6 +1,6 @@
 {
-  "name": "DOFbasen",
-  "short_name": "DOFbasen",
+  "name": "DOFbasen Notifikationer",
+  "short_name": "DOFbasen Notifikationer",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

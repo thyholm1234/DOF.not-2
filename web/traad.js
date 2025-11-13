@@ -1,4 +1,4 @@
-// Version: 4.6.3 - 2025-11-12 21.42.58
+// Version: 4.6.4.2 - 2025-11-13 22.32.19
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -131,23 +131,23 @@
       h2.innerHTML = `${artLink} - ${lokLink}`;
       titleRow.appendChild(h2);
 
-      // Del-knap (🔗)cl
+      // Del-knap (🔗)
       const shareBtn = document.createElement('button');
       shareBtn.id = "thread-share-btn";
       shareBtn.textContent = "🔗 Del";
       shareBtn.className = "share-btn";
       shareBtn.style.margin = "0";
       shareBtn.onclick = () => {
-        const shareUrl = window.location.href;
         const shareTitle = art ? `${art} - ${lok}` : document.title;
+        const fbShareUrl = `${location.origin}/share/${day}/${id}`;
         if (navigator.share) {
           navigator.share({
             title: shareTitle,
-            url: shareUrl
+            url: fbShareUrl
           });
         } else {
-          navigator.clipboard.writeText(shareUrl);
-          shareBtn.textContent = "Kopieret!";
+          navigator.clipboard.writeText(fbShareUrl);
+          shareBtn.textContent = "Link kopieret!";
           setTimeout(() => (shareBtn.textContent = "🔗 Del"), 1500);
         }
       };

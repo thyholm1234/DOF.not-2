@@ -1,4 +1,4 @@
-// Version: 4.6.3 - 2025-11-12 21.42.58
+// Version: 4.6.4.2 - 2025-11-13 22.32.19
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -627,9 +627,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         mailBtn.textContent = "Mail";
         mailBtn.style.padding = "2px 8px";
         mailBtn.style.verticalAlign = "middle";
-        mailBtn.style.margin = "0"; // <-- Tilføj denne linje
+        mailBtn.style.margin = "0";
         td.style.verticalAlign = "middle";
         td.style.height = "40px";
+        mailBtn.onclick = () => {
+          window.open(
+            `https://dofbasen.dk/mine/sendmailtouser.php?obserkode=${encodeURIComponent(u.obserkode)}`,
+            "_blank"
+          );
+        };
         td.appendChild(mailBtn);
       }
       // Slet-knap kun for hovedadmin

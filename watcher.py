@@ -848,16 +848,17 @@ def main():
 
 
 if __name__ == "__main__":
-    # Start watchdog for instant sync
     path = "server"
     event_handler = SyncHandler()
     observer = Observer()
     observer.schedule(event_handler, path, recursive=False)
     observer.start()
 
-    # Start polling-loop for normal drift
     try:
-        main()  # din eksisterende main-loop
+        main()
     except KeyboardInterrupt:
+        print("\n[watcher] Stopper (Ctrl+C).")
+    finally:
         observer.stop()
-    observer.join()
+        observer.join()
+        print("[watcher] Lukket ned.")
