@@ -9,6 +9,29 @@ function getOrCreateUserId() {
   return userid;
 }
 
+function downloadAdminFile(filename, user_id) {
+  fetch(`/api/admin/download/${filename}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Download fejlede");
+      return res.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(() => alert("Kun hovedadmin kan hente filen eller filen findes ikke."));
+}
+
 function getOrCreateDeviceId() {
   let deviceid = localStorage.getItem("deviceid");
   if (!deviceid) {
@@ -275,9 +298,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const stats = await res.json();
       let html = "<h3>Trafik i dag</h3>";
 
-      // --- Tilføj "Gem trafiklog nu"-knap for superadmin ---
+      // Tilføj knapper til superadmin
       if (window.isSuperadmin) {
-        html += `<button id="archive-traffic-log-btn" class="primary-btn" style="margin-bottom:1em;">Gem masterlog nu</button>`;
+        html += `
+          <div style="display:flex;gap:0.5em;align-items:center;margin-bottom:1em;">
+            <button id="archive-traffic-log-btn">Gem masterlog nu</button>
+            <button type="button" id="download-masterlog-btn">Download masterlog</button>
+            <button type="button" id="download-pageviews-btn">Download pageviews.log</button>
+          </div>
+        `;
       }
 
       // Unikke brugere i alt og total visninger som card
@@ -359,6 +388,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
       }
       panel.innerHTML = html;
+
+      // Tilføj event handlers til download-knapperne
+      if (window.isSuperadmin) {
+        const user_id = getOrCreateUserId();
+        const masterlogBtn = document.getElementById("download-masterlog-btn");
+        const pageviewsBtn = document.getElementById("download-pageviews-btn");
+        if (masterlogBtn) {
+          masterlogBtn.onclick = () => downloadAdminFile('pageview_masterlog.jsonl', user_id);
+        }
+        if (pageviewsBtn) {
+          pageviewsBtn.onclick = () => downloadAdminFile('pageviews.log', user_id);
+        }
+      }
 
       // Tilføj event handler til "Gem masterlog nu"-knap
       if (window.isSuperadmin) {

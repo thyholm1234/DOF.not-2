@@ -1683,6 +1683,41 @@ async def api_thread(day: str, thread_id: str, request: Request):
         data = json.load(f)
     return JSONResponse(data)
 
+@app.post("/api/admin/download/{filename}")
+async def download_admin_file(filename: str, data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    # Tjek superadmin
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    # Brug absolut sti
+    base_dir = os.path.dirname(__file__)
+    allowed = {
+        "pageview_masterlog.jsonl": os.path.join(base_dir, "pageview_masterlog.jsonl"),
+        "pageviews.log": os.path.join(base_dir, "pageviews.log")
+    }
+    if filename not in allowed:
+        raise HTTPException(status_code=404, detail="Ikke tilladt")
+    if not os.path.isfile(allowed[filename]):
+        raise HTTPException(status_code=404, detail="Filen findes ikke")
+    return FileResponse(allowed[filename], filename=filename)
+
+@app.post("/api/admin/serverlog")
+async def get_server_log(data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+    if not os.path.isfile(log_path):
+        return {"log": ""}
+    # Return fx de sidste 200 linjer
+    with open(log_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()[-200:]
+    return {"log": "".join(lines)}
+
 @app.post("/api/userinfo")
 async def get_or_save_userinfo(data: dict = Body(...)):
     user_id = data.get("user_id")
