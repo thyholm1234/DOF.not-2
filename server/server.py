@@ -23,6 +23,7 @@ import time
 import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request as StarletteRequest
+import pytz
 
 load_dotenv()
 
@@ -35,6 +36,7 @@ MAX_BODY_SIZE = 2 * 1024 * 1024  # 2 MB
 SYNC_PATH = os.path.join(os.path.dirname(__file__), "request_sync.json")
 
 comment_file_locks = defaultdict(threading.Lock)
+dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -1543,18 +1545,18 @@ async def admin_pageview_stats(data: dict = Body(...)):
     return stats_out
 
 @asynccontextmanager
+@asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Midnats-task (asynkron)
     async def midnight_task():
+        tz = pytz.timezone("Europe/Copenhagen")
         while True:
-            now = datetime.now()
+            now = datetime.now(tz)
             next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
             seconds = (next_midnight - now).total_seconds()
             await asyncio.sleep(seconds)
             archive_and_reset_pageview_log(reset_log=True)
     asyncio.create_task(midnight_task())
-
-    yield  # Lifespan fortsætter mens app kører
+    yield
 
 @app.post("/api/admin/archive-pageview-log")
 async def archive_pageview_log(data: dict = Body(...)):
