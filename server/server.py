@@ -1545,7 +1545,6 @@ async def admin_pageview_stats(data: dict = Body(...)):
     return stats_out
 
 @asynccontextmanager
-@asynccontextmanager
 async def lifespan(app: FastAPI):
     async def midnight_task():
         tz = pytz.timezone("Europe/Copenhagen")
