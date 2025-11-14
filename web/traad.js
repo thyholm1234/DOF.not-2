@@ -1,4 +1,4 @@
-// Version: 4.6.4.2 - 2025-11-13 22.32.19
+// Version: 4.6.4.7 - 2025-11-14 12.54.20
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -39,17 +39,20 @@
   }
 
   async function isAppUser(obserkode) {
-    if (!obserkode) return false;
-    try {
-      const res = await fetch(`/api/is-app-user?obserkode=${encodeURIComponent(obserkode)}`);
-      if (res.ok) {
-        const data = await res.json();
-        return !!data.is_app_user;
-      }
-    } catch {}
-    return false;
+      if (!obserkode) return false;
+      try {
+        const res = await fetch("/api/is-app-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ obserkode })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return !!data.is_app_user;
+        }
+      } catch {}
+      return false;
   }
-
   async function loadThread() {
       await loadArterContentMap();
       const day = getParam('date');

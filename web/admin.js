@@ -1,4 +1,4 @@
-// Version: 4.6.4.2 - 2025-11-13 22.32.19
+// Version: 4.6.4.7 - 2025-11-14 12.54.20
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -463,6 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // CSV-fil editor
   const csvFiles = [
     { file: "data/arter_filter_klassificeret.csv", title: "Arter - Kategori" },
+    { file: "data/arter_dof_content.csv", title: "Arter - DOF Content" }, // <-- tilføj denne linje
     { file: "data/faenologi.csv", title: "Arter - Fænologi" },
     { file: "data/bornholm_bemaerk_parsed.csv", title: "Bornholm - Bemærkelsesværdig" },
     { file: "data/fyn_bemaerk_parsed.csv", title: "Fyn - Bemærkelsesværdig" },

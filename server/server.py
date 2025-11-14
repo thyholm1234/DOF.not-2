@@ -21,6 +21,7 @@ import threading
 from collections import defaultdict
 import time
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request as StarletteRequest
 
 load_dotenv()
 
@@ -34,7 +35,23 @@ SYNC_PATH = os.path.join(os.path.dirname(__file__), "request_sync.json")
 
 comment_file_locks = defaultdict(threading.Lock)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    def run_and_repeat():
+        while True:
+            try:
+                cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
+                cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
+                database_maintenance()
+            except Exception as e:
+                print(f"Fejl under oprydning: {e}")
+            time.sleep(3600)
+    t = threading.Thread(target=run_and_repeat, daemon=True)
+    t.start()
+    yield  # Lifespan fortsætter mens app kører
+
+app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://notifikation.dofbasen.dk"],  # eller ["*"] for test, men ikke i produktion!
@@ -50,6 +67,23 @@ async def limit_body_size(request: Request, call_next):
         return JSONResponse({"error": "Request body for stor"}, status_code=413)
     request._body = body  # så body stadig kan læses senere
     return await call_next(request)
+
+@app.middleware("http")
+async def log_html_requests(request: Request, call_next):
+    path = request.url.path
+    if path.endswith(".html"):
+        with open("html_requests.log", "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat()} {request.client.host} {path}\n")
+    return await call_next(request)
+
+class LoggingStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        # Log kun .html-filer
+        if path.endswith(".html"):
+            req = StarletteRequest(scope)
+            with open("html_requests.log", "a", encoding="utf-8") as f:
+                f.write(f"{datetime.now().isoformat()} {req.client.host} {path}\n")
+        return await super().get_response(path, scope)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
@@ -129,23 +163,6 @@ def database_maintenance():
         conn.commit()
     # Ryd op i user_prefs uden tilknyttede subscriptions
     cleanup_user_prefs_without_subscriptions()  
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    def run_and_repeat():
-        while True:
-            try:
-                cleanup_dirs(os.path.join(web_dir, "payload"), days=3)
-                cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
-                database_maintenance()
-            except Exception as e:
-                print(f"Fejl under oprydning: {e}")
-            time.sleep(3600)
-    t = threading.Thread(target=run_and_repeat, daemon=True)
-    t.start()
-    yield  # Lifespan fortsætter mens app kører
-
-app = FastAPI(lifespan=lifespan)
 
 def send_push(sub, push_payload, user_id, device_id):
     try:
@@ -520,9 +537,9 @@ ALLOWED_CSV_FILES = {
     "data/sydvestjylland_bemaerk_parsed.csv",
     "data/vestjylland_bemaerk_parsed.csv",
     "data/vestsjaelland_bemaerk_parsed.csv",
-    "web/data/arter_filter_klassificeret.csv"
+    "web/data/arter_filter_klassificeret.csv",
+    "data/arter_dof_content.csv"
 }
-
 
 @app.post("/api/admin/csv")
 async def admin_csv(request: Request):
@@ -1341,11 +1358,14 @@ async def admin_comments():
     return JSONResponse(threads)
 
 @app.get("/api/thread/{day}/{thread_id}")
-async def api_thread(day: str, thread_id: str):
+async def api_thread(day: str, thread_id: str, request: Request):
     """Returner thread.json for en given dag og tråd-id."""
     thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
     if not os.path.isfile(thread_path):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
+    # Log visning
+    with open("threadviews.log", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now().isoformat()} {day} {thread_id} {request.client.host}\n")
     with open(thread_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return JSONResponse(data)
@@ -1895,7 +1915,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
         if not ws_connections[key]:
             del ws_connections[key]
 
-app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")   
+app.mount("/", LoggingStaticFiles(directory=web_dir, html=True), name="web")
 
 if __name__ == "__main__":
     import uvicorn
