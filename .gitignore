@@ -9,6 +9,7 @@ server/pageview_masterlog.jsonl
 server/blacklist.json
 server/admin.json
 server/superadmin.json
+server/__init__.py
 .env
 list_users.csv
 list_users.json

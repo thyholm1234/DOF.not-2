@@ -1679,9 +1679,6 @@ async def api_thread(day: str, thread_id: str, request: Request):
     thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
     if not os.path.isfile(thread_path):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
-    # Log visning
-    with open("threadviews.log", "a", encoding="utf-8") as f:
-        f.write(f"{datetime.now().isoformat()} {day} {thread_id} {request.client.host}\n")
     with open(thread_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return JSONResponse(data)
