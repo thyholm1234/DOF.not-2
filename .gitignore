@@ -9,4 +9,4 @@ list_users.csv
 list_users.json
 server/blacklist.json
 server/admin.json
-web/obsid_birthtime.json
+web/obsid_birthtimes.json
