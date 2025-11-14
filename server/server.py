@@ -1715,7 +1715,7 @@ async def get_server_log(data: dict = Body(...)):
         return {"log": ""}
     # Return fx de sidste 200 linjer
     with open(log_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()[-200:]
+        lines = f.readlines()[-400:]
     return {"log": "".join(lines)}
 
 @app.post("/api/userinfo")

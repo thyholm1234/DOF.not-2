@@ -273,6 +273,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("admin-action-card").style.display = "none";
   }
 
+  if (window.isSuperadmin) {
+    const user_id = getOrCreateUserId();
+    const showBtn = document.getElementById("show-serverlog-btn");
+    const modal = document.getElementById("serverlog-modal");
+    const closeBtn = document.getElementById("close-serverlog-btn");
+    const content = document.getElementById("serverlog-content");
+    if (showBtn && modal && closeBtn && content) {
+      showBtn.onclick = async () => {
+        content.textContent = "Henter log...";
+        modal.style.display = "block";
+        const res = await fetch("/api/admin/serverlog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          content.textContent = data.log || "(ingen log)";
+        } else {
+          content.textContent = "Kunne ikke hente log";
+        }
+      };
+      closeBtn.onclick = () => { modal.style.display = "none"; };
+    }
+  }
+
   document.getElementById("traffic-btn").onclick = async function() {
     const panel = document.getElementById("traffic-panel");
     // Toggle: hvis synlig, så skjul og returnér
@@ -401,6 +427,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           pageviewsBtn.onclick = () => downloadAdminFile('pageviews.log', user_id);
         }
       }
+
+      
 
       // Tilføj event handler til "Gem masterlog nu"-knap
       if (window.isSuperadmin) {

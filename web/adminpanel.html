@@ -42,6 +42,7 @@
       <button id="show-admins-btn" style="margin: 0;">Admins</button>
       <button id="show-users-btn" style="margin:0;">Brugere</button>
       <button id="traffic-btn" style="margin: 0;" aria-label="Traffik">Traffik</button> <!-- NY KNAP -->
+      <button id="show-serverlog-btn" type="button" style="margin: 0;">Vis serverlog</button>
       <button id="sync-threads-btn" style="margin: 0;">Sync</button>
     </div>
 
@@ -85,6 +86,11 @@
     <div id="admins-panel" style="display:none; margin-top:1em;">
       <button id="add-admin-btn" style="margin-bottom:1em;">Tilføj admin</button>
       <div id="admins-list"></div>
+    </div>
+
+    <div id="serverlog-modal" style="display:none;position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #ccc;max-width:90vw;max-height:70vh;overflow:auto;z-index:1000;padding:1em;">
+      <button id="close-serverlog-btn" style="float:right;">Luk</button>
+      <pre id="serverlog-content" style="white-space:pre-wrap;font-size:12px;"></pre>
     </div>
 
     <!-- Vis brugere -->
