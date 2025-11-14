@@ -307,10 +307,21 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             obs["obsidbirthtime"] = obsid_birthtimes.get(oid, "")
 
         # Find alle obsidbirthtimes blandt events i tråden
+        # NYT: Tag kun obsidbirthtime for observationer UDEN klokkeslet
         obsidbirthtimes = [
             e.get("obsidbirthtime")
             for e in obs_list
-            if e.get("obsidbirthtime") and isinstance(e.get("obsidbirthtime"), str) and ":" in e.get("obsidbirthtime")
+            if (
+                e.get("obsidbirthtime")
+                and isinstance(e.get("obsidbirthtime"), str)
+                and ":" in e.get("obsidbirthtime")
+                and not (
+                    (e.get("Obstidfra") or "").strip()
+                    or (e.get("Turtidfra") or "").strip()
+                    or (e.get("Obstidtil") or "").strip()
+                    or (e.get("Turtidtil") or "").strip()
+                )
+            )
         ]
         def _birthtime_key(t):
             try:

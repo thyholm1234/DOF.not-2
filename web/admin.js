@@ -1,4 +1,4 @@
-// Version: 4.6.5 - 2025-11-14 22.02.58
+// Version: 4.6.5.1 - 2025-11-14 22.10.48
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -251,9 +251,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById("traffic-btn").onclick = async function() {
+    const panel = document.getElementById("traffic-panel");
+    // Toggle: hvis synlig, så skjul og returnér
+    if (panel.style.display === "block" || panel.style.display === "") {
+      panel.style.display = "none";
+      panel.innerHTML = "";
+      return;
+    }
     const user_id = getOrCreateUserId();
     const device_id = getOrCreateDeviceId();
-    const panel = document.getElementById("traffic-panel");
     panel.innerHTML = "<em>Henter trafiktal...</em>";
     panel.style.display = "block";
     try {
