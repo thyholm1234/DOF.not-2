@@ -1,4 +1,4 @@
-<!-- Version: 4.6.4.7 - 2025-11-14 12.54.20 -->
+<!-- Version: 4.6.4.14 - 2025-11-14 14.44.47 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.6.4.7">
+  <link rel="stylesheet" href="/style.css?v=4.6.4.14">
 </head>
 <body>
   <header class="wrap">
@@ -40,7 +40,8 @@
       <button id="add-art-btn" style="margin: 0;">Ny art</button>
       <button id="show-admins-btn" style="margin: 0;">Admins</button>
       <button id="show-users-btn" style="margin:0;">Brugere</button>
-      <button id="sync-threads-btn" style="margin-bottom: 0;">Sync</button>
+      <button id="traffic-btn" style="margin: 0;" aria-label="Traffik">Traffik</button> <!-- NY KNAP -->
+      <button id="sync-threads-btn" style="margin: 0;">Sync</button>
     </div>
 
     <!-- Indhold under admin-action-card -->
@@ -87,6 +88,8 @@
 
     <!-- Vis brugere -->
     <div id="all-users-list" style="display:none; margin-top:1em;"></div>
+
+    <div id="traffic-panel" class="card" style="display:none; margin-top:1em;"></div>
 
     <!-- Modal tilføj admin -->
     <div id="add-admin-modal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
@@ -140,8 +143,8 @@
 
     
   </main>
-  <script src="admin.js?v=4.6.4.7"></script>
-  <script src="app.js?v=4.6.4.7"></script>
+  <script src="admin.js?v=4.6.4.14"></script>
+  <script src="app.js?v=4.6.4.14"></script>
   <div id="blacklist-modal" class="modal" style="display:none;">
     <div class="modal-content card" style="max-width:400px; margin:auto;">
       <h3>Blacklist observation</h3>

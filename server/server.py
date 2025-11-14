@@ -68,23 +68,6 @@ async def limit_body_size(request: Request, call_next):
     request._body = body  # så body stadig kan læses senere
     return await call_next(request)
 
-@app.middleware("http")
-async def log_html_requests(request: Request, call_next):
-    path = request.url.path
-    if path.endswith(".html"):
-        with open("html_requests.log", "a", encoding="utf-8") as f:
-            f.write(f"{datetime.now().isoformat()} {request.client.host} {path}\n")
-    return await call_next(request)
-
-class LoggingStaticFiles(StaticFiles):
-    async def get_response(self, path, scope):
-        # Log kun .html-filer
-        if path.endswith(".html"):
-            req = StarletteRequest(scope)
-            with open("html_requests.log", "a", encoding="utf-8") as f:
-                f.write(f"{datetime.now().isoformat()} {req.client.host} {path}\n")
-        return await super().get_response(path, scope)
-
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
 def db_init():
@@ -270,6 +253,16 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
     </body>
     </html>
     """
+
+@app.post("/api/log-pageview")
+async def log_pageview(data: dict, request: Request):
+    url = data.get("url")
+    ts = data.get("ts")
+    user_id = data.get("user_id")
+    ip = request.client.host
+    with open("pageviews.log", "a", encoding="utf-8") as f:
+        f.write(f"{ts} {ip} {user_id} {url}\n")
+    return {"ok": True}
 
 @app.post("/api/admin/superadmin")
 async def superadmins(data: dict = Body(None)):
@@ -1131,12 +1124,11 @@ async def api_request_sync(request: Request):
         json.dump(data, f)
     return {"status": "ok", "written": data}
 
-@app.get("/api/is-app-user")
-async def api_is_app_user(obserkode: str = ""):
-    obserkode = (obserkode or "").strip().upper()
+@app.post("/api/is-app-user")
+async def api_is_app_user(data: dict = Body(...)):
+    obserkode = (data.get("obserkode") or "").strip().upper()
     if not obserkode:
         return {"is_app_user": False}
-    # Tjek i din database eller prefs
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
     for (prefs_json,) in rows:
@@ -1232,6 +1224,72 @@ async def is_superadmin(data: dict = Body(...)):
         "superadmin": obserkode in superadmins,
         "obserkode": obserkode
     }
+
+@app.post("/api/admin/pageview-stats")
+async def admin_pageview_stats(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_alt = datetime.now().strftime("%d-%m-%Y")
+    stats = defaultdict(lambda: {"total": 0, "unique": set()})
+    traad_total = {"total": 0, "unique": set()}
+    traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set()})
+    all_users = set()
+    total_views = 0
+
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+    if not os.path.isfile(log_path):
+        return {}
+
+    with open(log_path, encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 4:
+                continue
+            ts = parts[0]
+            if not (ts[:10] == today or ts[:10] == today_alt):
+                continue
+            user_id = parts[2]
+            url = parts[3]
+            all_users.add(user_id)
+            total_views += 1
+            # Find side
+            m = re.search(r"https?://[^/]+/([^?]+)", url)
+            page = m.group(1) if m else url
+            if page.startswith("traad.html"):
+                traad_total["total"] += 1
+                traad_total["unique"].add(user_id)
+                m_id = re.search(r"id=([a-z0-9\-]+)", url)
+                m_date = re.search(r"date=([0-9\-]+)", url)
+                if m_id and m_date:
+                    key = f"{m_id.group(1)}-{m_date.group(1)}"
+                    traad_per_thread[key]["total"] += 1
+                    traad_per_thread[key]["unique"].add(user_id)
+            stats[page]["total"] += 1
+            stats[page]["unique"].add(user_id)
+
+    stats_out = {}
+    for page, d in stats.items():
+        stats_out[page] = {
+            "total": d["total"],
+            "unique": len(d["unique"])
+        }
+    stats_out["traad.html"] = {
+        "total": traad_total["total"],
+        "unique": len(traad_total["unique"]),
+        "threads": {
+            k: {"total": v["total"], "unique": len(v["unique"])}
+            for k, v in traad_per_thread.items()
+        }
+    }
+    stats_out["unique_users_total"] = len(all_users)
+    stats_out["total_views"] = total_views
+    return stats_out
 
 @app.post("/api/admin/list-admins")
 async def list_admins(data: dict = Body(...)):
@@ -1915,7 +1973,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
         if not ws_connections[key]:
             del ws_connections[key]
 
-app.mount("/", LoggingStaticFiles(directory=web_dir, html=True), name="web")
+app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
 if __name__ == "__main__":
     import uvicorn

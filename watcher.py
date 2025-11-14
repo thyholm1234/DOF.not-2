@@ -262,9 +262,16 @@ def group_and_sum_by_observer(obs_list):
         row["Antal"] = str(int(row["Antal"])) if row["Antal"].is_integer() else str(row["Antal"])
     return list(grouped.values())
 
+def _parse_obs_time(row):
+    # Returner tuple (dato, tid, obsid) for sortering
+    date = row.get("Dato", "")
+    for field in ("Obstidfra", "Turtidfra", "Obstidtil", "Turtidtil"):
+        t = (row.get(field) or "").strip()
+        if t:
+            return (date, t, row.get("Obsid", ""))
+    return (date, "", row.get("Obsid", ""))
+
 def save_threads_and_index(rows: List[Dict[str, str]], day: str):
-    import os
-    import json
 
     base_dir = os.path.join("web", "obs", day)
     threads_dir = os.path.join(base_dir, "threads")
@@ -301,8 +308,13 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
                 break  # Tag den første du finder
 
         # Find seneste og første observation i tråden
-        latest = max(obs_list, key=_parse_dt_from_row)
+        latest = max(obs_list, key=_parse_obs_time)
         earliest = min(obs_list, key=_parse_dt_from_row)
+
+        obsidbirthtime = (latest.get("obsidbirthtime") or "").strip()
+        if not obsidbirthtime:
+            oid = latest.get("Obsid", "").strip()
+            obsidbirthtime = obsid_birthtimes.get(oid, "")
 
         # Antal individer (sum af Antal)
         obs_by_observer = defaultdict(float)
@@ -485,6 +497,9 @@ def _key(row: Dict[str, str]) -> str:
     return "\n".join([
         (row.get('Artnavn') or '').strip(),
         (row.get('Loknr') or '').strip(),
+        (row.get('Fornavn') or '').strip(),
+        (row.get('Efternavn') or '').strip(),
+        (row.get('Obserkode') or '').strip(),
     ])
 
 def _obsid(row: Dict[str, str]) -> str:
@@ -545,25 +560,6 @@ def _state_get_antal(state_val) -> float | None:
         return float(state_val)
     except Exception:
         return None
-    
-def group_max_by_art_lok(obs_list):
-    # key = (Artnavn, Loknr)
-    grouped = {}
-    for row in obs_list:
-        key = (
-            row.get("Artnavn", "").strip(),
-            row.get("Loknr", "").strip(),
-        )
-        antal = parse_float(row.get("Antal"))
-        if key not in grouped or antal > grouped[key]["Antal"]:
-            grouped[key] = dict(row)
-            grouped[key]["Antal"] = antal
-    # Konverter Antal til string igen for konsistens
-    for row in grouped.values():
-        antal = row["Antal"]
-        row["Antal"] = str(int(antal)) if isinstance(antal, float) and antal.is_integer() else str(antal)
-    return list(grouped.values())    
-
 
 def _state_get_obsids(state_val) -> Set[str]:
     if isinstance(state_val, dict):
@@ -574,10 +570,6 @@ def _state_get_obsids(state_val) -> Set[str]:
 
 
 def build_state(rows: List[Dict[str, str]]) -> Dict[str, Dict[str, object]]:
-    """
-    Byg ny state:
-      key -> { 'antal': max_antal_for_key, 'obsids': [obsid1, obsid2, ...] }
-    """
     by_key: Dict[str, Dict[str, object]] = {}
     for r in rows:
         k = _key(r)
@@ -586,13 +578,9 @@ def build_state(rows: List[Dict[str, str]]) -> Dict[str, Dict[str, object]]:
         antal = parse_float(r.get("Antal"))
         obsid = _obsid(r)
         entry = by_key.setdefault(k, {"antal": 0.0, "obsids": set()})
-        # max antal
-        if antal > entry["antal"]:
-            entry["antal"] = antal
-        # obsids (kun ikke-tomme)
+        entry["antal"] += antal  # SUM i stedet for max
         if obsid:
             entry["obsids"].add(obsid)
-    # konverter sets til lister for JSON
     for k, v in by_key.items():
         v["obsids"] = sorted(list(v["obsids"]))
     return by_key
@@ -660,7 +648,6 @@ def run_once(date_str=None, send_notifications=True):
     normalized_rows = normalize_rows(parsed_rows)
     # berig med kategori for SU/SUB/bemaerk/alm
     enriched_all = enrich_with_kategori(normalized_rows)
-    enriched_all = group_max_by_art_lok(enriched_all)
 
     birthtimes_path = os.path.join("web", "obsid_birthtimes.json")
     if os.path.exists(birthtimes_path):

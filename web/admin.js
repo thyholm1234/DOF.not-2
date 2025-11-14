@@ -1,4 +1,4 @@
-// Version: 4.6.4.7 - 2025-11-14 12.54.20
+// Version: 4.6.4.14 - 2025-11-14 14.44.47
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -245,9 +245,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("add-admin-btn").style.display = "";
     document.getElementById("add-art-btn").style.display = "";
     document.getElementById("sync-threads-btn").style.display = "";
+    document.getElementById("traffic-btn").style.display = "";
   } else {
     document.getElementById("admin-action-card").style.display = "none";
   }
+
+  document.getElementById("traffic-btn").onclick = async function() {
+    const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
+    const panel = document.getElementById("traffic-panel");
+    panel.innerHTML = "<em>Henter trafiktal...</em>";
+    panel.style.display = "block";
+    try {
+      const res = await fetch("/api/admin/pageview-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, device_id })
+      });
+      if (!res.ok) {
+        panel.innerHTML = "<b>Ingen adgang eller fejl ved hentning.</b>";
+        return;
+      }
+      const stats = await res.json();
+      let html = "<h3>Trafik i dag</h3>";
+      // Unikke brugere i alt og total visninger som card
+      if (typeof stats.unique_users_total === "number" && typeof stats.total_views === "number") {
+        html += `<div class="card" style="margin-bottom:1em;">
+          <b>Unikke brugere i alt: ${stats.unique_users_total}</b><br>
+          <b>Visninger i alt: ${stats.total_views}</b>
+        </div><hr>`;
+      }
+      // Side-statistik som cards (inkl. traad.html)
+      for (const [page, info] of Object.entries(stats)) {
+        if (page === "unique_users_total" || page === "total_views" || page === "traad.html") continue;
+        html += `<div class="card" style="margin-bottom:0.5em;">
+          <div style="font-weight:bold;">${page}</div>
+          <div>Unikke brugere: <b>${info.unique}</b></div>
+          <div>Visninger: <b>${info.total}</b></div>
+        </div>`;
+      }
+      // traad.html total som card
+      if (stats["traad.html"]) {
+        html += `<div class="card" style="margin-bottom:0.5em;">
+          <div style="font-weight:bold;">traad.html (alle tråde)</div>
+          <div>Unikke brugere: <b>${stats["traad.html"].unique}</b></div>
+          <div>Visninger: <b>${stats["traad.html"].total}</b></div>
+        </div><hr>`;
+        // Pr. tråd som cards
+        for (const [thread, tinfo] of Object.entries(stats["traad.html"].threads || {})) {
+          html += `<div class="card" style="margin-bottom:0.5em;">
+            <div style="font-weight:bold;">${thread}</div>
+            <div>Unikke brugere: <b>${tinfo.unique}</b></div>
+            <div>Visninger: <b>${tinfo.total}</b></div>
+          </div>`;
+        }
+      }
+      panel.innerHTML = html;
+      panel.scrollIntoView({behavior: "smooth"});
+    } catch (e) {
+      panel.innerHTML = "<b>Fejl ved hentning af trafiktal.</b>";
+    }
+  };
 
   // "Administrer admins"-knap
   document.getElementById("show-admins-btn").onclick = async function() {

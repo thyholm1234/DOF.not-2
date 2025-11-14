@@ -1,4 +1,4 @@
-// Version: 4.6.4.7 - 2025-11-14 12.54.20
+// Version: 4.6.4.14 - 2025-11-14 14.44.47
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -23,6 +23,18 @@ function isFirstVisit() {
     return true;
   }
   return false;
+}
+
+function logPageView(userId) {
+  fetch("/api/log-pageview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url: window.location.href,
+      ts: new Date().toISOString(),
+      user_id: userId
+    })
+  });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -279,8 +291,14 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
+window.addEventListener("popstate", () => {
+  const userid = getOrCreateUserId();
+  logPageView(userid);
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   const userid = getOrCreateUserId();
+  logPageView(userid); // <-- Indsæt denne linje her
   let deviceid = localStorage.getItem("deviceid");
   if (!deviceid) {
     deviceid = "device-" + Math.random().toString(36).slice(2);
