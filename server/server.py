@@ -820,7 +820,7 @@ async def update_data(request: Request):
             afd = obs.get("DOF_afdeling")
             kat = obs.get("kategori")
             statechanged = int(obs.get("statechanged", 0))
-            thread_id = obs.get("tag")  # eller brug obs.get("thread_id") hvis det findes
+            thread_id = obs.get("tag")  # eller obs.get("thread_id")
             day = datetime.strptime(obs.get("Dato"), "%Y-%m-%d").strftime("%d-%m-%Y")
             title = f"{obs.get('Antal','?')} {obs.get('Artnavn','')}, {obs.get('Loknavn','')}"
             body = f"{obs.get('Adfbeskrivelse','')}, {obs.get('Fornavn','')} {obs.get('Efternavn','')}"
@@ -832,7 +832,7 @@ async def update_data(request: Request):
             }
 
             if statechanged == 1:
-                # Send til alle med prefs
+                # Send til alle med prefs (uændret)
                 rows = conn.execute(
                     "SELECT user_prefs.user_id, subscriptions.device_id, user_prefs.prefs, subscriptions.subscription "
                     "FROM user_prefs JOIN subscriptions ON user_prefs.user_id = subscriptions.user_id"
@@ -846,8 +846,25 @@ async def update_data(request: Request):
                             executor.submit(push_task, sub, push_payload, user_id, device_id)
                         )
             else:
-                # Send kun til thread-subscribers
+                # Send kun til thread-subscribers, men KUN hvis obs matcher trådens art og lokation
                 if not thread_id:
+                    continue
+                # Hent tråd-info
+                thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+                if not os.path.isfile(thread_path):
+                    continue
+                try:
+                    with open(thread_path, "r", encoding="utf-8") as f:
+                        thread_data = json.load(f)
+                    thread_info = thread_data.get("thread", {})
+                    thread_art = (thread_info.get("art") or "").strip().lower()
+                    thread_lok = (thread_info.get("lok") or "").strip().lower()
+                except Exception:
+                    continue
+                obs_art = (obs.get("Artnavn") or "").strip().lower()
+                obs_lok = (obs.get("Loknavn") or "").strip().lower()
+                # Kun hvis både art og lokation matcher
+                if obs_art != thread_art or obs_lok != thread_lok:
                     continue
                 rows = conn.execute(
                     "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
