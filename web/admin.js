@@ -518,12 +518,44 @@ document.addEventListener('DOMContentLoaded', async () => {
               }
             });
 
-            // Sidste 365 dage (årsgraf pr. dag) - dagsdato til højre
-            const days = data.last365; // behold rækkefølgen fra backend
-            const labels365 = days.map(d => d.date);
-            const users365 = days.map(d => d.unique_users_total);
-            const withObs365 = days.map(d => d.users_with_obserkode);
-            const withoutObs365 = days.map(d => d.users_without_obserkode);
+            // Find alle datoer i data.last365
+            const allDates = (data.last365 || []).map(d => d.date);
+            // Find ældste og nyeste dato
+            let minDate = allDates.length ? new Date(allDates[0]) : new Date();
+            let maxDate = allDates.length ? new Date(allDates[allDates.length - 1]) : new Date();
+
+            // Hvis der er mindre end 7 dage, vis mindst 7 dage (slutter med dags dato)
+            const today = new Date();
+            if ((maxDate - minDate) / 86400000 < 6) {
+              minDate = new Date(today);
+              minDate.setDate(today.getDate() - 6);
+              maxDate = today;
+            }
+
+            // Byg dag-mapping
+            const dayMap = {};
+            (data.last365 || []).forEach(d => { dayMap[d.date] = d; });
+
+            const labels365 = [];
+            const users365 = [];
+            const withObs365 = [];
+            const withoutObs365 = [];
+
+            let d = new Date(minDate);
+            while (d <= maxDate) {
+              const ds = d.toISOString().slice(0, 10);
+              labels365.push(ds);
+              if (dayMap[ds]) {
+                users365.push(dayMap[ds].unique_users_total);
+                withObs365.push(dayMap[ds].users_with_obserkode);
+                withoutObs365.push(dayMap[ds].users_without_obserkode);
+              } else {
+                users365.push(0);
+                withObs365.push(0);
+                withoutObs365.push(0);
+              }
+              d.setDate(d.getDate() + 1);
+            }
 
             new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
               type: "line",
