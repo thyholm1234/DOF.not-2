@@ -279,6 +279,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modal = document.getElementById("serverlog-modal");
     const closeBtn = document.getElementById("close-serverlog-btn");
     const content = document.getElementById("serverlog-content");
+    const downloadJsonBtn = document.getElementById("download-serverlog-json-btn"); // Tilføj denne knap i din modal-html
+
     if (showBtn && modal && closeBtn && content) {
       showBtn.onclick = async () => {
         content.textContent = "Henter log...";
@@ -296,6 +298,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       };
       closeBtn.onclick = () => { modal.style.display = "none"; };
+
+      // Download som TXT
+      if (downloadJsonBtn && content) {
+        downloadJsonBtn.onclick = () => {
+          const blob = new Blob([content.textContent], { type: "text/plain" });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "serverlog.txt";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        };
+      }
     }
   }
 
