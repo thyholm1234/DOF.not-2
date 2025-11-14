@@ -1,4 +1,4 @@
-// Version: 4.6.4.14 - 2025-11-14 14.44.47
+// Version: 4.6.5 - 2025-11-14 22.02.58
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -53,6 +53,21 @@
       } catch {}
       return false;
   }
+
+  async function isAppUserBulk(obserkoder) {
+    // Bulk endpoint: POST {obserkoder: [kode1, kode2, ...]} => {kode1: true, kode2: false, ...}
+    try {
+      const res = await fetch("/api/is-app-user-bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ obserkoder })
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    // fallback: return tomt map
+    return {};
+  }
+
   async function loadThread() {
       await loadArterContentMap();
       const day = getParam('date');
@@ -208,7 +223,11 @@
           return;
       }
 
-      
+      // --- NYT: Bulk fetch is-app-user for alle observere ---
+      const observerCodes = Array.from(new Set(events.map(ev => (ev.Obserkode || ev.obserkode || "").trim().toUpperCase()).filter(Boolean)));
+      const appUserMapRaw = observerCodes.length ? await isAppUserBulk(observerCodes) : {};
+      const appUserMap = {};
+      for (const k in appUserMapRaw) appUserMap[k.toUpperCase()] = appUserMapRaw[k];
 
       // Sorter events efter tidspunkt (Obstidfra > Turtidfra > obsidbirthtime)
       events.sort((a, b) => {
@@ -220,7 +239,6 @@
           if (!ta && !tb) return 0;
           if (!ta) return 1;
           if (!tb) return -1;
-          // Faldende: byt rækkefølgen i localeCompare
           return tb.localeCompare(ta, 'da', { numeric: true });
       });
 
@@ -279,6 +297,13 @@
           nameSpan.textContent = navn;
           observerNameBadge.appendChild(nameSpan);
 
+          // Indsæt badge synkront hvis appUserMap siger true
+          if (appUserMap[obserkode]) {
+            observerNameBadge.insertAdjacentHTML('beforeend',
+              `<img src="/icons/verified-symbol-icon.svg" alt="App-bruger" title="App-bruger" class="verified-badge">`
+            );
+          }
+
           if (adfaerd) {
             infoRow.innerHTML = `<span class="adfaerd">${adfaerd}</span> <span class="bullet">•</span>`;
             infoRow.appendChild(observerNameBadge);
@@ -286,29 +311,6 @@
             infoRow.appendChild(observerNameBadge);
           }
 
-          // Badge placeres altid direkte efter navnet
-          isAppUser(obserkode).then(isUser => {
-            if (isUser) {
-              observerNameBadge.insertAdjacentHTML('beforeend',
-                `<img src="/icons/verified-symbol-icon.svg" alt="App-bruger" title="App-bruger" class="verified-badge">`
-              );
-            }
-            function updateBulletVisibility() {
-              const bullet = infoRow.querySelector('.bullet');
-              const adfaerdSpan = infoRow.querySelector('.adfaerd');
-              const observerNameBadge = infoRow.querySelector('.observer-name-badge');
-              if (bullet && adfaerdSpan && observerNameBadge) {
-                if (bullet.getBoundingClientRect().top !== adfaerdSpan.getBoundingClientRect().top) {
-                  bullet.style.display = "none";
-                } else {
-                  bullet.style.display = "inline";
-                }
-              }
-            }
-            setTimeout(updateBulletVisibility, 0);
-            window.addEventListener('resize', updateBulletVisibility);
-            window.addEventListener('orientationchange', updateBulletVisibility);
-          });
           obsRow.appendChild(infoRow);
 
           // Vandret streg under body

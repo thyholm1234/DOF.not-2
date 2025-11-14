@@ -271,6 +271,8 @@ def _parse_obs_time(row):
             return (date, t, row.get("Obsid", ""))
     return (date, "", row.get("Obsid", ""))
 
+
+
 def save_threads_and_index(rows: List[Dict[str, str]], day: str):
 
     base_dir = os.path.join("web", "obs", day)
@@ -299,13 +301,26 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
 
     index = []
     for thread_id, obs_list in threads.items():
-        # Find obsid'er for SU/SUB i denne tråd
-        obsids = [row.get("Obsid", "").strip() for row in obs_list if row.get("kategori") in ("SU", "SUB")]
-        obsidbirthtime = None
-        for oid in obsids:
-            if oid and oid in obsid_birthtimes:
-                obsidbirthtime = obsid_birthtimes[oid]
-                break  # Tag den første du finder
+        # Tilføj obsidbirthtime til hver observation i events (før vi finder latest_obsidbirthtime)
+        for obs in obs_list:
+            oid = obs.get("Obsid", "").strip()
+            obs["obsidbirthtime"] = obsid_birthtimes.get(oid, "")
+
+        # Find alle obsidbirthtimes blandt events i tråden
+        obsidbirthtimes = [
+            e.get("obsidbirthtime")
+            for e in obs_list
+            if e.get("obsidbirthtime") and isinstance(e.get("obsidbirthtime"), str) and ":" in e.get("obsidbirthtime")
+        ]
+        def _birthtime_key(t):
+            try:
+                h, m = map(int, t.split(":"))
+                return h * 60 + m
+            except Exception:
+                return -1
+        latest_obsidbirthtime = ""
+        if obsidbirthtimes:
+            latest_obsidbirthtime = max(obsidbirthtimes, key=_birthtime_key)
 
         # Find seneste og første observation i tråden
         latest = max(obs_list, key=_parse_obs_time)
@@ -343,11 +358,6 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             or (latest.get("Turtidtil") or "").strip()
         )
 
-        # Tilføj obsidbirthtime til hver observation i events
-        for obs in obs_list:
-            oid = obs.get("Obsid", "").strip()
-            obs["obsidbirthtime"] = obsid_birthtimes.get(oid, "")
-
         # Byg index-entry
         index_entry = {
             "day": day,
@@ -365,7 +375,7 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
             "antal_individer": int(total_antal),
             "antal_observationer": num_observationer,
             "klokkeslet": klokkeslet,
-            "obsidbirthtime": obsidbirthtime or "",
+            "obsidbirthtime": latest_obsidbirthtime,
         }
         index.append(index_entry)
         # Gem hele tråden
@@ -374,7 +384,7 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
         thread_data = {
             "thread": index_entry,
             "events": obs_list,
-            "obsidbirthtime": obsidbirthtime or "",
+            "obsidbirthtime": latest_obsidbirthtime,
         }
         with open(os.path.join(thread_dir, "thread.json"), "w", encoding="utf-8") as f:
             json.dump(thread_data, f, ensure_ascii=False, indent=2)

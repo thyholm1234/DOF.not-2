@@ -20,6 +20,7 @@ from typing import Dict, List
 import threading
 from collections import defaultdict
 import time
+import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request as StarletteRequest
 
@@ -37,6 +38,7 @@ comment_file_locks = defaultdict(threading.Lock)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Oprydning i baggrundstråd (blocking)
     def run_and_repeat():
         while True:
             try:
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI):
             time.sleep(3600)
     t = threading.Thread(target=run_and_repeat, daemon=True)
     t.start()
+
     yield  # Lifespan fortsætter mens app kører
 
 app = FastAPI(lifespan=lifespan)
@@ -1141,6 +1144,28 @@ async def api_is_app_user(data: dict = Body(...)):
             continue
     return {"is_app_user": False}
 
+@app.post("/api/is-app-user-bulk")
+async def api_is_app_user_bulk(data: dict = Body(...)):
+    obserkoder = [str(k).strip().upper() for k in data.get("obserkoder", []) if k]
+    result = {k: False for k in obserkoder}
+    if not obserkoder:
+        return result
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+    known = set()
+    for (prefs_json,) in rows:
+        try:
+            prefs = json.loads(prefs_json)
+            kode = (prefs.get("obserkode") or "").strip().upper()
+            if kode:
+                known.add(kode)
+        except Exception:
+            continue
+    for k in obserkoder:
+        if k in known:
+            result[k] = True
+    return result
+
 @app.get("/api/admin/all-users")
 async def admin_all_users(user_id: str = Query(...)):
     obserkode = get_obserkode_from_userprefs(user_id)
@@ -1225,6 +1250,108 @@ async def is_superadmin(data: dict = Body(...)):
         "obserkode": obserkode
     }
 
+def archive_and_reset_pageview_log(reset_log=True):
+    today = datetime.now().strftime("%Y-%m-%d")
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+    masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
+
+    # Genbrug statistikberegning fra admin_pageview_stats
+    stats_out = {}
+    stats = defaultdict(lambda: {"total": 0, "unique": set()})
+    traad_total = {"total": 0, "unique": set()}
+    traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set()})
+    all_users = set()
+    total_views = 0
+
+    if not os.path.isfile(log_path):
+        return
+
+    unique_obserkoder = set()
+
+    with open(log_path, encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 4:
+                continue
+            ts = parts[0]
+            if not (ts[:10] == today or ts[:10] == datetime.now().strftime("%d-%m-%Y")):
+                continue
+            user_id = parts[2]
+            url = parts[3]
+            all_users.add(user_id)
+            total_views += 1
+            # Find obserkode for user_id
+            obserkode = get_obserkode_from_userprefs(user_id)
+            if obserkode:
+                unique_obserkoder.add(obserkode)
+            m = re.search(r"https?://[^/]+/([^?]+)", url)
+            page = m.group(1) if m else url
+            if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
+                page = "index.html"
+            if page.startswith("traad.html"):
+                traad_total["total"] += 1
+                traad_total["unique"].add(user_id)
+                m_id = re.search(r"id=([a-z0-9\-]+)", url)
+                m_date = re.search(r"date=([0-9\-]+)", url)
+                if m_id and m_date:
+                    key = f"{m_id.group(1)}-{m_date.group(1)}"
+                    traad_per_thread[key]["total"] += 1
+                    traad_per_thread[key]["unique"].add(user_id)
+            stats[page]["total"] += 1
+            stats[page]["unique"].add(user_id)
+
+    for page, d in stats.items():
+        stats_out[page] = {
+            "total": d["total"],
+            "unique": len(d["unique"])
+        }
+    stats_out["traad.html"] = {
+        "total": traad_total["total"],
+        "unique": len(traad_total["unique"]),
+        "threads": {
+            k: {"total": v["total"], "unique": len(v["unique"])}
+            for k, v in traad_per_thread.items()
+        }
+    }
+    stats_out["unique_users_total"] = len(all_users)
+    stats_out["total_views"] = total_views
+
+    # Tæl brugere i databasen
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+        total_users = 0
+        users_with_obserkode = 0
+        users_without_obserkode = 0
+        all_db_obserkoder = set()
+        for (prefs_json,) in rows:
+            try:
+                prefs = json.loads(prefs_json)
+                total_users += 1
+                obserkode = prefs.get("obserkode")
+                if obserkode:
+                    users_with_obserkode += 1
+                    all_db_obserkoder.add(obserkode)
+                else:
+                    users_without_obserkode += 1
+            except Exception:
+                continue
+    stats_out["users_total"] = total_users
+    stats_out["users_with_obserkode"] = users_with_obserkode
+    stats_out["users_without_obserkode"] = users_without_obserkode
+    stats_out["unique_obserkoder_total_db"] = len(all_db_obserkoder)
+
+    # Skriv til masterlog
+    log_entry = {
+        "date": today,
+        **stats_out,
+    }
+    with open(masterlog_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+
+    # Nulstil dagens log
+    if reset_log:
+        open(log_path, "w").close()
+
 @app.post("/api/admin/pageview-stats")
 async def admin_pageview_stats(data: dict = Body(...)):
     user_id = data.get("user_id")
@@ -1261,6 +1388,12 @@ async def admin_pageview_stats(data: dict = Body(...)):
             # Find side
             m = re.search(r"https?://[^/]+/([^?]+)", url)
             page = m.group(1) if m else url
+
+            # --- Gruppér forsiden ---
+            if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
+                page = "index.html"
+            # ------------------------
+
             if page.startswith("traad.html"):
                 traad_total["total"] += 1
                 traad_total["unique"].add(user_id)
@@ -1290,6 +1423,30 @@ async def admin_pageview_stats(data: dict = Body(...)):
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
     return stats_out
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Midnats-task (asynkron)
+    async def midnight_task():
+        while True:
+            now = datetime.now()
+            next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            seconds = (next_midnight - now).total_seconds()
+            await asyncio.sleep(seconds)
+            archive_and_reset_pageview_log(reset_log=True)
+    asyncio.create_task(midnight_task())
+
+    yield  # Lifespan fortsætter mens app kører
+
+@app.post("/api/admin/archive-pageview-log")
+async def archive_pageview_log(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    archive_and_reset_pageview_log(reset_log=False)
+    return {"status": "ok"}
 
 @app.post("/api/admin/list-admins")
 async def list_admins(data: dict = Body(...)):

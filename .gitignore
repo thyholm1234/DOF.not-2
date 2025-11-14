@@ -4,9 +4,12 @@ __pycache__/
 state/state.json
 state/watch_state.json
 server/users.db
+server/pageviews.log
+server/pageview_masterlog.jsonl
+server/blacklist.json
+server/admin.json
+server/superadmin.json
 .env
 list_users.csv
 list_users.json
-server/blacklist.json
-server/admin.json
 web/obsid_birthtimes.json

@@ -1,4 +1,4 @@
-// Version: 4.5.4 - 2025-11-12 13.15.49
+// Version: 4.6.5 - 2025-11-14 22.02.58
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -52,6 +52,18 @@
     if (hDiff < 24) return `${hDiff} timer`;
     const dDiff = Math.floor(hDiff / 24);
     return `${dDiff} d`;
+  }
+
+  function getLatestTime(klokkeslet, obsidbirthtime) {
+    // Returnerer det seneste tidspunkt som "HH:MM"
+    if (!klokkeslet && !obsidbirthtime) return "00:00";
+    if (!klokkeslet) return obsidbirthtime;
+    if (!obsidbirthtime) return klokkeslet;
+    // Sammenlign som tidspunkter
+    const [h1, m1] = klokkeslet.split(':').map(Number);
+    const [h2, m2] = obsidbirthtime.split(':').map(Number);
+    if (h1 > h2 || (h1 === h2 && m1 >= m2)) return klokkeslet;
+    return obsidbirthtime;
   }
 
   let userPrefs = {};
@@ -143,8 +155,8 @@
         const dagA = a._dofnot_dag || a.day || todayDMYLocal();
         const dagB = b._dofnot_dag || b.day || todayDMYLocal();
         if (dagA !== dagB) return dagB.localeCompare(dagA, 'da');
-        const klA = (a.klokkeslet || a.obsidbirthtime || "00:00").padStart(5, "0");
-        const klB = (b.klokkeslet || b.obsidbirthtime || "00:00").padStart(5, "0");
+        const klA = getLatestTime(a.klokkeslet, a.obsidbirthtime).padStart(5, "0");
+        const klB = getLatestTime(b.klokkeslet, b.obsidbirthtime).padStart(5, "0");
         return klB.localeCompare(klA, 'da');
       } else if (frontState.sortMode === "alfabet") {
         return (a.art || '').localeCompare(b.art || '', 'da');
@@ -156,8 +168,8 @@
       const dagA = a._dofnot_dag || a.day || todayDMYLocal();
       const dagB = b._dofnot_dag || b.day || todayDMYLocal();
       if (dagA !== dagB) return dagB.localeCompare(dagA, 'da');
-      const klA = (a.klokkeslet || a.obsidbirthtime || "00:00").padStart(5, "0");
-      const klB = (b.klokkeslet || b.obsidbirthtime || "00:00").padStart(5, "0");
+      const klA = getLatestTime(a.klokkeslet, a.obsidbirthtime).padStart(5, "0");
+      const klB = getLatestTime(b.klokkeslet, b.obsidbirthtime).padStart(5, "0");
       return klB.localeCompare(klA, 'da');
     });
   } else if (frontState.sortMode === "alfabet") {
@@ -193,7 +205,7 @@
     const obsCount = Number(t.antal_observationer ?? 0);
     const obsBadgeClass = obsCount > 1 ? 'badge event-count warn' : 'badge event-count';
     right.appendChild(el('span', obsBadgeClass, `${obsCount} obs`));
-    right.appendChild(regionBadge(fmtAgeFromKlokkeslet(t.klokkeslet, t.day, t.obsidbirthtime)));
+    right.appendChild(regionBadge(fmtAgeFromKlokkeslet(getLatestTime(t.klokkeslet, t.obsidbirthtime), t.day, t.obsidbirthtime)));
     cardTop.appendChild(right);
 
     article.appendChild(cardTop);

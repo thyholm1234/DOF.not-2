@@ -1,4 +1,4 @@
-// Version: 4.6.4.14 - 2025-11-14 14.44.47
+// Version: 4.6.5 - 2025-11-14 22.02.58
 // © Christian Vemmelund Helligsø
 async function validateLogin(user_id, device_id, obserkode, adgangskode) {
   const res = await fetch('/api/validate-login', {

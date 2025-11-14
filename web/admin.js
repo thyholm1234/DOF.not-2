@@ -1,4 +1,4 @@
-// Version: 4.6.4.14 - 2025-11-14 14.44.47
+// Version: 4.6.5 - 2025-11-14 22.02.58
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -268,6 +268,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const stats = await res.json();
       let html = "<h3>Trafik i dag</h3>";
+
+      // --- Tilføj "Gem trafiklog nu"-knap for superadmin ---
+      if (window.isSuperadmin) {
+        html += `<button id="archive-traffic-log-btn" class="primary-btn" style="margin-bottom:1em;">Gem masterlog nu</button>`;
+      }
+
       // Unikke brugere i alt og total visninger som card
       if (typeof stats.unique_users_total === "number" && typeof stats.total_views === "number") {
         html += `<div class="card" style="margin-bottom:1em;">
@@ -300,8 +306,44 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>`;
         }
       }
+
       panel.innerHTML = html;
       panel.scrollIntoView({behavior: "smooth"});
+
+      // Tilføj eventlistener til knappen hvis superadmin
+      if (window.isSuperadmin) {
+        document.getElementById("archive-traffic-log-btn").onclick = async function() {
+          this.disabled = true;
+          this.textContent = "Gemmer...";
+          try {
+            const res = await fetch("/api/admin/archive-pageview-log", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id })
+            });
+            if (res.ok) {
+              this.textContent = "Trafiklog gemt!";
+              setTimeout(() => {
+                this.textContent = "Gem trafiklog nu";
+                this.disabled = false;
+              }, 2000);
+            } else {
+              this.textContent = "Fejl!";
+              setTimeout(() => {
+                this.textContent = "Gem trafiklog nu";
+                this.disabled = false;
+              }, 2000);
+            }
+          } catch {
+            this.textContent = "Fejl!";
+            setTimeout(() => {
+              this.textContent = "Gem trafiklog nu";
+              this.disabled = false;
+            }, 2000);
+          }
+        };
+      }
+      // --- slut på knap ---
     } catch (e) {
       panel.innerHTML = "<b>Fejl ved hentning af trafiktal.</b>";
     }
