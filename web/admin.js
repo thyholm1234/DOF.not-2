@@ -1,4 +1,4 @@
-// Version: 4.6.5.1 - 2025-11-14 22.10.48
+// Version: 4.6.5.5 - 2025-11-14 23.26.30
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -288,14 +288,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div><hr>`;
       }
       // Side-statistik som cards (inkl. traad.html)
-      for (const [page, info] of Object.entries(stats)) {
-        if (page === "unique_users_total" || page === "total_views" || page === "traad.html") continue;
-        html += `<div class="card" style="margin-bottom:0.5em;">
-          <div style="font-weight:bold;">${page}</div>
-          <div>Unikke brugere: <b>${info.unique}</b></div>
-          <div>Visninger: <b>${info.total}</b></div>
-        </div>`;
+      const pageStats = Object.entries(stats)
+        .filter(([page, info]) =>
+          page !== "unique_users_total" &&
+          page !== "total_views" &&
+          page !== "traad.html"
+        )
+        .sort((a, b) => (b[1].unique || 0) - (a[1].unique || 0)); // Sortér efter flest unikke brugere
+
+      for (const [page, info] of pageStats) {
+        let link = null;
+        if (page.endsWith(".html")) {
+          link = `/${page}`;
+        }
+        const cardHtml = `
+          <div class="card" style="margin-bottom:0.5em;">
+            <div style="font-weight:bold;">${page}</div>
+            <div>Unikke brugere: <b>${info.unique}</b></div>
+            <div>Visninger: <b>${info.total}</b></div>
+          </div>
+        `;
+        if (link) {
+          html += `<a href="${link}" style="text-decoration:none;color:inherit;">${cardHtml}</a>`;
+        } else {
+          html += cardHtml;
+        }
       }
+
       // traad.html total som card
       if (stats["traad.html"]) {
         html += `<div class="card" style="margin-bottom:0.5em;">
@@ -303,51 +322,155 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div>Unikke brugere: <b>${stats["traad.html"].unique}</b></div>
           <div>Visninger: <b>${stats["traad.html"].total}</b></div>
         </div><hr>`;
-        // Pr. tråd som cards
-        for (const [thread, tinfo] of Object.entries(stats["traad.html"].threads || {})) {
-          html += `<div class="card" style="margin-bottom:0.5em;">
-            <div style="font-weight:bold;">${thread}</div>
-            <div>Unikke brugere: <b>${tinfo.unique}</b></div>
-            <div>Visninger: <b>${tinfo.total}</b></div>
-          </div>`;
+
+        // Pr. tråd som cards, sorteret efter flest unikke brugere
+        const threads = Object.entries(stats["traad.html"].threads || {})
+          .sort((a, b) => (b[1].unique || 0) - (a[1].unique || 0));
+        for (const [thread, tinfo] of threads) {
+          const match = thread.match(/(.+)-(\d{6,})-(\d{2}-\d{2}-\d{4})$/);
+          let link = "#";
+          if (match) {
+            const id = match[1] + "-" + match[2];
+            const date = match[3];
+            link = `/traad.html?date=${encodeURIComponent(date)}&id=${encodeURIComponent(id)}`;
+          }
+          html += `<a href="${link}" style="text-decoration:none;color:inherit;">
+            <div class="card" style="margin-bottom:0.5em;">
+              <div style="font-weight:bold;">${thread}</div>
+              <div>Unikke brugere: <b>${tinfo.unique}</b></div>
+              <div>Visninger: <b>${tinfo.total}</b></div>
+            </div>
+          </a>`;
         }
       }
 
+      // Tilføj grafer for superadmin
+      if (window.isSuperadmin) {
+        // Tilføj horisontal linje før første graf
+        html += `<hr style="margin:1.5em 0;">
+          <div class="card" style="margin-bottom:1em;">
+            <h4>Traffik de sidste 7 dage</h4>
+            <canvas id="traffic-graph-7d" height="120"></canvas>
+          </div>
+          <div class="card" style="margin-bottom:1em;">
+            <h4>Traffik det sidste år</h4>
+            <canvas id="traffic-graph-52w" height="120"></canvas>
+          </div>
+        `;
+      }
       panel.innerHTML = html;
+
+      // Tilføj event handler til "Gem masterlog nu"-knap
+      if (window.isSuperadmin) {
+        const archiveBtn = document.getElementById("archive-traffic-log-btn");
+        if (archiveBtn) {
+          archiveBtn.onclick = async function() {
+            archiveBtn.disabled = true;
+            archiveBtn.textContent = "Gemmer...";
+            try {
+              const res = await fetch("/api/admin/archive-pageview-log", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id })
+              });
+              if (res.ok) {
+                archiveBtn.textContent = "Masterlog gemt!";
+                setTimeout(() => {
+                  archiveBtn.textContent = "Gem masterlog nu";
+                  archiveBtn.disabled = false;
+                }, 1500);
+              } else {
+                archiveBtn.textContent = "Fejl!";
+                setTimeout(() => {
+                  archiveBtn.textContent = "Gem masterlog nu";
+                  archiveBtn.disabled = false;
+                }, 1500);
+              }
+            } catch {
+              archiveBtn.textContent = "Fejl!";
+              setTimeout(() => {
+                archiveBtn.textContent = "Gem masterlog nu";
+                archiveBtn.disabled = false;
+              }, 1500);
+            }
+          };
+        }
+      }
+
       panel.scrollIntoView({behavior: "smooth"});
 
-      // Tilføj eventlistener til knappen hvis superadmin
+      // Hent og vis grafer hvis superadmin
       if (window.isSuperadmin) {
-        document.getElementById("archive-traffic-log-btn").onclick = async function() {
-          this.disabled = true;
-          this.textContent = "Gemmer...";
-          try {
-            const res = await fetch("/api/admin/archive-pageview-log", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id })
+        try {
+          const res = await fetch("/api/admin/traffic-graphs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            // Sidste 7 dage
+            const labels7 = data.last7.map(d => d.date.slice(5));
+            const users7 = data.last7.map(d => d.unique_users_total);
+            const withObs7 = data.last7.map(d => d.users_with_obserkode);
+            const withoutObs7 = data.last7.map(d => d.users_without_obserkode);
+            new Chart(document.getElementById("traffic-graph-7d").getContext("2d"), {
+              type: "line",
+              data: {
+                labels: labels7,
+                datasets: [
+                  { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false },
+                  { label: "Med obserkode", data: withObs7, borderColor: "#2ECC40", fill: false },
+                  { label: "Uden obserkode", data: withoutObs7, borderColor: "#FF4136", fill: false }
+                ]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { display: true } },
+                scales: { y: { beginAtZero: true } }
+              }
             });
-            if (res.ok) {
-              this.textContent = "Trafiklog gemt!";
-              setTimeout(() => {
-                this.textContent = "Gem trafiklog nu";
-                this.disabled = false;
-              }, 2000);
-            } else {
-              this.textContent = "Fejl!";
-              setTimeout(() => {
-                this.textContent = "Gem trafiklog nu";
-                this.disabled = false;
-              }, 2000);
-            }
-          } catch {
-            this.textContent = "Fejl!";
-            setTimeout(() => {
-              this.textContent = "Gem trafiklog nu";
-              this.disabled = false;
-            }, 2000);
+
+            // Sidste 365 dage (årsgraf pr. dag) - dagsdato til højre
+            const days = data.last365; // behold rækkefølgen fra backend
+            const labels365 = days.map(d => d.date);
+            const users365 = days.map(d => d.unique_users_total);
+            const withObs365 = days.map(d => d.users_with_obserkode);
+            const withoutObs365 = days.map(d => d.users_without_obserkode);
+
+            new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
+              type: "line",
+              data: {
+                labels: labels365,
+                datasets: [
+                  { label: "Unikke besøgende", data: users365, borderColor: "#0074D9", fill: false, pointRadius: 0 },
+                  { label: "Med obserkode", data: withObs365, borderColor: "#2ECC40", fill: false, pointRadius: 0 },
+                  { label: "Uden obserkode", data: withoutObs365, borderColor: "#FF4136", fill: false, pointRadius: 0 }
+                ]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { display: true } },
+                scales: {
+                  y: { beginAtZero: true },
+                  x: {
+                    ticks: {
+                      // Vis kun hver 30. dag label for overskuelighed, og altid sidste label
+                      callback: function(val, idx) {
+                        if (idx % 30 === 0 || idx === labels365.length - 1) return labels365[idx];
+                        return "";
+                      },
+                      maxRotation: 0,
+                      minRotation: 0
+                    }
+                  }
+                }
+              }
+            });
           }
-        };
+        } catch (e) {
+          // ignore
+        }
       }
       // --- slut på knap ---
     } catch (e) {

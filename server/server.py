@@ -1144,6 +1144,107 @@ async def api_is_app_user(data: dict = Body(...)):
             continue
     return {"is_app_user": False}
 
+@app.post("/api/admin/traffic-graphs")
+async def admin_traffic_graphs(data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
+    if not os.path.isfile(masterlog_path):
+        return JSONResponse({"error": "No masterlog"}, status_code=404)
+
+    import datetime
+    import collections
+    import json
+
+    # Helper: parse date
+    def parse_date(s):
+        try:
+            return datetime.datetime.strptime(s, "%Y-%m-%d").date()
+        except Exception:
+            return None
+
+    # Læs alle linjer
+    days = []
+    with open(masterlog_path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                obj = json.loads(line)
+                d = parse_date(obj.get("date", ""))
+                if d:
+                    days.append((d, obj))
+            except Exception:
+                continue
+
+    # Sortér efter dato
+    days.sort(key=lambda x: x[0])
+
+    # Sidste 7 dage (inkl. i dag)
+    today = datetime.date.today()
+    last7 = []
+    for i in range(6, -1, -1):
+        d = today - datetime.timedelta(days=i)
+        found = next((obj for (dt, obj) in days if dt == d), None)
+        if found:
+            last7.append({
+                "date": d.strftime("%Y-%m-%d"),
+                "unique_users_total": found.get("unique_users_total", 0),
+                "users_with_obserkode": found.get("users_with_obserkode", 0),
+                "users_without_obserkode": found.get("users_without_obserkode", 0)
+            })
+        else:
+            last7.append({
+                "date": d.strftime("%Y-%m-%d"),
+                "unique_users_total": 0,
+                "users_with_obserkode": 0,
+                "users_without_obserkode": 0
+            })
+
+    # Sidste 365 dage (pr. dag)
+    last365 = []
+    for d, obj in days[-365:]:
+        last365.append({
+            "date": d.strftime("%Y-%m-%d"),
+            "unique_users_total": obj.get("unique_users_total", 0),
+            "users_with_obserkode": obj.get("users_with_obserkode", 0),
+            "users_without_obserkode": obj.get("users_without_obserkode", 0)
+        })
+
+    # Uge-totaler for sidste 52 uger (behold for evt. bagudkompatibilitet)
+    week_stats = collections.OrderedDict()
+    for dt, obj in days:
+        year, week, _ = dt.isocalendar()
+        key = f"{year}-W{week:02d}"
+        if key not in week_stats:
+            week_stats[key] = {
+                "unique_users_total": 0,
+                "users_with_obserkode": 0,
+                "users_without_obserkode": 0
+            }
+        week_stats[key]["unique_users_total"] += obj.get("unique_users_total", 0)
+        week_stats[key]["users_with_obserkode"] += obj.get("users_with_obserkode", 0)
+        week_stats[key]["users_without_obserkode"] += obj.get("users_without_obserkode", 0)
+
+    week_keys = list(week_stats.keys())[-52:]
+    week_data = []
+    for k in week_keys:
+        v = week_stats[k]
+        week_data.append({
+            "week": k,
+            "unique_users_total": v["unique_users_total"],
+            "users_with_obserkode": v["users_with_obserkode"],
+            "users_without_obserkode": v["users_without_obserkode"]
+        })
+
+    return {
+        "last7": last7,
+        "last365": last365,
+        "weeks": week_data
+    }
+
 @app.post("/api/is-app-user-bulk")
 async def api_is_app_user_bulk(data: dict = Body(...)):
     obserkoder = [str(k).strip().upper() for k in data.get("obserkoder", []) if k]
