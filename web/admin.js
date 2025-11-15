@@ -1,4 +1,4 @@
-// Version: 4.7 - 2025-11-15 23.00.26
+// Version: 4.7.0 - 2025-11-16 00.35.56
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -496,19 +496,32 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
           if (res.ok) {
             const data = await res.json();
-            // Sidste 7 dage
+
+            // VIS UNIKKE OBSERKODER TOTALT (kort øverst)
+            if (data.last7 && data.last7.length) {
+              // Vis total_db for seneste dag (sidste dag i last7 med data)
+              const lastDayWithData = [...data.last7].reverse().find(d => d.unique_obserkoder_total_db > 0);
+              const totalDb = lastDayWithData ? lastDayWithData.unique_obserkoder_total_db : 0;
+              const panel = document.getElementById("traffic-panel");
+              panel.innerHTML = `<div class="card" style="margin-bottom:1em;">
+                <b>Unikke obserkoder i databasen: ${totalDb}</b>
+              </div>` + panel.innerHTML;
+            }
+
+            // Sidste 7 dage - brug dagsværdier for unique_obserkoder_total_db og users_total
             const labels7 = data.last7.map(d => d.date.slice(5));
             const users7 = data.last7.map(d => d.unique_users_total);
-            const withObs7 = data.last7.map(d => d.users_with_obserkode);
-            const withoutObs7 = data.last7.map(d => d.users_without_obserkode);
+            const uniqueObserkoder7 = data.last7.map(d => d.unique_obserkoder_total_db);
+            const usersTotal7 = data.last7.map(d => d.users_total);
+
             new Chart(document.getElementById("traffic-graph-7d").getContext("2d"), {
               type: "line",
               data: {
                 labels: labels7,
                 datasets: [
                   { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false },
-                  { label: "Med obserkode", data: withObs7, borderColor: "#2ECC40", fill: false },
-                  { label: "Uden obserkode", data: withoutObs7, borderColor: "#FF4136", fill: false }
+                  { label: "Unikke obserkoder", data: uniqueObserkoder7, borderColor: "#2ECC40", fill: false },
+                  { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false }
                 ]
               },
               options: {
@@ -518,28 +531,23 @@ document.addEventListener('DOMContentLoaded', async () => {
               }
             });
 
-            // Find alle datoer i data.last365
+            // 365-dages graf - brug dagsværdier for unique_obserkoder_total_db og users_total
             const allDates = (data.last365 || []).map(d => d.date);
-            // Find ældste og nyeste dato
             let minDate = allDates.length ? new Date(allDates[0]) : new Date();
             let maxDate = allDates.length ? new Date(allDates[allDates.length - 1]) : new Date();
-
-            // Hvis der er mindre end 7 dage, vis mindst 7 dage (slutter med dags dato)
             const today = new Date();
             if ((maxDate - minDate) / 86400000 < 6) {
               minDate = new Date(today);
               minDate.setDate(today.getDate() - 6);
               maxDate = today;
             }
-
-            // Byg dag-mapping
             const dayMap = {};
             (data.last365 || []).forEach(d => { dayMap[d.date] = d; });
 
             const labels365 = [];
             const users365 = [];
-            const withObs365 = [];
-            const withoutObs365 = [];
+            const uniqueObserkoder365 = [];
+            const usersTotal365 = [];
 
             let d = new Date(minDate);
             while (d <= maxDate) {
@@ -547,12 +555,12 @@ document.addEventListener('DOMContentLoaded', async () => {
               labels365.push(ds);
               if (dayMap[ds]) {
                 users365.push(dayMap[ds].unique_users_total);
-                withObs365.push(dayMap[ds].users_with_obserkode);
-                withoutObs365.push(dayMap[ds].users_without_obserkode);
+                uniqueObserkoder365.push(dayMap[ds].unique_obserkoder_total_db);
+                usersTotal365.push(dayMap[ds].users_total);
               } else {
                 users365.push(0);
-                withObs365.push(0);
-                withoutObs365.push(0);
+                uniqueObserkoder365.push(0);
+                usersTotal365.push(0);
               }
               d.setDate(d.getDate() + 1);
             }
@@ -563,8 +571,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 labels: labels365,
                 datasets: [
                   { label: "Unikke besøgende", data: users365, borderColor: "#0074D9", fill: false, pointRadius: 0 },
-                  { label: "Med obserkode", data: withObs365, borderColor: "#2ECC40", fill: false, pointRadius: 0 },
-                  { label: "Uden obserkode", data: withoutObs365, borderColor: "#FF4136", fill: false, pointRadius: 0 }
+                  { label: "Unikke obserkoder", data: uniqueObserkoder365, borderColor: "#2ECC40", fill: false, pointRadius: 0 },
+                  { label: "Antal enheder", data: usersTotal365, borderColor: "#FF4136", fill: false, pointRadius: 0 }
                 ]
               },
               options: {

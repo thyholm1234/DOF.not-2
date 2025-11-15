@@ -1219,6 +1219,7 @@ async def admin_traffic_graphs(data: dict = Body(...)):
     import datetime
     import collections
     import json
+    import sqlite3
 
     # Helper: parse date
     def parse_date(s):
@@ -1253,14 +1254,20 @@ async def admin_traffic_graphs(data: dict = Body(...)):
                 "date": d.strftime("%Y-%m-%d"),
                 "unique_users_total": found.get("unique_users_total", 0),
                 "users_with_obserkode": found.get("users_with_obserkode", 0),
-                "users_without_obserkode": found.get("users_without_obserkode", 0)
+                "users_without_obserkode": found.get("users_without_obserkode", 0),
+                "unique_obserkoder": found.get("unique_obserkoder", 0),
+                "unique_obserkoder_total_db": found.get("unique_obserkoder_total_db", 0),
+                "users_total": found.get("users_total", 0)
             })
         else:
             last7.append({
                 "date": d.strftime("%Y-%m-%d"),
                 "unique_users_total": 0,
                 "users_with_obserkode": 0,
-                "users_without_obserkode": 0
+                "users_without_obserkode": 0,
+                "unique_obserkoder": 0,
+                "unique_obserkoder_total_db": 0,
+                "users_total": 0
             })
 
     # Sidste 365 dage (pr. dag)
@@ -1270,10 +1277,13 @@ async def admin_traffic_graphs(data: dict = Body(...)):
             "date": d.strftime("%Y-%m-%d"),
             "unique_users_total": obj.get("unique_users_total", 0),
             "users_with_obserkode": obj.get("users_with_obserkode", 0),
-            "users_without_obserkode": obj.get("users_without_obserkode", 0)
+            "users_without_obserkode": obj.get("users_without_obserkode", 0),
+            "unique_obserkoder": obj.get("unique_obserkoder", 0),
+            "unique_obserkoder_total_db": obj.get("unique_obserkoder_total_db", 0),
+            "users_total": obj.get("users_total", 0)
         })
 
-    # Uge-totaler for sidste 52 uger (behold for evt. bagudkompatibilitet)
+    # Uge-totaler for sidste 52 uger
     week_stats = collections.OrderedDict()
     for dt, obj in days:
         year, week, _ = dt.isocalendar()
@@ -1299,10 +1309,25 @@ async def admin_traffic_graphs(data: dict = Body(...)):
             "users_without_obserkode": v["users_without_obserkode"]
         })
 
+    # Læs fra databasen: antal brugere uden obserkode og antal unikke obserkoder
+    users_without_obserkode_db = 0
+    unique_obserkoder = set()
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+        for (prefs_json,) in rows:
+            try:
+                prefs = json.loads(prefs_json)
+                kode = (prefs.get("obserkode") or "").strip()
+                if kode:
+                    unique_obserkoder.add(kode)
+                else:
+                    users_without_obserkode_db += 1
+            except Exception:
+                continue
+
     return {
         "last7": last7,
         "last365": last365,
-        "weeks": week_data
     }
 
 @app.post("/api/is-app-user-bulk")
@@ -1411,8 +1436,10 @@ async def is_superadmin(data: dict = Body(...)):
         "obserkode": obserkode
     }
 
-def archive_and_reset_pageview_log(reset_log=True):
-    today = datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
+def archive_and_reset_pageview_log(for_date=None):
+    tz = pytz.timezone("Europe/Copenhagen")
+    if for_date is None:
+        for_date = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
     log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
 
@@ -1427,6 +1454,7 @@ def archive_and_reset_pageview_log(reset_log=True):
         return
 
     unique_obserkoder = set()
+    kept_lines = []
 
     with open(log_path, encoding="utf-8") as f:
         for line in f:
@@ -1435,31 +1463,32 @@ def archive_and_reset_pageview_log(reset_log=True):
                 continue
             ts = parts[0]
             # Brug dansk dato
-            if not ts.startswith(today):
-                continue
-            user_id = parts[2]
-            url = parts[3]
-            all_users.add(user_id)
-            total_views += 1
-            # Find obserkode for user_id
-            obserkode = get_obserkode_from_userprefs(user_id)
-            if obserkode:
-                unique_obserkoder.add(obserkode)  # <-- kun ét entry pr. obserkode
-            m = re.search(r"https?://[^/]+/([^?]+)", url)
-            page = m.group(1) if m else url
-            if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
-                page = "index.html"
-            if page.startswith("traad.html"):
-                traad_total["total"] += 1
-                traad_total["unique"].add(user_id)
-                m_id = re.search(r"id=([a-z0-9\-]+)", url)
-                m_date = re.search(r"date=([0-9\-]+)", url)
-                if m_id and m_date:
-                    key = f"{m_id.group(1)}-{m_date.group(1)}"
-                    traad_per_thread[key]["total"] += 1
-                    traad_per_thread[key]["unique"].add(user_id)
-            stats[page]["total"] += 1
-            stats[page]["unique"].add(user_id)
+            if ts.startswith(for_date):
+                user_id = parts[2]
+                url = parts[3]
+                all_users.add(user_id)
+                total_views += 1
+                # Find obserkode for user_id
+                obserkode = get_obserkode_from_userprefs(user_id)
+                if obserkode:
+                    unique_obserkoder.add(obserkode)
+                m = re.search(r"https?://[^/]+/([^?]+)", url)
+                page = m.group(1) if m else url
+                if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
+                    page = "index.html"
+                if page.startswith("traad.html"):
+                    traad_total["total"] += 1
+                    traad_total["unique"].add(user_id)
+                    m_id = re.search(r"id=([a-z0-9\-]+)", url)
+                    m_date = re.search(r"date=([0-9\-]+)", url)
+                    if m_id and m_date:
+                        key = f"{m_id.group(1)}-{m_date.group(1)}"
+                        traad_per_thread[key]["total"] += 1
+                        traad_per_thread[key]["unique"].add(user_id)
+                stats[page]["total"] += 1
+                stats[page]["unique"].add(user_id)
+            else:
+                kept_lines.append(line)
 
     for page, d in stats.items():
         stats_out[page] = {
@@ -1476,8 +1505,7 @@ def archive_and_reset_pageview_log(reset_log=True):
     }
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
-    stats_out["unique_obserkoder"] = len(unique_obserkoder)  # <-- kun unikke obserkoder
-
+    stats_out["unique_obserkoder"] = len(unique_obserkoder)
 
     # Tæl brugere i databasen
     with sqlite3.connect(DB_PATH) as conn:
@@ -1505,15 +1533,16 @@ def archive_and_reset_pageview_log(reset_log=True):
 
     # Skriv til masterlog
     log_entry = {
-        "date": today,
+        "date": for_date,
         **stats_out,
     }
     with open(masterlog_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
 
-    # Nulstil dagens log
-    if reset_log:
-        open(log_path, "w").close()
+    # Overskriv pageviews.log med kun de linjer der IKKE matcher for_date
+    with open(log_path, "w", encoding="utf-8") as f:
+        for line in kept_lines:
+            f.write(line if line.endswith("\n") else line + "\n")
 
 @app.post("/api/admin/pageview-stats")
 async def admin_pageview_stats(data: dict = Body(...)):
@@ -1587,7 +1616,6 @@ async def admin_pageview_stats(data: dict = Body(...)):
     }
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
-    stats_out["unique_obserkoder"] = len(unique_obserkoder)  # <-- kun unikke obserkoder
     return stats_out
 
 @asynccontextmanager
@@ -1596,10 +1624,13 @@ async def lifespan(app: FastAPI):
         tz = pytz.timezone("Europe/Copenhagen")
         while True:
             now = datetime.now(tz)
+            # Beregn sekunder til næste midnat
             next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
             seconds = (next_midnight - now).total_seconds()
             await asyncio.sleep(seconds)
-            archive_and_reset_pageview_log(reset_log=True)
+            # Når klokken slår 00:00:00, skriv masterlog for gårsdagen
+            yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
+            archive_and_reset_pageview_log(for_date=yesterday)
     asyncio.create_task(midnight_task())
     yield
 
