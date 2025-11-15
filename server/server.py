@@ -851,6 +851,13 @@ async def update_data(request: Request):
                     prefs = json.loads(prefs_json)
                     sub = json.loads(sub_json)
                     species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
+                    # Find brugerens obserkode
+                    user_obserkode = prefs.get("obserkode", "").strip().upper()
+                    # Find observationens obserkode
+                    obs_obserkode = (obs.get("Obserkode") or obs.get("obserkode") or "").strip().upper()
+                    # Spring over hvis brugerens obserkode matcher observationens
+                    if user_obserkode and obs_obserkode and user_obserkode == obs_obserkode:
+                        continue
                     if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
                         tasks.append(
                             executor.submit(push_task, sub, push_payload, user_id, device_id)
@@ -2184,7 +2191,14 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                     except Exception:
                         pass
                 for sub_user_id, sub_device_id in subs:
-                    if sub_user_id == user_id and sub_device_id == device_id:
+                    # Find obserkode for abonnent
+                    sub_prefs = get_prefs(sub_user_id)
+                    sub_obserkode = (sub_prefs.get("obserkode") or "").strip().upper()
+                    # Find obserkode for forfatter
+                    author_prefs = get_prefs(user_id)
+                    author_obserkode = (author_prefs.get("obserkode") or "").strip().upper()
+                    # Spring over hvis det er forfatteren selv eller en anden med samme obserkode
+                    if (sub_user_id == user_id and sub_device_id == device_id) or (sub_obserkode and author_obserkode and sub_obserkode == author_obserkode):
                         continue
                     with sqlite3.connect(DB_PATH) as conn:
                         row = conn.execute(
