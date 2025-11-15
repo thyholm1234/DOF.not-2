@@ -24,6 +24,7 @@ import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request as StarletteRequest
 import pytz
+import logging
 
 load_dotenv()
 
@@ -74,6 +75,12 @@ async def limit_body_size(request: Request, call_next):
     return await call_next(request)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
+
+logging.basicConfig(
+    filename="server.log",
+    format="%(message)s",
+    level=logging.INFO,
+)
 
 def db_init():
     with sqlite3.connect(DB_PATH) as conn:
@@ -1721,6 +1728,13 @@ async def download_admin_file(filename: str, data: dict = Body(...)):
         raise HTTPException(status_code=404, detail="Filen findes ikke")
     return FileResponse(allowed[filename], filename=filename)
 
+@app.middleware("http")
+async def log_all_requests(request: Request, call_next):
+    response = await call_next(request)
+    log_line = f'{request.client.host} - "{request.method} {request.url.path} HTTP/{request.scope.get("http_version", "1.1")}" {response.status_code}'
+    logging.info(log_line)
+    return response
+
 @app.post("/api/admin/serverlog")
 async def get_server_log(data: dict = Body(...)):
     user_id = data.get("user_id", "")
@@ -1728,12 +1742,11 @@ async def get_server_log(data: dict = Body(...)):
     superadmins = load_superadmins()
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
-    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+    log_path = os.path.join(os.path.dirname(__file__), "server.log")
     if not os.path.isfile(log_path):
         return {"log": ""}
-    # Return fx de sidste 200 linjer
     with open(log_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()[-400:]
+        lines = f.readlines()[-1000:]
     return {"log": "".join(lines)}
 
 @app.post("/api/userinfo")
