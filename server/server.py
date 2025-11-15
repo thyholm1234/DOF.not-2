@@ -262,11 +262,12 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
 @app.post("/api/log-pageview")
 async def log_pageview(data: dict, request: Request):
     url = data.get("url")
-    ts = data.get("ts")
     user_id = data.get("user_id")
     ip = request.client.host
+    # Brug dansk tid (Europe/Copenhagen)
+    dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
     with open("pageviews.log", "a", encoding="utf-8") as f:
-        f.write(f"{ts} {ip} {user_id} {url}\n")
+        f.write(f"{dk_time} {ip} {user_id} {url}\n")
     return {"ok": True}
 
 @app.post("/api/admin/superadmin")
@@ -1481,8 +1482,8 @@ async def admin_pageview_stats(data: dict = Body(...)):
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    today_alt = datetime.now().strftime("%d-%m-%Y")
+    # Brug dansk dato, da loggen bruger dansk tid
+    today_dk = datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
     stats = defaultdict(lambda: {"total": 0, "unique": set()})
     traad_total = {"total": 0, "unique": set()}
     traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set()})
@@ -1499,7 +1500,8 @@ async def admin_pageview_stats(data: dict = Body(...)):
             if len(parts) < 4:
                 continue
             ts = parts[0]
-            if not (ts[:10] == today or ts[:10] == today_alt):
+            # Match kun på dansk dato (YYYY-MM-DD)
+            if not ts.startswith(today_dk):
                 continue
             user_id = parts[2]
             url = parts[3]
@@ -1509,10 +1511,9 @@ async def admin_pageview_stats(data: dict = Body(...)):
             m = re.search(r"https?://[^/]+/([^?]+)", url)
             page = m.group(1) if m else url
 
-            # --- Gruppér forsiden ---
+            # Gruppér forsiden
             if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
                 page = "index.html"
-            # ------------------------
 
             if page.startswith("traad.html"):
                 traad_total["total"] += 1
@@ -1543,7 +1544,6 @@ async def admin_pageview_stats(data: dict = Body(...)):
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
     return stats_out
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async def midnight_task():
