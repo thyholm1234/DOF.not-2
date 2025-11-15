@@ -1379,11 +1379,10 @@ async def is_superadmin(data: dict = Body(...)):
     }
 
 def archive_and_reset_pageview_log(reset_log=True):
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
     log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
 
-    # Genbrug statistikberegning fra admin_pageview_stats
     stats_out = {}
     stats = defaultdict(lambda: {"total": 0, "unique": set()})
     traad_total = {"total": 0, "unique": set()}
@@ -1402,7 +1401,8 @@ def archive_and_reset_pageview_log(reset_log=True):
             if len(parts) < 4:
                 continue
             ts = parts[0]
-            if not (ts[:10] == today or ts[:10] == datetime.now().strftime("%d-%m-%Y")):
+            # Brug dansk dato
+            if not ts.startswith(today):
                 continue
             user_id = parts[2]
             url = parts[3]
@@ -1411,7 +1411,7 @@ def archive_and_reset_pageview_log(reset_log=True):
             # Find obserkode for user_id
             obserkode = get_obserkode_from_userprefs(user_id)
             if obserkode:
-                unique_obserkoder.add(obserkode)
+                unique_obserkoder.add(obserkode)  # <-- kun ét entry pr. obserkode
             m = re.search(r"https?://[^/]+/([^?]+)", url)
             page = m.group(1) if m else url
             if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
@@ -1443,6 +1443,8 @@ def archive_and_reset_pageview_log(reset_log=True):
     }
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
+    stats_out["unique_obserkoder"] = len(unique_obserkoder)  # <-- kun unikke obserkoder
+
 
     # Tæl brugere i databasen
     with sqlite3.connect(DB_PATH) as conn:
@@ -1489,13 +1491,13 @@ async def admin_pageview_stats(data: dict = Body(...)):
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
-    # Brug dansk dato, da loggen bruger dansk tid
     today_dk = datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
     stats = defaultdict(lambda: {"total": 0, "unique": set()})
     traad_total = {"total": 0, "unique": set()}
     traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set()})
     all_users = set()
     total_views = 0
+    unique_obserkoder = set()
 
     log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     if not os.path.isfile(log_path):
@@ -1507,18 +1509,20 @@ async def admin_pageview_stats(data: dict = Body(...)):
             if len(parts) < 4:
                 continue
             ts = parts[0]
-            # Match kun på dansk dato (YYYY-MM-DD)
             if not ts.startswith(today_dk):
                 continue
             user_id = parts[2]
             url = parts[3]
             all_users.add(user_id)
             total_views += 1
+            # Find obserkode for user_id
+            okode = get_obserkode_from_userprefs(user_id)
+            if okode:
+                unique_obserkoder.add(okode)
             # Find side
             m = re.search(r"https?://[^/]+/([^?]+)", url)
             page = m.group(1) if m else url
 
-            # Gruppér forsiden
             if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
                 page = "index.html"
 
@@ -1550,7 +1554,9 @@ async def admin_pageview_stats(data: dict = Body(...)):
     }
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
+    stats_out["unique_obserkoder"] = len(unique_obserkoder)  # <-- kun unikke obserkoder
     return stats_out
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async def midnight_task():
