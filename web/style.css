@@ -1,4 +1,4 @@
-/* Version: 4.6.7.0 - 2025-11-15 01.44.58 */
+/* Version: 4.6.6.3 - 2025-11-15 22.53.43 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1826,4 +1826,85 @@ header.wrap .brand {
   .toolbar button {
     margin: 0 6px;
   }
+}
+
+.sound-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 4px;
+  /* Tving til ny linje i grid */
+  grid-column: 1 / span 2;
+}
+
+@media (max-width: 800px) {
+  .sound-row {
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 4px;
+    grid-column: 1 / span 2;
+  }
+}
+
+.note-row,
+.img-row,
+.sound-row {
+  position: relative;
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 4px !important;
+  min-height: 28px;
+}
+
+.note-row .spacer,
+.img-row .spacer,
+.sound-row .spacer {
+  display: inline-block;
+  width: 100px; /* Fast bredde til badge-kant */
+  height: 1px;
+  visibility: hidden;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note-row .badge,
+.img-row .badge,
+.sound-row .badge {
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  text-align: left !important;
+  box-sizing: border-box !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  margin-right: 0 !important;
+  vertical-align: middle;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.note-row .note-text,
+.img-row a,
+.sound-row audio {
+  display: inline-block !important;
+  margin-left: 85px; /* Samme som spacer/badge-kolonne */
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: calc(100% - 85px) !important;
+  vertical-align: middle;
+}
+
+.obs-hr {
+  border: none;
+  border-top: 1px solid var(--card-border, #ccc);
+  margin: 10px 0 10px 0;
+  width: 100%;
+  grid-column: 1 / span 2;
 }

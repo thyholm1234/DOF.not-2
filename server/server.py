@@ -227,44 +227,70 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
     with open(thread_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     thread = data.get("thread", {})
-    art = thread.get("art", "")
-    lok = thread.get("lok", "")
+    art = thread.get("art", "").strip()
+    lok = thread.get("lok", "").strip()
     images = thread.get("images", [])
-    og_image = images[0] if images else "https://notifikation.dofbasen.dk/icons/icon-512.png"
-    og_title = f"{art} - {lok}"
-    og_desc = f"Se observationen af {art} ved {lok} i DOFbasen Notifikationer."
-    url = f"https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}"
+    # Brug et billede på mindst 1200x630 px hvis muligt!
+    og_image = images[0] if images else "https://notifikation.dofbasen.dk/icons/icon-2048.png"
+    og_image_width = "2048"
+    og_image_height = "2048"
+    og_image_type = "image/png" if og_image.endswith(".png") else "image/jpeg"
+    if art and lok:
+        og_title = f"{art} - {lok}"
+    elif art:
+        og_title = art
+    elif lok:
+        og_title = lok
+    else:
+        og_title = "DOFbasen Notifikation"
+    og_desc = f"Se observationen af {art or 'en fugl'} ved {lok or 'ukendt lokalitet'} i DOFbasen Notifikationer."
+    # Sæt url og canonical til denne /share/...-side!
+    url = f"https://notifikation.dofbasen.dk/share/{day}/{thread_id}"
+    canonical = f'<link rel="canonical" href="{html.escape(url)}">'
 
-    # Tjek om det er en kendt crawler
     crawler_agents = [
         "facebookexternalhit", "facebookcatalog", "meta-webindexer",
-        "meta-externalads", "meta-externalagent", "meta-externalfetcher"
+        "meta-externalads", "meta-externalagent", "meta-externalfetcher", "bsky"
     ]
     is_crawler = user_agent and any(a in user_agent.lower() for a in crawler_agents)
 
-    meta_refresh = "" if is_crawler else f'<meta http-equiv="refresh" content="0; url={html.escape(url)}">'
-    return f"""
-    <!DOCTYPE html>
-    <html lang="da">
-    <head>
-      <meta charset="utf-8">
-      <title>{html.escape(og_title)}</title>
-      <meta property="og:title" content="{html.escape(og_title)}">
-      <meta property="og:description" content="{html.escape(og_desc)}">
-      <meta property="og:image" content="{html.escape(og_image)}">
-      <meta property="og:url" content="{html.escape(url)}">
-      <meta property="og:type" content="website">
-      <meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:title" content="{html.escape(og_title)}">
-      <meta name="twitter:description" content="{html.escape(og_desc)}">
-      <meta name="twitter:image" content="{html.escape(og_image)}">
-      {meta_refresh}
-    </head>
-    <body>
-      <p>Omdirigerer til <a href="{html.escape(url)}">{html.escape(url)}</a>...</p>
-    </body>
-    </html>
-    """
+    # Kun redirect for almindelige brugere, ikke crawlers
+    meta_refresh = ""
+    if user_agent and not is_crawler:
+        # Omdiriger til traad.html for almindelige brugere
+        traad_url = f"https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}"
+        meta_refresh = f'<meta http-equiv="refresh" content="0; url={html.escape(traad_url)}">'
+
+    html_out = f"""<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{html.escape(og_title)}</title>
+  <meta property="og:url" content="{html.escape(url)}">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="{html.escape(og_title)}">
+  <meta property="og:description" content="{html.escape(og_desc)}">
+  <meta property="og:site_name" content="DOFbasen Notifikationer">
+  <meta property="og:image" content="{html.escape(og_image)}">
+  <meta property="og:image:type" content="{og_image_type}">
+  <meta property="og:image:width" content="{og_image_width}">
+  <meta property="og:image:height" content="{og_image_height}">
+  <meta property="og:locale" content="da_DK">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{html.escape(og_title)}">
+  <meta name="twitter:description" content="{html.escape(og_desc)}">
+  <meta name="twitter:image" content="{html.escape(og_image)}">
+  <meta name="twitter:image:alt" content="{html.escape(og_title)}">
+  {canonical}
+  {meta_refresh}
+</head>
+<body>
+  <p>Omdirigerer til <a href="https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}">https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}</a>...</p>
+</body>
+</html>
+"""
+    return HTMLResponse(content=html_out, status_code=200)
 
 @app.post("/api/log-pageview")
 async def log_pageview(data: dict, request: Request):

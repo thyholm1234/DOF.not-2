@@ -1,4 +1,4 @@
-// Version: 4.6.7.0 - 2025-11-15 01.44.58
+// Version: 4.6.6.3 - 2025-11-15 22.53.43
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -25,6 +25,13 @@
     const d = Math.floor(h / 24);
     return `${d} d`;
   }
+
+  function ensureObsHr(obsRow) {
+    if (!obsRow.querySelector('.obs-hr')) {
+      obsRow.appendChild(el('hr', 'obs-hr'));
+    }
+  }
+
   function getParam(name) {
     const q = new URLSearchParams(location.search);
     return q.get(name) || '';
@@ -313,9 +320,6 @@
 
           obsRow.appendChild(infoRow);
 
-          // Vandret streg under body
-          obsRow.appendChild(el('hr', 'obs-hr'));
-
           // --- Hent DKU-status, billeder og lyd i ét kald ---
           if (ev.Obsid) {
             (async () => {
@@ -326,9 +330,9 @@
 
                   // DKU-status badge
                   if (data.status && data.status.trim()) {
+                    ensureObsHr(obsRow);
                     const dkuRow = el('div', 'note-row');
                     const badge = el('span', 'badge', 'DKU');
-                    badge.style.marginRight = "8px";
                     badge.style.background = "rgba(0, 162, 255, 1)";
                     badge.style.color = "#fff";
                     badge.style.fontWeight = "bold";
@@ -349,6 +353,7 @@
 
                   // Billeder
                   if (data.images && data.images.length) {
+                    ensureObsHr(obsRow);
                     data.images.forEach((url, idx) => {
                       const imgRow = el('div', 'img-row');
                       const badge = el('span', 'badge', `Pic#${idx + 1}`);
@@ -372,6 +377,7 @@
 
                   // Lydfiler
                   if (data.sound_urls && data.sound_urls.length) {
+                    ensureObsHr(obsRow);
                     data.sound_urls.forEach((url, idx) => {
                       const soundRow = el('div', 'sound-row');
                       const badge = el('span', 'badge', `Rec#${idx + 1}`);
@@ -393,8 +399,22 @@
           }
           // --- DKU-status, billeder og lyd slut ---
 
+          if (ev.Medobser && ev.Medobser.trim()) {
+            ensureObsHr(obsRow);
+            const medobserRow = el('div', 'note-row');
+            const badge = el('span', 'badge', 'Medobser');
+            badge.style.marginRight = "8px";
+            medobserRow.appendChild(badge);
+            const medobserText = document.createElement('span');
+            medobserText.className = 'note-text';
+            medobserText.textContent = ev.Medobser;
+            medobserRow.appendChild(medobserText);
+            obsRow.appendChild(medobserRow);
+          }
+
           // Turnoter badge og tekst (hvis findes)
-          if (ev.Turnoter) {
+          if (ev.Turnoter && ev.Turnoter.trim()) {
+              ensureObsHr(obsRow);
               const noteRow = el('div', 'note-row');
               const badge = el('span', 'badge', 'Turnote');
               badge.style.marginRight = "8px";
@@ -407,7 +427,8 @@
           }
 
           // Fuglnoter badge og tekst (hvis findes)
-          if (ev.Fuglnoter) {
+          if (ev.Fuglnoter && ev.Fuglnoter.trim()) {
+              ensureObsHr(obsRow);
               const noteRow = el('div', 'note-row');
               const badge = el('span', 'badge', 'Obsnote');
               badge.style.marginRight = "8px";

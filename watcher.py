@@ -590,21 +590,25 @@ def _state_get_obsids(state_val) -> Set[str]:
     return set()
 
 
-def build_state(rows: List[Dict[str, str]]) -> Dict[str, Dict[str, object]]:
-    by_key: Dict[str, Dict[str, object]] = {}
+def build_state(rows: List[Dict[str, str]]) -> Dict[str, dict]:
+    state = {}
     for r in rows:
-        k = _key(r)
-        if not k.strip():
-            continue
+        art = (r.get("Artnavn") or "").strip()
+        lok = (r.get("Loknr") or "").strip()
+        key = f"{art}|{lok}"
         antal = parse_float(r.get("Antal"))
+        obserkode = (r.get("Obserkode") or "").strip()
         obsid = _obsid(r)
-        entry = by_key.setdefault(k, {"antal": 0.0, "obsids": set()})
-        entry["antal"] += antal  # SUM i stedet for max
-        if obsid:
-            entry["obsids"].add(obsid)
-    for k, v in by_key.items():
-        v["obsids"] = sorted(list(v["obsids"]))
-    return by_key
+        if not key or not obserkode or not obsid:
+            continue
+        entry = state.setdefault(key, {"max_antal": 0, "obserkoder": {}})
+        entry["max_antal"] = max(entry["max_antal"], antal)
+        entry["obserkoder"].setdefault(obserkode, set()).add(obsid)
+    # Konverter sets til lister for JSON
+    for entry in state.values():
+        for k in entry["obserkoder"]:
+            entry["obserkoder"][k] = sorted(list(entry["obserkoder"][k]))
+    return state
 
 
 def get_changed_keys(
@@ -633,8 +637,15 @@ def get_new_obsids_by_key(
     """Find nye obsid’er pr. key: obsid i new_state men ikke i old_state."""
     result: Dict[str, Set[str]] = {}
     for k, v in new_state.items():
-        new_ids = set(v.get("obsids") or [])
-        old_ids = _state_get_obsids(old_state.get(k))
+        # Saml alle obsids fra alle observerkoder
+        new_ids = set()
+        for obsids in (v.get("obserkoder") or {}).values():
+            new_ids.update(obsids)
+        # Saml gamle obsids
+        old_ids = set()
+        old_v = old_state.get(k) or {}
+        for obsids in (old_v.get("obserkoder") or {}).values():
+            old_ids.update(obsids)
         diff = new_ids - old_ids
         if diff:
             result[k] = diff
