@@ -1,4 +1,4 @@
-// Version: 4.7.1.0 - 2025-11-16 01.01.20
+// Version: 4.7.1.2 - 2025-11-16 01.14.27
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       const stats = await res.json();
-      let html = "<h3>Trafik i dag</h3>";
+      let html = "<h2 style='margin-top:0'>Trafik i dag</h2>";
 
       // Tilføj knapper til superadmin
       if (window.isSuperadmin) {
@@ -491,19 +491,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
           if (res.ok) {
             const data = await res.json();
-
-            // VIS UNIKKE OBSERKODER TOTALT (kort øverst)
-            if (data.last7 && data.last7.length) {
-              // Vis total_db for seneste dag (sidste dag i last7 med data)
-              const lastDayWithData = [...data.last7].reverse().find(d => d.unique_obserkoder_total_db > 0);
-              const totalDb = lastDayWithData ? lastDayWithData.unique_obserkoder_total_db : 0;
-              const panel = document.getElementById("traffic-panel");
-              const card = document.createElement("div");
-              card.className = "card";
-              card.style.marginBottom = "1em";
-              card.innerHTML = `<b>Unikke obserkoder i databasen: ${totalDb}</b>`;
-              panel.insertBefore(card, panel.firstChild);
-            }
 
             // Sidste 7 dage - brug dagsværdier for unique_obserkoder_total_db og users_total
             const labels7 = data.last7.map(d => d.date.slice(5));

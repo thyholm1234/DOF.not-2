@@ -296,6 +296,11 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
 async def log_pageview(data: dict, request: Request):
     url = data.get("url")
     user_id = data.get("user_id")
+    # Tjek superadmin
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun superadmin")
     ip = request.client.host
     # Brug dansk tid (Europe/Copenhagen)
     dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
@@ -309,25 +314,26 @@ async def superadmins(data: dict = Body(None)):
     user_id = (data or {}).get("user_id", "")
     obserkode = ((data or {}).get("obserkode") or "").strip().upper()
     try:
+        superadmins = load_superadmins()
+        # Hent protected-listen direkte fra filen (hvis du bruger den)
         with open("./superadmin.json", "r", encoding="utf-8") as f:
             file_data = json.load(f)
-        superadmin_list = set(file_data.get("superadmins", []))
         protected = set(file_data.get("protected", []))
+        requester_obserkode = get_obserkode_from_userprefs(user_id)
+        if requester_obserkode not in superadmins:
+            raise HTTPException(status_code=403, detail="Kun hovedadmin")
         if action == "get":
-            return {"superadmins": sorted(superadmin_list)}
+            return {"superadmins": sorted(superadmins)}
         elif action == "toggle":
-            requester_obserkode = get_obserkode_from_userprefs(user_id)
-            if requester_obserkode not in superadmin_list:
-                raise HTTPException(status_code=403, detail="Kun hovedadmin")
             if not obserkode:
                 raise HTTPException(status_code=400, detail="Obserkode mangler")
             if obserkode in protected:
                 raise HTTPException(status_code=400, detail="Denne superadmin kan ikke fjernes")
-            if obserkode in superadmin_list:
-                superadmin_list.remove(obserkode)
+            if obserkode in superadmins:
+                superadmins.remove(obserkode)
             else:
-                superadmin_list.add(obserkode)
-            file_data["superadmins"] = sorted(superadmin_list)
+                superadmins.add(obserkode)
+            file_data["superadmins"] = sorted(superadmins)
             with open("./superadmin.json", "w", encoding="utf-8") as f:
                 json.dump(file_data, f, ensure_ascii=False, indent=2)
             return {"ok": True, "superadmins": file_data["superadmins"]}
@@ -634,61 +640,11 @@ async def add_art(data: dict = Body(...)):
     user_id = data.get("user_id", "")
     device_id = data.get("device_id", "")
 
-    # Admin-tjek
+    # Superadmin-tjek
     obserkode = get_obserkode_from_userprefs(user_id)
-    admins = load_admins()
-    if obserkode not in admins:
-        raise HTTPException(status_code=403, detail="Ikke admin")
-
-    # 1. Tilføj til arter_filter_klassificeret.csv hvis ikke findes
-    arter_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
-    with open(arter_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    exists = any(line.split(";")[0].strip() == artsid for line in lines)
-    if not exists:
-        append_line_robust(arter_path, f"{artsid};{artsnavn};{klassifikation}")
-        # Synkroniser til web/data også hvis nødvendigt
-        web_arter_path = os.path.join(os.path.dirname(__file__), "..", "web", "data", "arter_filter_klassificeret.csv")
-        if os.path.exists(web_arter_path):
-            append_line_robust(web_arter_path, f"{artsid};{artsnavn};{klassifikation}")
-
-    # 2. Tilføj til alle bemærk-filer (undtagen faenologi)
-    bemaerk_files = [
-        "bornholm_bemaerk_parsed.csv", "fyn_bemaerk_parsed.csv", "koebenhavn_bemaerk_parsed.csv",
-        "nordjylland_bemaerk_parsed.csv", "nordsjaelland_bemaerk_parsed.csv", "nordvestjylland_bemaerk_parsed.csv",
-        "oestjylland_bemaerk_parsed.csv", "soenderjylland_bemaerk_parsed.csv", "storstroem_bemaerk_parsed.csv",
-        "sydoestjylland_bemaerk_parsed.csv", "sydvestjylland_bemaerk_parsed.csv", "vestjylland_bemaerk_parsed.csv",
-        "vestsjaelland_bemaerk_parsed.csv"
-    ]
-    for fname in bemaerk_files:
-        path = os.path.join(os.path.dirname(__file__), "..", "data", fname)
-        # Tjek om artsnavn allerede findes
-        exists = False
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.split(";")[0].strip().lower() == artsnavn.lower():
-                        exists = True
-                        break
-        if not exists:
-            append_line_robust(path, f"{artsnavn};{bemaerk_antal}")
-
-    return {"ok": True}
-
-@app.post("/api/admin/add-art")
-async def add_art(data: dict = Body(...)):
-    artsid = data.get("artsid", "").strip()
-    artsnavn = data.get("artsnavn", "").strip()
-    klassifikation = data.get("klassifikation", "").strip()
-    bemaerk_antal = data.get("bemaerk_antal", "").strip()
-    user_id = data.get("user_id", "")
-    device_id = data.get("device_id", "")
-
-    # Admin-tjek
-    obserkode = get_obserkode_from_userprefs(user_id)
-    admins = load_admins()
-    if obserkode not in admins:
-        raise HTTPException(status_code=403, detail="Ikke admin")
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
     # 1. Tilføj til arter_filter_klassificeret.csv hvis ikke findes
     arter_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
@@ -2183,6 +2139,15 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                 comments = get_comments_for_thread(day, thread_id)
                 comments.append(comment)
                 save_comments_for_thread(day, thread_id, comments)
+
+                # Log kommentaren til comments.log
+                comment_log_entry = {
+                    "day": day,
+                    "thread_id": thread_id,
+                    **comment
+                }
+                with open("comments.log", "a", encoding="utf-8") as logf:
+                    logf.write(json.dumps(comment_log_entry, ensure_ascii=False) + "\n")
 
                 # Tilføj forfatteren som abonnent på tråden (hvis ikke allerede)
                 with sqlite3.connect(DB_PATH) as conn:
