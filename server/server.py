@@ -54,6 +54,18 @@ async def lifespan(app: FastAPI):
     t = threading.Thread(target=run_and_repeat, daemon=True)
     t.start()
 
+    # Midnat-task (asynkron)
+    async def midnight_task():
+        tz = pytz.timezone("Europe/Copenhagen")
+        while True:
+            now = datetime.now(tz)
+            next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            seconds = (next_midnight - now).total_seconds()
+            await asyncio.sleep(seconds)
+            yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
+            archive_and_reset_pageview_log(for_date=yesterday, reset_log=True)
+    asyncio.create_task(midnight_task())
+
     yield  # Lifespan fortsætter mens app kører
 
 app = FastAPI(lifespan=lifespan)
@@ -1698,22 +1710,6 @@ async def admin_pageview_stats(data: dict = Body(...)):
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
     return stats_out
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async def midnight_task():
-        tz = pytz.timezone("Europe/Copenhagen")
-        while True:
-            now = datetime.now(tz)
-            # Beregn sekunder til næste midnat
-            next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-            seconds = (next_midnight - now).total_seconds()
-            await asyncio.sleep(seconds)
-            # Når klokken slår 00:00:00, skriv masterlog for gårsdagen
-            yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
-            archive_and_reset_pageview_log(for_date=yesterday, reset_log=True)
-    asyncio.create_task(midnight_task())
-    yield
 
 @app.post("/api/admin/archive-pageview-log")
 async def archive_pageview_log(data: dict = Body(...)):

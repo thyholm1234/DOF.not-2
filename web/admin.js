@@ -528,14 +528,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 365-dages graf - brug dagsværdier for unique_obserkoder_total_db og users_total
             const allDates = (data.last365 || []).map(d => d.date);
-            let minDate = allDates.length ? new Date(allDates[0]) : new Date();
-            let maxDate = allDates.length ? new Date(allDates[allDates.length - 1]) : new Date();
+            let minDate, maxDate;
             const today = new Date();
-            if ((maxDate - minDate) / 86400000 < 6) {
-              minDate = new Date(today);
-              minDate.setDate(today.getDate() - 6);
-              maxDate = today;
+            const todayStr = today.toISOString().slice(0, 10);
+
+            // Vis altid mindst 14 dage (inkl. i dag)
+            const minNeeded = new Date(today);
+            minNeeded.setDate(today.getDate() - 13); // 14 dage inkl. i dag
+            const minNeededStr = minNeeded.toISOString().slice(0, 10);
+
+            if (allDates.length >= 1) {
+              minDate = allDates[0];
+              maxDate = allDates[allDates.length - 1];
+              if (minDate > minNeededStr) minDate = minNeededStr;
+              if (maxDate < todayStr) maxDate = todayStr;
+            } else {
+              minDate = minNeededStr;
+              maxDate = todayStr;
             }
+
             const dayMap = {};
             (data.last365 || []).forEach(d => { dayMap[d.date] = d; });
 
@@ -544,9 +555,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const uniqueObserkoder365 = [];
             const usersTotal365 = [];
 
-            let d = new Date(minDate);
-            while (d <= maxDate) {
-              const ds = d.toISOString().slice(0, 10);
+            let dObj = new Date(minDate);
+            const maxObj = new Date(maxDate);
+
+            while (dObj <= maxObj) {
+              const ds = dObj.toISOString().slice(0, 10);
               labels365.push(ds);
               if (dayMap[ds]) {
                 users365.push(dayMap[ds].unique_users_total);
@@ -557,7 +570,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 uniqueObserkoder365.push(0);
                 usersTotal365.push(0);
               }
-              d.setDate(d.getDate() + 1);
+              dObj.setDate(dObj.getDate() + 1);
             }
 
             new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
