@@ -1,4 +1,4 @@
-// Version: 4.7.0 - 2025-11-16 00.35.56
+// Version: 4.7.1.0 - 2025-11-16 01.01.20
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -430,26 +430,21 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         `;
       }
-      panel.innerHTML = html;
+      panel.innerHTML = html;    
 
-      // Tilføj event handlers til download-knapperne
+      // Tilføj event handler til "Gem masterlog nu"-knap
       if (window.isSuperadmin) {
         const user_id = getOrCreateUserId();
         const masterlogBtn = document.getElementById("download-masterlog-btn");
         const pageviewsBtn = document.getElementById("download-pageviews-btn");
+        const archiveBtn = document.getElementById("archive-traffic-log-btn");
+
         if (masterlogBtn) {
           masterlogBtn.onclick = () => downloadAdminFile('pageview_masterlog.jsonl', user_id);
         }
         if (pageviewsBtn) {
           pageviewsBtn.onclick = () => downloadAdminFile('pageviews.log', user_id);
         }
-      }
-
-      
-
-      // Tilføj event handler til "Gem masterlog nu"-knap
-      if (window.isSuperadmin) {
-        const archiveBtn = document.getElementById("archive-traffic-log-btn");
         if (archiveBtn) {
           archiveBtn.onclick = async function() {
             archiveBtn.disabled = true;
@@ -503,9 +498,11 @@ document.addEventListener('DOMContentLoaded', async () => {
               const lastDayWithData = [...data.last7].reverse().find(d => d.unique_obserkoder_total_db > 0);
               const totalDb = lastDayWithData ? lastDayWithData.unique_obserkoder_total_db : 0;
               const panel = document.getElementById("traffic-panel");
-              panel.innerHTML = `<div class="card" style="margin-bottom:1em;">
-                <b>Unikke obserkoder i databasen: ${totalDb}</b>
-              </div>` + panel.innerHTML;
+              const card = document.createElement("div");
+              card.className = "card";
+              card.style.marginBottom = "1em";
+              card.innerHTML = `<b>Unikke obserkoder i databasen: ${totalDb}</b>`;
+              panel.insertBefore(card, panel.firstChild);
             }
 
             // Sidste 7 dage - brug dagsværdier for unique_obserkoder_total_db og users_total

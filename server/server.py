@@ -1436,10 +1436,11 @@ async def is_superadmin(data: dict = Body(...)):
         "obserkode": obserkode
     }
 
-def archive_and_reset_pageview_log(for_date=None):
+def archive_and_reset_pageview_log(for_date=None, reset_log=True):
     tz = pytz.timezone("Europe/Copenhagen")
+    today = datetime.now(tz).strftime("%Y-%m-%d")  # Dagens dato
     if for_date is None:
-        for_date = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
+        for_date = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")  # Gårsdagens dato
     log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
 
@@ -1540,9 +1541,10 @@ def archive_and_reset_pageview_log(for_date=None):
         f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
 
     # Overskriv pageviews.log med kun de linjer der IKKE matcher for_date
-    with open(log_path, "w", encoding="utf-8") as f:
-        for line in kept_lines:
-            f.write(line if line.endswith("\n") else line + "\n")
+    if reset_log:
+        with open(log_path, "w", encoding="utf-8") as f:
+            for line in kept_lines:
+                f.write(line if line.endswith("\n") else line + "\n")
 
 @app.post("/api/admin/pageview-stats")
 async def admin_pageview_stats(data: dict = Body(...)):
@@ -1630,7 +1632,7 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(seconds)
             # Når klokken slår 00:00:00, skriv masterlog for gårsdagen
             yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
-            archive_and_reset_pageview_log(for_date=yesterday)
+            archive_and_reset_pageview_log(for_date=yesterday, reset_log=True)
     asyncio.create_task(midnight_task())
     yield
 
@@ -1641,7 +1643,9 @@ async def archive_pageview_log(data: dict = Body(...)):
     superadmins = load_superadmins()
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
-    archive_and_reset_pageview_log(reset_log=False)
+    tz = pytz.timezone("Europe/Copenhagen")
+    today = datetime.now(tz).strftime("%Y-%m-%d")
+    archive_and_reset_pageview_log(for_date=today, reset_log=False)
     return {"status": "ok"}
 
 @app.post("/api/admin/list-admins")
