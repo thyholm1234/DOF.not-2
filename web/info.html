@@ -1,4 +1,4 @@
-<!-- Version: 4.7.3.10 - 2025-11-16 23.23.02 -->
+<!-- Version: 4.7.4 - 2025-11-16 23.29.37 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -17,7 +17,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.7.3.10">
+  <link rel="stylesheet" href="/style.css?v=4.7.4">
   <style>
   .card h2 {
     margin-top: 0;
@@ -131,12 +131,12 @@
     <div class="card">
       <h2>Data og tredjeparter</h2>
       <p>
-        Appen benytter en række tredjepartsbiblioteker og -tjenester for at fungere. På serversiden anvendes FastAPI til at håndtere webserver, push-notifikationer og brugerdata. Når brugeren logger ind, sendes loginoplysninger til DOFbasens officielle API, og der hentes supplerende oplysninger som navn fra DOFbasen. Push-notifikationer sendes via browserens indbyggede push-tjeneste, hvilket betyder, at beskeder går igennem browserleverandørens push-servere (typisk Google, Mozilla eller Apple afhængigt af brugerens browser). Appen udveksler ikke brugerdata med andre virksomheder end DOFbasen.
+        Appen benytter en række tredjepartsbiblioteker og -tjenester for at fungere. På serversiden anvendes FastAPI til at håndtere webserver, push-notifikationer og brugerdata. Når brugeren logger ind, sendes loginoplysninger til DOFbasens officielle API, og der hentes supplerende oplysninger som navn fra DOFbasen. Push-notifikationer sendes via browserens indbyggede push-tjeneste, hvilket betyder, at beskeder går igennem browserleverandørens push-servere (typisk Google, Mozilla eller Apple afhængigt af brugerens browser). Derudover logges sidebesøg med henblik på brugsanalyse. Appen udveksler ikke brugerdata med andre virksomheder end DOFbasen.
       </p>
     </div>
   </main>
 
-  <script src="app.js?v=4.7.3.10"></script>
+  <script src="app.js?v=4.7.4"></script>
   <footer class="footer">
     <a href="https://dofbasen.dk" target="_blank" rel="noopener" class="footer-link">
       <div class="footer-content">
