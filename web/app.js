@@ -1,4 +1,4 @@
-// Version: 4.7.2 - 2025-11-16 01.25.51
+// Version: 4.7.3.10 - 2025-11-16 23.23.02
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -25,14 +25,62 @@ function isFirstVisit() {
   return false;
 }
 
+function getBrowserInfo() {
+  const ua = navigator.userAgent;
+  if (/chrome|crios|crmo/i.test(ua) && !/edge|edg|opr|opera/i.test(ua)) return "Chrome";
+  if (/firefox|fxios/i.test(ua)) return "Firefox";
+  if (/safari/i.test(ua) && !/chrome|crios|crmo|android/i.test(ua)) return "Safari";
+  if (/edg/i.test(ua)) return "Edge";
+  if (/opr|opera/i.test(ua)) return "Opera";
+  if (/android/i.test(ua)) return "Android WebView";
+  return "Unknown";
+}
+
+function isPWA() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true || // iOS
+    document.referrer.startsWith('android-app://')
+  );
+}
+
+function getOSInfo() {
+  const ua = navigator.userAgent;
+  if (/windows nt/i.test(ua)) return "Windows";
+  if (/android/i.test(ua)) return "Android";
+  if (/iphone|ipad|ipod/i.test(ua)) return "iOS";
+  if (/macintosh|mac os x/i.test(ua)) return "MacOS";
+  if (/linux/i.test(ua)) return "Linux";
+  return "Other";
+}
+
+function cleanUrl(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.delete("from_share");
+    // Fjern evt. tom querystring
+    return u.origin + u.pathname + (u.search ? u.search : '') + (u.hash ? u.hash : '');
+  } catch (e) {
+    return url;
+  }
+}
+
 function logPageView(userId) {
+  const params = new URLSearchParams(window.location.search);
+  const fromShare = params.get("from_share") === "1";
+  let url = window.location.href;
+  if (fromShare) url = cleanUrl(url);
   fetch("/api/log-pageview", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      url: window.location.href,
+      url: url,
       ts: new Date().toISOString(),
-      user_id: userId
+      user_id: userId,
+      os: getOSInfo(),
+      browser: getBrowserInfo(),
+      is_pwa: isPWA(),
+      from_sharelink: fromShare
     })
   });
 }

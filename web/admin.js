@@ -1,4 +1,4 @@
-// Version: 4.7.2 - 2025-11-16 01.25.51
+// Version: 4.7.3.10 - 2025-11-16 23.23.02
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -393,6 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div style="font-weight:bold;">traad.html (alle tråde)</div>
           <div>Unikke brugere: <b>${stats["traad.html"].unique}</b></div>
           <div>Visninger: <b>${stats["traad.html"].total}</b></div>
+          ${stats["traad.html"].sharelink > 0 ? `<div>Fra sharelink: <b>${stats["traad.html"].sharelink}</b></div>` : ""}
         </div><hr>`;
 
         // Pr. tråd som cards, sorteret efter flest unikke brugere
@@ -411,6 +412,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div style="font-weight:bold;">${thread}</div>
               <div>Unikke brugere: <b>${tinfo.unique}</b></div>
               <div>Visninger: <b>${tinfo.total}</b></div>
+              ${tinfo.sharelink > 0 ? `<div>Fra sharelink: <b>${tinfo.sharelink}</b></div>` : ""}
             </div>
           </a>`;
         }
@@ -427,6 +429,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="card" style="margin-bottom:1em;">
             <h4>Traffik det sidste år</h4>
             <canvas id="traffic-graph-52w" height="120"></canvas>
+          </div>
+          <hr style="margin:1.5em 0;">
+          <div class="card" style="margin-bottom:1em;">
+            <h4>PWA installation blandt brugere i dag</h4>
+            <canvas id="traffic-pwa-pie" style="max-height:400px;height:400px;width:100%;"></canvas>
+          </div>
+          <div class="card" style="margin-bottom:1em;">
+            <h4>Platforme og browsere pr. bruger i dag</h4>
+            <canvas id="traffic-platform-bar" height="120"></canvas>
           </div>
         `;
       }
@@ -578,6 +589,60 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
               }
             });
+            // Brug userplatforms-data
+            const userplatforms = data.userplatforms || {};
+            // Doughnut: PWA installeret/ikke installeret
+            if (userplatforms && typeof userplatforms.pwa_installed === "number") {
+              new Chart(document.getElementById("traffic-pwa-pie").getContext("2d"), {
+                type: "doughnut",
+                data: {
+                  labels: ["Installeret", "Ikke installeret"],
+                  datasets: [{
+                    data: [userplatforms.pwa_installed, userplatforms.pwa_not_installed],
+                    backgroundColor: ["#2ECC40", "#FF4136"]
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: true } }
+                }
+              });
+            }
+
+            // Bar: OS/Browser kombinationer
+            if (userplatforms && Array.isArray(userplatforms.platform_combinations)) {
+              const combos = userplatforms.platform_combinations;
+              const labels = combos.map(c => `${c.os} / ${c.browser}`);
+              const counts = combos.map(c => c.count);
+              new Chart(document.getElementById("traffic-platform-bar").getContext("2d"), {
+                type: "bar",
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: "Antal brugere",
+                    data: counts,
+                    backgroundColor: "#0074D9"
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                          if (Number.isInteger(value)) return value;
+                          return '';
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            }
           }
         } catch (e) {
           // ignore

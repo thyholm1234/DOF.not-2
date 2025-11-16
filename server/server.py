@@ -221,6 +221,9 @@ def set_prefs(user_id, prefs):
 @app.get("/share/{day}/{thread_id}", response_class=HTMLResponse)
 async def share_thread(day: str, thread_id: str, user_agent: str = Header(None)):
     import html
+    import pytz
+    from datetime import datetime
+
     thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
     if not os.path.isfile(thread_path):
         return HTMLResponse("<h1>Ikke fundet</h1>", status_code=404)
@@ -258,7 +261,7 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
     meta_refresh = ""
     if user_agent and not is_crawler:
         # Omdiriger til traad.html for almindelige brugere
-        traad_url = f"https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}"
+        traad_url = f"https://notifikation.dofbasen.dk/traad.html?date={day}&id={thread_id}&from_share=1"
         meta_refresh = f'<meta http-equiv="refresh" content="0; url={html.escape(traad_url)}">'
 
     html_out = f"""<!DOCTYPE html>
@@ -296,16 +299,14 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
 async def log_pageview(data: dict, request: Request):
     url = data.get("url")
     user_id = data.get("user_id")
-    # Tjek superadmin
-    obserkode = get_obserkode_from_userprefs(user_id)
-    superadmins = load_superadmins()
-    if obserkode not in superadmins:
-        raise HTTPException(status_code=403, detail="Kun superadmin")
+    os_info = data.get("os", "Unknown")
+    browser = data.get("browser", "Unknown")
+    is_pwa = data.get("is_pwa", False)
+    from_sharelink = data.get("from_sharelink", False)
     ip = request.client.host
-    # Brug dansk tid (Europe/Copenhagen)
     dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
     with open("pageviews.log", "a", encoding="utf-8") as f:
-        f.write(f"{dk_time} {ip} {user_id} {url}\n")
+        f.write(f"{dk_time} {ip} {user_id} {url} OS: {os_info}  BROWSER: {browser}  PWA: {is_pwa}{'  SHARELINK: True' if from_sharelink else ''}\n")
     return {"ok": True}
 
 @app.post("/api/admin/superadmin")
@@ -1169,51 +1170,134 @@ async def admin_traffic_graphs(data: dict = Body(...)):
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
     masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
-    if not os.path.isfile(masterlog_path):
-        return JSONResponse({"error": "No masterlog"}, status_code=404)
-
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     import datetime
     import collections
     import json
     import sqlite3
 
-    # Helper: parse date
     def parse_date(s):
         try:
             return datetime.datetime.strptime(s, "%Y-%m-%d").date()
         except Exception:
             return None
 
-    # Læs alle linjer
-    days = []
-    with open(masterlog_path, "r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                obj = json.loads(line)
-                d = parse_date(obj.get("date", ""))
-                if d:
-                    days.append((d, obj))
-            except Exception:
-                continue
+    # Læs alle linjer og byg dict med dato -> sidste obj (fra masterlog)
+    days_dict = {}
+    if os.path.isfile(masterlog_path):
+        with open(masterlog_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                    d = parse_date(obj.get("date", ""))
+                    if d:
+                        days_dict[d] = obj  # overskriv, så sidste vinder
+                except Exception:
+                    continue
+
+    # Beregn dagens statistik fra pageviews.log (samme logik som archive_and_reset_pageview_log)
+    today = datetime.datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
+    today_date = datetime.datetime.strptime(today, "%Y-%m-%d").date()
+    if os.path.isfile(log_path):
+        stats = collections.defaultdict(lambda: {"total": 0, "unique": set()})
+        traad_total = {"total": 0, "unique": set()}
+        traad_per_thread = collections.defaultdict(lambda: {"total": 0, "unique": set()})
+        all_users = set()
+        total_views = 0
+        unique_obserkoder = set()
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 4:
+                    continue
+                ts = parts[0]
+                if not ts.startswith(today):
+                    continue
+                user_id = parts[2]
+                url = parts[3]
+                all_users.add(user_id)
+                total_views += 1
+                # Find obserkode for user_id
+                okode = get_obserkode_from_userprefs(user_id)
+                if okode:
+                    unique_obserkoder.add(okode)
+                m = re.search(r"https?://[^/]+/([^?]+)", url)
+                page = m.group(1) if m else url
+                if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
+                    page = "index.html"
+                if page.startswith("traad.html"):
+                    traad_total["total"] += 1
+                    traad_total["unique"].add(user_id)
+                    m_id = re.search(r"id=([a-z0-9\-]+)", url)
+                    m_date = re.search(r"date=([0-9\-]+)", url)
+                    if m_id and m_date:
+                        key = f"{m_id.group(1)}-{m_date.group(1)}"
+                        traad_per_thread[key]["total"] += 1
+                        traad_per_thread[key]["unique"].add(user_id)
+                stats[page]["total"] += 1
+                stats[page]["unique"].add(user_id)
+        stats_out = {
+            "date": today,
+            "unique_users_total": len(all_users),
+            "total_views": total_views,
+            "unique_obserkoder": len(unique_obserkoder)
+        }
+        for page, d in stats.items():
+            stats_out[page] = {
+                "total": d["total"],
+                "unique": len(d["unique"])
+            }
+        stats_out["traad.html"] = {
+            "total": traad_total["total"],
+            "unique": len(traad_total["unique"]),
+            "threads": {
+                k: {"total": v["total"], "unique": len(v["unique"])}
+                for k, v in traad_per_thread.items()
+            }
+        }
+        # Tæl brugere i databasen
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+            total_users = 0
+            users_with_obserkode = 0
+            users_without_obserkode = 0
+            all_db_obserkoder = set()
+            for (prefs_json,) in rows:
+                try:
+                    prefs = json.loads(prefs_json)
+                    total_users += 1
+                    obserkode = prefs.get("obserkode")
+                    if obserkode:
+                        users_with_obserkode += 1
+                        all_db_obserkoder.add(obserkode)
+                    else:
+                        users_without_obserkode += 1
+                except Exception:
+                    continue
+        stats_out["users_total"] = total_users
+        stats_out["users_with_obserkode"] = users_with_obserkode
+        stats_out["users_without_obserkode"] = users_without_obserkode
+        stats_out["unique_obserkoder_total_db"] = len(all_db_obserkoder)
+        # Opdater days_dict for i dag
+        days_dict[today_date] = stats_out
 
     # Sortér efter dato
-    days.sort(key=lambda x: x[0])
+    days = sorted(days_dict.items(), key=lambda x: x[0])
 
     # Sidste 7 dage (inkl. i dag)
-    today = datetime.date.today()
     last7 = []
     for i in range(6, -1, -1):
-        d = today - datetime.timedelta(days=i)
-        found = next((obj for (dt, obj) in days if dt == d), None)
-        if found:
+        d = datetime.datetime.now(pytz.timezone("Europe/Copenhagen")).date() - datetime.timedelta(days=i)
+        obj = days_dict.get(d)
+        if obj:
             last7.append({
                 "date": d.strftime("%Y-%m-%d"),
-                "unique_users_total": found.get("unique_users_total", 0),
-                "users_with_obserkode": found.get("users_with_obserkode", 0),
-                "users_without_obserkode": found.get("users_without_obserkode", 0),
-                "unique_obserkoder": found.get("unique_obserkoder", 0),
-                "unique_obserkoder_total_db": found.get("unique_obserkoder_total_db", 0),
-                "users_total": found.get("users_total", 0)
+                "unique_users_total": obj.get("unique_users_total", 0),
+                "users_with_obserkode": obj.get("users_with_obserkode", 0),
+                "users_without_obserkode": obj.get("users_without_obserkode", 0),
+                "unique_obserkoder": obj.get("unique_obserkoder", 0),
+                "unique_obserkoder_total_db": obj.get("unique_obserkoder_total_db", 0),
+                "users_total": obj.get("users_total", 0)
             })
         else:
             last7.append({
@@ -1265,25 +1349,47 @@ async def admin_traffic_graphs(data: dict = Body(...)):
             "users_without_obserkode": v["users_without_obserkode"]
         })
 
-    # Læs fra databasen: antal brugere uden obserkode og antal unikke obserkoder
-    users_without_obserkode_db = 0
-    unique_obserkoder = set()
-    with sqlite3.connect(DB_PATH) as conn:
-        rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
-        for (prefs_json,) in rows:
-            try:
-                prefs = json.loads(prefs_json)
-                kode = (prefs.get("obserkode") or "").strip()
-                if kode:
-                    unique_obserkoder.add(kode)
-                else:
-                    users_without_obserkode_db += 1
-            except Exception:
-                continue
+    # --- Userplatforms statistik (samme logik som last-user-platforms) ---
+    userplatforms = {}
+    last_seen = {}
+    if os.path.isfile(log_path):
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 4:
+                    continue
+                user_id = parts[2]
+                m = re.search(r'OS:\s*([^\s]+)\s+BROWSER:\s*([^\s]+)\s+PWA:\s*([^\s]+)', line)
+                if m:
+                    os_info = m.group(1)
+                    browser = m.group(2)
+                    is_pwa = m.group(3)
+                    last_seen[user_id] = (os_info, browser, is_pwa)
+        combo_counter = collections.Counter()
+        pwa_installed = 0
+        pwa_not_installed = 0
+        for os_info, browser, is_pwa in last_seen.values():
+            combo_counter[(os_info, browser)] += 1
+            if is_pwa == "True":
+                pwa_installed += 1
+            else:
+                pwa_not_installed += 1
+        combos = [
+            {"os": os_info, "browser": browser, "count": count}
+            for (os_info, browser), count in combo_counter.items()
+        ]
+        userplatforms = {
+            "unique_users": len(last_seen),
+            "platform_combinations": combos,
+            "pwa_installed": pwa_installed,
+            "pwa_not_installed": pwa_not_installed
+        }
 
     return {
         "last7": last7,
         "last365": last365,
+        "week_data": week_data,
+        "userplatforms": userplatforms
     }
 
 @app.post("/api/is-app-user-bulk")
@@ -1514,10 +1620,11 @@ async def admin_pageview_stats(data: dict = Body(...)):
     today_dk = datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
     stats = defaultdict(lambda: {"total": 0, "unique": set()})
     traad_total = {"total": 0, "unique": set()}
-    traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set()})
+    traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set(), "sharelink": 0})
     all_users = set()
     total_views = 0
     unique_obserkoder = set()
+    traad_sharelink_total = 0  # Samlet antal traad.html via sharelink
 
     log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     if not os.path.isfile(log_path):
@@ -1525,14 +1632,18 @@ async def admin_pageview_stats(data: dict = Body(...)):
 
     with open(log_path, encoding="utf-8") as f:
         for line in f:
+            # Find første URL i linjen (efter user_id)
+            m_url = re.search(r"https?://[^\s]+", line)
+            if not m_url:
+                continue
+            url = m_url.group(0)
             parts = line.strip().split()
-            if len(parts) < 4:
+            if len(parts) < 3:
                 continue
             ts = parts[0]
             if not ts.startswith(today_dk):
                 continue
             user_id = parts[2]
-            url = parts[3]
             all_users.add(user_id)
             total_views += 1
             # Find obserkode for user_id
@@ -1542,6 +1653,8 @@ async def admin_pageview_stats(data: dict = Body(...)):
             # Find side
             m = re.search(r"https?://[^/]+/([^?]+)", url)
             page = m.group(1) if m else url
+
+            is_sharelink = "SHARELINK: True" in line
 
             if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
                 page = "index.html"
@@ -1555,6 +1668,11 @@ async def admin_pageview_stats(data: dict = Body(...)):
                     key = f"{m_id.group(1)}-{m_date.group(1)}"
                     traad_per_thread[key]["total"] += 1
                     traad_per_thread[key]["unique"].add(user_id)
+                    if is_sharelink:
+                        traad_per_thread[key]["sharelink"] += 1
+                        traad_sharelink_total += 1
+                elif is_sharelink:
+                    traad_sharelink_total += 1
             stats[page]["total"] += 1
             stats[page]["unique"].add(user_id)
 
@@ -1567,8 +1685,13 @@ async def admin_pageview_stats(data: dict = Body(...)):
     stats_out["traad.html"] = {
         "total": traad_total["total"],
         "unique": len(traad_total["unique"]),
+        "sharelink": traad_sharelink_total,
         "threads": {
-            k: {"total": v["total"], "unique": len(v["unique"])}
+            k: {
+                "total": v["total"],
+                "unique": len(v["unique"]),
+                "sharelink": v["sharelink"]
+            }
             for k, v in traad_per_thread.items()
         }
     }
