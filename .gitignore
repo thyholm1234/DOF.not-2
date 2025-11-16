@@ -8,6 +8,7 @@ server/pageviews.log
 server/pageview_masterlog.jsonl
 server/blacklist.json
 server/admin.json
+server/comments.log
 server/superadmin.json
 server/server.log
 server/__init__.py
