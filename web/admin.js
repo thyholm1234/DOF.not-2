@@ -1,4 +1,4 @@
-// Version: 4.7.4 - 2025-11-16 23.29.37
+// Version: 4.7.4.4 - 2025-11-17 14.57.05
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -1091,6 +1091,138 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   };
 });
+
+// Tilføj knap i din HTML, fx: <button id="show-database-btn">Database</button>
+function isAllRed(u, allAfd) {
+  // Tjek for manglende eller tom obserkode
+  const noObserkode = !(u.obserkode && typeof u.obserkode === "string" && u.obserkode.trim());
+  // Tjek for advanced-flag: null, undefined, 0, false eller ikke sat
+  const noAdv = !u.advanced || u.advanced === 0 || u.advanced === "0";
+  // Tjek for alle lokalafdelinger: mangler, null, "Ingen", 0, tom streng eller undefined
+  const allRedAfd = allAfd.every(afd => {
+    if (!u.lokalafdelinger || typeof u.lokalafdelinger !== "object") return true;
+    const val = u.lokalafdelinger[afd];
+    return (
+      val === undefined ||
+      val === null ||
+      val === "" ||
+      val === "Ingen" ||
+      val === 0 ||
+      val === "0"
+    );
+  });
+  return noObserkode && noAdv && allRedAfd;
+}
+
+document.getElementById("show-database-btn").onclick = async function() {
+  const container = document.getElementById("database-list");
+  // Toggle
+  if (container.style.display === "block") {
+    container.style.display = "none";
+    return;
+  }
+  // Hent brugere
+  const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
+  const res = await fetch("/api/users-overview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id, device_id })
+  });
+  if (!res.ok) {
+    alert("Kunne ikke hente brugere.");
+    return;
+  }
+  let users = await res.json();
+
+  // Find alle lokalafdelinger der findes
+  const allAfd = [
+    "DOF København", "DOF Nordsjælland", "DOF Vestsjælland", "DOF Storstrøm", "DOF Bornholm",
+    "DOF Fyn", "DOF Sønderjylland", "DOF Sydvestjylland", "DOF Sydøstjylland", "DOF Vestjylland",
+    "DOF Østjylland", "DOF Nordvestjylland", "DOF Nordjylland"
+  ];
+  // Korte navne til kolonneoverskrifter
+  const afdShort = [
+    "KBH", "NSJ", "VSJ", "STR", "BOR",
+    "FYN", "SJL", "SVJ", "SØJ", "VEJ",
+    "ØJY", "NVJ", "NJY"
+  ];
+
+  // Sortér: helt røde øverst, derefter brugere med obserkode øverst
+  users.sort((a, b) => {
+    const aRed = isAllRed(a, allAfd) ? 0 : 1;
+    const bRed = isAllRed(b, allAfd) ? 0 : 1;
+    if (aRed !== bRed) return aRed - bRed;
+    const aHas = (a.obserkode && a.obserkode.trim()) ? 0 : 1;
+    const bHas = (b.obserkode && b.obserkode.trim()) ? 0 : 1;
+    return aHas - bHas;
+  });
+
+  let html = `<table style="width:auto;border-collapse:collapse;">
+    <thead>
+      <tr style="background:var(--card-bg);">
+        <th style="border:1px solid #eee;">user_id</th>
+        <th style="border:1px solid #eee;">obserkode</th>
+        ${afdShort.map(short => `<th style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;font-size:11px;">${short}</th>`).join("")}
+        <th style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;">Adv</th>
+        <th style="border:1px solid #eee;">Slet</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  users.forEach((u, idx) => {
+    html += `<tr>
+      <td style="border:1px solid #eee;">${escapeHTML(u.user_id)}</td>`;
+    const obserkodeColor = (u.obserkode && u.obserkode.trim()) ? "#27ae60" : "#e74c3c";
+    html += `<td style="border:1px solid #eee;background:${obserkodeColor};color:#fff;font-weight:bold;">${escapeHTML(u.obserkode || "")}</td>`;
+    allAfd.forEach((afd, i) => {
+      let val = (u.lokalafdelinger && u.lokalafdelinger[afd]) || "Ingen";
+      let vis = val === "Bemærk" ? "BV" : (val === "Ingen" ? "" : escapeHTML(val));
+      const color = val === "Ingen" ? "#e74c3c" : "#27ae60";
+      html += `<td style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;background:${color};color:#fff;font-weight:bold;">${vis}</td>`;
+    });
+    // Advanced
+    const advColor = u.advanced ? "#27ae60" : "#e74c3c";
+    html += `<td style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;background:${advColor};color:#fff;font-weight:bold;">${u.advanced ? "1" : "0"}</td>`;
+    // Slet-knap
+    html += `<td style="border:1px solid #eee;text-align:center;">
+        <button onclick="deleteUser('${u.user_id}', '${u.obserkode || ""}')">Slet</button>
+      </td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  container.innerHTML = html;
+  container.style.display = "block";
+};
+
+// Slet-funktion
+window.deleteUser = async function(target_user_id, obserkode) {
+  if (!confirm("Er du sikker på at du vil slette denne bruger og alle data?")) return;
+  const requester_id = getOrCreateUserId();
+  // Byg body: brug obserkode hvis den findes, ellers target_user_id
+  let body = { user_id: requester_id };
+  if (obserkode && obserkode.trim()) {
+    body.obserkode = obserkode;
+  } else if (target_user_id) {
+    body.target_user_id = target_user_id;
+  } else {
+    alert("Kan ikke slette: Mangler både user_id og obserkode.");
+    return;
+  }
+  const res = await fetch("/api/admin/delete-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const result = await res.json();
+  if (result.ok) {
+  alert("Bruger og alle data er slettet.");
+    // Fjern rækken fra tabellen uden reload
+    const row = document.querySelector(`button[onclick*="'${target_user_id}'"]`)?.closest("tr");
+    if (row) row.remove();
+  } else {
+    alert("Kunne ikke slette bruger: " + (result.detail || result.error || "Ukendt fejl"));
+  }
+};
 
 // Modal-knapper og sync-request (udenfor DOMContentLoaded)
 document.getElementById("sync-threads-btn").onclick = function() {

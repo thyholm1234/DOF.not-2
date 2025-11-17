@@ -1,6 +1,6 @@
-// Version: 4.7.4 - 2025-11-16 23.29.37
+// Version: 4.7.4.4 - 2025-11-17 14.57.05
 // © Christian Vemmelund Helligsø
-const CACHE_NAME = 'dofnot-v4.7.4';
+const CACHE_NAME = 'dofnot-v4.7.4.4';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -38,8 +38,13 @@ self.addEventListener('fetch', (event) => {
 
   // Aldrig cache noget under /obs
   if (url.pathname.startsWith('/obs/')) {
-    // Network only
     event.respondWith(fetch(req));
+    return;
+  }
+
+  // *** CACHE-BUST debug.html ***
+  if (url.pathname === '/debug.html') {
+    event.respondWith(fetch(req, { cache: "reload" }));
     return;
   }
 

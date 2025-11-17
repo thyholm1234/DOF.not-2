@@ -787,7 +787,7 @@ async def update_data(request: Request):
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
                 ttl=3600,
-                headers={"Urgency": "high"}  # <-- Tilføj urgency high
+                headers={"Urgency": "high"}
             )
         except WebPushException as ex:
             should_delete = False
@@ -816,6 +816,16 @@ async def update_data(request: Request):
                         "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
                         (user_id, device_id)
                     )
+                    # Slet user_prefs hvis der ikke er flere subscriptions for user_id
+                    remaining = conn2.execute(
+                        "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
+                        (user_id,)
+                    ).fetchone()
+                    if not remaining:
+                        conn2.execute(
+                            "DELETE FROM user_prefs WHERE user_id=?",
+                            (user_id,)
+                        )
                     conn2.commit()
             else:
                 print(f"Push-fejl til {user_id}/{device_id}: {ex}")
@@ -897,6 +907,59 @@ async def update_data(request: Request):
             t.result()
     return {"ok": True}
 
+@app.post("/api/users-overview")
+async def users_overview(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek superadmin
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    users = []
+    with sqlite3.connect(DB_PATH) as conn:
+        # Find alle user_ids fra både user_prefs og subscriptions
+        user_ids = set()
+        rows = conn.execute("SELECT user_id FROM user_prefs").fetchall()
+        user_ids.update(uid for (uid,) in rows)
+        rows = conn.execute("SELECT user_id FROM subscriptions").fetchall()
+        user_ids.update(uid for (uid,) in rows)
+        for uid in sorted(user_ids):
+            # Hent prefs hvis de findes
+            cur = conn.execute("SELECT prefs FROM user_prefs WHERE user_id=?", (uid,))
+            row = cur.fetchone()
+            if row and row[0]:
+                try:
+                    prefs = json.loads(row[0])
+                except Exception:
+                    prefs = {}
+            else:
+                prefs = {}
+            lokalafdelinger = {afd: val for afd, val in prefs.items() if val in ("Ingen", "SU", "SUB", "Bemærk")}
+            obserkode = prefs.get("obserkode", "")
+            species_filters = prefs.get("species_filters", {})
+            # Tjek om der er indhold i include, exclude eller counts
+            sf_active = 0
+            if (
+                isinstance(species_filters, dict)
+                and (
+                    species_filters.get("include")
+                    or species_filters.get("exclude")
+                    or (species_filters.get("counts") and len(species_filters.get("counts")) > 0)
+                )
+            ):
+                sf_active = 1
+
+            subs = conn.execute("SELECT subscription FROM subscriptions WHERE user_id=?", (uid,)).fetchall()
+            subscriptions = [json.loads(s[0]) for s in subs if s and s[0]]
+            users.append({
+                "user_id": uid,
+                "subscription": subscriptions,
+                "lokalafdelinger": lokalafdelinger,
+                "obserkode": obserkode,
+                "advanced": sf_active
+            })
+    return users
 
 @app.post("/api/admin/blacklist")
 async def admin_blacklist(data: dict = Body(...)):
@@ -1454,25 +1517,36 @@ async def admin_all_users(user_id: str = Query(...)):
 
 @app.post("/api/admin/delete-user")
 async def admin_delete_user(data: dict = Body(...)):
-    user_id = data.get("user_id")
+    requester_id = data.get("user_id")
     obserkode = (data.get("obserkode") or "").strip().upper()
+    target_user_id = data.get("target_user_id") or data.get("delete_user_id") or data.get("delete_userid") or None
+
     # Tjek om requester er superadmin
-    requester_obserkode = get_obserkode_from_userprefs(user_id)
+    requester_obserkode = get_obserkode_from_userprefs(requester_id)
     superadmins = load_superadmins()
     if requester_obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin kan slette brugere")
-    if not obserkode:
-        raise HTTPException(status_code=400, detail="Obserkode mangler")
+
     deleted = 0
     with sqlite3.connect(DB_PATH) as conn:
-        # Find alle user_ids med denne obserkode
-        rows = conn.execute("SELECT user_id FROM user_prefs").fetchall()
         user_ids = []
-        for (uid,) in rows:
-            prefs = get_prefs(uid)
-            kode = (prefs.get("obserkode") or "").strip().upper()
-            if kode == obserkode:
-                user_ids.append(uid)
+        # Hvis obserkode angivet: find alle user_ids med denne obserkode
+        if obserkode:
+            rows = conn.execute("SELECT user_id, prefs FROM user_prefs").fetchall()
+            for uid, prefs_json in rows:
+                try:
+                    prefs = json.loads(prefs_json)
+                    kode = (prefs.get("obserkode") or "").strip().upper()
+                    if kode == obserkode:
+                        user_ids.append(uid)
+                except Exception:
+                    continue
+        # Hvis user_id angivet og ikke allerede fundet
+        elif target_user_id:
+            user_ids.append(target_user_id)
+        else:
+            raise HTTPException(status_code=400, detail="Obserkode eller user_id mangler")
+
         # Slet fra alle relevante tabeller
         for uid in user_ids:
             conn.execute("DELETE FROM user_prefs WHERE user_id=?", (uid,))
@@ -1498,6 +1572,20 @@ def load_superadmins():
             return set(data.get("superadmins", []))
     except Exception:
         return set()
+
+@app.post("/api/is-subscribed")
+async def is_subscribed(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek om user_id findes i subscriptions (tilpas evt. logik)
+    import sqlite3
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM subscriptions WHERE user_id=? OR device_id=? LIMIT 1",
+            (user_id, device_id)
+        ).fetchone()
+        is_subscribed = bool(row)
+    return {"isSubscribed": is_subscribed}
 
 @app.post("/api/is-superadmin")
 async def is_superadmin(data: dict = Body(...)):

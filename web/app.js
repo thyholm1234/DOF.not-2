@@ -1,4 +1,4 @@
-// Version: 4.7.4 - 2025-11-16 23.29.37
+// Version: 4.7.4.4 - 2025-11-17 14.57.05
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -16,6 +16,8 @@ const afdelinger = [
   "DOF Nordjylland"
 ];
 const kategorier = ["Ingen", "SU", "SUB", "Bemærk"];
+const prefs = {};
+afdelinger.forEach(afd => prefs[afd] = "Ingen");
 
 function isFirstVisit() {
   if (!localStorage.getItem("hasVisited")) {
@@ -287,7 +289,8 @@ async function subscribeUser(userid, deviceid) {
       body: JSON.stringify({
         user_id: userid,
         device_id: deviceid,
-        subscription: sub.toJSON()
+        subscription: sub.toJSON(),
+        prefs // <-- tilføj denne linje
       })
     });
     alert('Du er nu abonneret!');

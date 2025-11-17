@@ -1,4 +1,4 @@
-<!-- Version: 4.7.4 - 2025-11-16 23.29.37 -->
+<!-- Version: 4.7.4.4 - 2025-11-17 14.57.05 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -15,10 +15,10 @@
       navigator.serviceWorker.register('/sw.js');
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.7.4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.7.4.4"></script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.7.4">
+  <link rel="stylesheet" href="/style.css?v=4.7.4.4">
 </head>
 <body>
   <header class="wrap">
@@ -41,6 +41,7 @@
       <button id="add-art-btn" style="margin: 0;">Ny art</button>
       <button id="show-admins-btn" style="margin: 0;">Admins</button>
       <button id="show-users-btn" style="margin:0;">Brugere</button>
+      <button id="show-database-btn" style="margin: 0;">Database</button>
       <button id="traffic-btn" style="margin: 0;" aria-label="Traffik">Traffik</button> <!-- NY KNAP -->
       <button id="show-serverlog-btn" type="button" style="margin: 0;">Vis serverlog</button>
       <button id="sync-threads-btn" style="margin: 0;">Sync</button>
@@ -93,6 +94,9 @@
       <button id="download-serverlog-json-btn" type="button">Download som .txt</button>
       <pre id="serverlog-content" style="white-space:pre; font-size:12px; overflow-x:auto; max-width:100%;"></pre>
     </div>
+
+    <!-- Database visning -->
+    <div id="database-list" style="display:none;margin-top:1em;"></div>
 
     <!-- Vis brugere -->
     <div id="all-users-list" style="display:none; margin-top:1em;"></div>
@@ -152,8 +156,8 @@
 
     
   </main>
-  <script src="admin.js?v=4.7.4"></script>
-  <script src="app.js?v=4.7.4"></script>
+  <script src="admin.js?v=4.7.4.4"></script>
+  <script src="app.js?v=4.7.4.4"></script>
   <div id="blacklist-modal" class="modal" style="display:none;">
     <div class="modal-content card" style="max-width:400px; margin:auto;">
       <h3>Blacklist observation</h3>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Debug-info</title>
+  <style>
+    body { font-family: monospace; background: #f9f9f9; color: #222; padding: 2em; }
+    pre { background: #fff; border: 1px solid #ccc; padding: 1em; }
+    .copy-btn { margin-bottom: 1em; }
+  </style>
+</head>
+<body>
+  <h2>Debug-info</h2>
+  <p style="color:#b00;font-weight:bold;margin-bottom:1em;">
+    <b>VIGTIGT:</b> Denne side skal åbnes på <u>den enhed</u> hvor du oplever problemer.<br>
+    Hvis det drejer sig om en mobil, så <u>åbn debug-siden i selve appen</u> – ikke i browseren!
+  </p>
+  <button class="copy-btn" onclick="copyDebug()">Kopier alt til udklipsholder</button>
+  <pre id="debug"></pre>
+  <script>
+    function getOSInfo() {
+      const ua = navigator.userAgent;
+      if (navigator.userAgentData && navigator.userAgentData.platform) {
+        return navigator.userAgentData.platform;
+      }
+      if (ua.indexOf("Win") !== -1) return "Windows";
+      if (ua.indexOf("Mac") !== -1) return "MacOS";
+      if (ua.indexOf("Linux") !== -1) return "Linux";
+      if (ua.indexOf("Android") !== -1) return "Android";
+      if (ua.indexOf("like Mac") !== -1) return "iOS";
+      return "Ukendt";
+    }
+
+    function getBrowserInfo() {
+      const ua = navigator.userAgent;
+      if (ua.indexOf("Firefox") !== -1) return "Firefox";
+      if (ua.indexOf("Edg") !== -1) return "Edge";
+      if (ua.indexOf("Chrome") !== -1) return "Chrome";
+      if (ua.indexOf("Safari") !== -1) return "Safari";
+      return "Ukendt";
+    }
+
+    async function getPrefsBackend(userId) {
+      if (!userId || userId === "(ingen)") return "(intet user-id)";
+      try {
+        const res = await fetch("/api/prefs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId })
+        });
+        if (!res.ok) return "(kunne ikke hente fra backend)";
+        const data = await res.json();
+        return JSON.stringify(data, null, 2);
+      } catch {
+        return "(fejl ved backend-opslag)";
+      }
+    }
+
+    async function getCacheStorageInfo() {
+      if (!('caches' in window)) return "(Cache Storage ikke understøttet)";
+      try {
+        const cacheNames = await caches.keys();
+        if (!cacheNames.length) return "(ingen caches fundet)";
+        let out = "";
+        for (const name of cacheNames) {
+          out += `Cache: ${name}\n`;
+          const cache = await caches.open(name);
+          const requests = await cache.keys();
+          for (const req of requests) {
+            let line = `  ${req.url}`;
+            // Forsøg at hente dato for cachet element
+            try {
+              const resp = await cache.match(req, { ignoreVary: true, ignoreSearch: false });
+              if (resp && resp.headers && resp.headers.has("date")) {
+                line += ` (cached: ${resp.headers.get("date")})`;
+              } else if (resp && resp.headers && resp.headers.has("last-modified")) {
+                line += ` (last-modified: ${resp.headers.get("last-modified")})`;
+              }
+            } catch {}
+            out += line + "\n";
+          }
+        }
+        return out;
+      } catch (e) {
+        return "(fejl ved læsning af cache storage)";
+      }
+    }
+
+    function getAllLocalStorage() {
+      if (!window.localStorage) return "(localStorage ikke understøttet)";
+      if (localStorage.length === 0) return "(ingen værdier i localStorage)";
+      let out = "";
+      // Sortér nøgler alfabetisk for overskuelighed
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        keys.push(localStorage.key(i));
+      }
+      keys.sort();
+      for (const key of keys) {
+        let val = localStorage.getItem(key);
+        // Forsøg at formatere JSON-værdier pænt
+        try {
+          const parsed = JSON.parse(val);
+          val = JSON.stringify(parsed, null, 2);
+        } catch {}
+        out += `${key}:\t${val}\n`;
+      }
+      return out;
+    }
+
+    async function showDebug() {
+      const userId = localStorage.getItem("userid") || "(ingen)";
+      const deviceId = localStorage.getItem("deviceid") || "(ingen)";
+      const osInfo = getOSInfo();
+      const browserInfo = getBrowserInfo();
+      const prefsBackend = await getPrefsBackend(userId);
+      const cacheInfo = await getCacheStorageInfo();
+      const localStorageDump = getAllLocalStorage();
+
+      const debugText =
+`--- identification (frontend) ---
+user-id:    ${userId}
+device-id:  ${deviceId}
+os:         ${osInfo}
+browser:    ${browserInfo}
+
+--- localStorage (frontend) ---
+${localStorageDump}
+
+--- prefs (backend) ---
+${prefsBackend}
+
+--- cache storage ---
+${cacheInfo}
+`;
+
+      document.getElementById("debug").textContent = debugText;
+    }
+
+    function copyDebug() {
+      const txt = document.getElementById("debug").textContent;
+      navigator.clipboard.writeText(txt).then(() => alert("Debug-info kopieret!"));
+    }
+
+    showDebug();
+  </script>
+</body>
+</html>

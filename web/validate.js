@@ -1,4 +1,4 @@
-// Version: 4.7.4 - 2025-11-16 23.29.37
+// Version: 4.7.4.4 - 2025-11-17 14.57.05
 // © Christian Vemmelund Helligsø
 async function validateLogin(user_id, device_id, obserkode, adgangskode) {
   const res = await fetch('/api/validate-login', {
@@ -27,6 +27,29 @@ function setLoginFormEnabled(enabled) {
   [obserkodeInput, adgangskodeInput, hentNavnBtn].forEach(el => {
     if (el) el.disabled = !enabled;
   });
+}
+
+async function updateIsSubscribed() {
+  const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
+  try {
+    const res = await fetch("/api/is-subscribed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id, device_id })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.isSubscribed) {
+        localStorage.setItem("isSubscribed", "1");
+      } else {
+        localStorage.setItem("isSubscribed", "0");
+      }
+    }
+    // Hvis ikke res.ok, gør ingenting (behold nuværende værdi)
+  } catch {
+    // Ved netværksfejl: gør ingenting (behold nuværende værdi)
+  }
 }
 
 function getOrCreateDeviceId() {
