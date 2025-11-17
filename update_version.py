@@ -21,6 +21,8 @@ FILES = [
     "web/info.html",
     "web/adminpanel.html",
     "web/install.js",
+    "web/obsid.js",
+    "web/obsid.html",
     "web/admin.js"
 ]
 

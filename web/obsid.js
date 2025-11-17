@@ -1,3 +1,6 @@
+// Version: 4.7.4.10 - 2025-11-17 23.46.47
+// © Christian Vemmelund Helligsø
+
 function getObsIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("obsid") || "38040196";
@@ -16,16 +19,28 @@ async function loadArterKategoriMap() {
     if (!artsnavn || artsnavn === "artsnavn") return;
     let navn = artsnavn.replace(/^\[|\]$/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
     let kat = (klassifikation || '').toLowerCase();
-    if (kat === "su") kat = "su";
-    else if (kat === "sub") kat = "sub";
-    else kat = "alm";
     arterKategoriMap[navn] = kat;
   });
 }
 
-// 2. Brug artsnavn til opslag
+// 2. Læs arter_dof_content.csv til map: artsnavn (renset/lowercase) -> {artsid, content}
+let arterContentMap = {};
+async function loadArterContentMap() {
+  if (Object.keys(arterContentMap).length) return;
+  const res = await fetch('/data/arter_dof_content.csv');
+  const text = await res.text();
+  text.split('\n').forEach(line => {
+    const [artsid, artsnavn, content] = line.trim().split(';');
+    if (!artsid || !artsnavn || artsnavn === "artsnavn") return;
+    let navn = artsnavn.replace(/^\[|\]$/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+    arterContentMap[navn] = { artsid: artsid.padStart(5, '0'), content: content.trim() };
+  });
+}
+
+// 3. Brug artsnavn til opslag
 async function fetchAndRenderObs(obsid) {
   await loadArterKategoriMap();
+  await loadArterContentMap();
   const res = await fetch(`/api/dofbasen?obsid=${encodeURIComponent(obsid)}`);
   if (!res.ok) {
     document.getElementById("main").innerHTML = "<h2>Observation ikke fundet</h2>";
@@ -44,15 +59,25 @@ async function fetchAndRenderObs(obsid) {
   }
   if (!kategori) kategori = "alm";
 
+  // Find artsid og content fra arterContentMap
+  let artLink = data.art || "Ukendt art";
+    if (data.art) {
+    // Rens artsnavn på samme måde som i loadArterContentMap
+    let navn = data.art.replace(/^\[|\]$/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const entry = arterContentMap[navn];
+    if (entry && entry.content === "1") {
+        artLink = `<a href="https://dofbasen.dk/danmarksfugle/art/${entry.artsid}" target="_blank" rel="noopener">${data.art}</a>`;
+    }
+    }
+
   const titleHtml = `
     <div class="thread-header card">
       <div id="thread-title" class="thread-title">
         <div class="thread-title-row" id="thread-title-row">
           <h2 id="thread-title">
-            <a href="https://dofbasen.dk/danmarksfugle/art/10140" target="_blank" rel="noopener">${data.art || "Ukendt art"}</a>
+            ${artLink}
             ${data.loklink ? ` - <a href="${data.loklink}" target="_blank" rel="noopener">${data.loknavn || data.loklink}</a>` : (data.loknavn ? " - " + data.loknavn : "")}
           </h2>
-          <button id="thread-sub-btn" class="twostate">🔔 Abonner</button>
         </div>
       </div>
     </div>
@@ -158,42 +183,44 @@ async function fetchAndRenderObs(obsid) {
         day = `${yyyy}-${mm}-${dd}`;
       }
       const id = data.obstid_param || data.turtid || obsid;
-      shareBtn.onclick = () => {
+        shareBtn.onclick = () => {
         const shareTitle = art ? `${art}${lok ? " - " + lok : ""}` : document.title;
-        const fbShareUrl = `${location.origin}/share/${day}/${id}`;
+        const fbShareUrl = `${location.origin}/share/obsid/${id}/`;
         if (navigator.share) {
-          navigator.share({
+            navigator.share({
             title: shareTitle,
             url: fbShareUrl
-          });
+            });
         } else {
-          navigator.clipboard.writeText(fbShareUrl);
-          shareBtn.textContent = "Link kopieret!";
-          setTimeout(() => (shareBtn.textContent = "🔗 Del"), 1500);
+            navigator.clipboard.writeText(fbShareUrl);
+            shareBtn.textContent = "Link kopieret!";
+            setTimeout(() => (shareBtn.textContent = "🔗 Del"), 1500);
         }
-      };
-      const subBtn = document.getElementById("thread-sub-btn");
-      titleRow.insertBefore(shareBtn, subBtn);
+        };
+      titleRow.insertBefore(shareBtn, null);
     }
-
 
     const obsRow = document.querySelector('.obs-row');
-    console.log("obsRow findes?", !!obsRow, "loklink:", data.loklink); // Debug
-    if (obsRow) { // Fjern !data.loklink
-    const obsLink = data.obstid_param || data.turtid || obsid;
-    obsRow.style.cursor = "pointer";
-    obsRow.tabIndex = 0; // Gør den også fokuserbar med tastatur
-    obsRow.addEventListener('click', (e) => {
-        if (e.target.closest('a,button')) return;
+    if (obsRow) {
+      const obsLink = data.obstid_param || data.turtid || obsid;
+      obsRow.style.cursor = "pointer";
+      obsRow.tabIndex = 0; // Gør den også fokuserbar med tastatur
+      obsRow.addEventListener('click', (e) => {
+        if (e.target.closest('a,button,audio,img')) return;
         window.open(`https://dofbasen.dk/popobs.php?obsid=${obsLink}&summering=tur&obs=obs`, '_blank');
-    });
-    // Gør Enter/Space klikbar
-    obsRow.addEventListener('keydown', (e) => {
-        if ((e.key === "Enter" || e.key === " ") && !e.target.closest('a,button')) {
-        window.open(`https://dofbasen.dk/popobs.php?obsid=${obsLink}&summering=tur&obs=obs`, '_blank');
+      });
+      // Gør Enter/Space klikbar
+      obsRow.addEventListener('keydown', (e) => {
+        if ((e.key === "Enter" || e.key === " ") && !e.target.closest('a,button,audio,img')) {
+          window.open(`https://dofbasen.dk/popobs.php?obsid=${obsLink}&summering=tur&obs=obs`, '_blank');
         }
-    });
+      });
     }
+
+    // Forhindr klik på billede/lyd åbner obs-linket
+    document.querySelectorAll('.obs-img-link, .sound-row audio').forEach(el => {
+      el.addEventListener('click', e => e.stopPropagation());
+    });
   }
 }
 

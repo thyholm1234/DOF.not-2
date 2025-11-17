@@ -1110,6 +1110,76 @@ async def api_threads_index(day: str):
         thread["comment_count"] = comment_count
 
     return JSONResponse(out)
+
+@app.get("/share/obsid/{obsid}/", response_class=HTMLResponse)
+async def share_obsid(obsid: str, user_agent: str = Header(None)):
+    import html
+    from fastapi.testclient import TestClient
+
+    # Brug TestClient til at kalde /api/dofbasen internt
+    client = TestClient(app)
+    resp = client.get(f"/api/dofbasen?obsid={obsid}")
+    if resp.status_code != 200:
+        print(f"[DEBUG] /api/dofbasen fejl: {resp.text}")
+        return HTMLResponse("<h1>Observation ikke fundet</h1>", status_code=404)
+    data = resp.json()
+
+    antal = (data.get("antal") or "").strip()
+    art = (data.get("art") or "").strip()
+    lok = (data.get("loknavn") or "").strip()
+    og_title = f"{antal} {art} - {lok}".strip(" -")
+
+    og_image = "https://notifikation.dofbasen.dk/icons/icon-2048.png"
+    og_image_width = "2048"
+    og_image_height = "2048"
+    og_image_type = "image/png" if og_image.endswith(".png") else "image/jpeg"
+    og_desc = f"Se observationen af {antal} {art or 'en fugl'} ved {lok or 'ukendt lokalitet'} i DOFbasen Notifikationer."
+    url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}"
+    canonical = f'<link rel="canonical" href="{html.escape(url)}">'
+
+    crawler_agents = [
+        "facebookexternalhit", "facebookcatalog", "meta-webindexer",
+        "meta-externalads", "meta-externalagent", "meta-externalfetcher", "bsky"
+    ]
+    is_crawler = user_agent and any(a in user_agent.lower() for a in crawler_agents)
+
+    # Kun redirect for almindelige brugere, ikke crawlers
+    meta_refresh = ""
+    if user_agent and not is_crawler:
+        obsid_url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}&from_share=1"
+        meta_refresh = f'<meta http-equiv="refresh" content="0; url={html.escape(obsid_url)}">'
+
+    html_out = f"""<!DOCTYPE html>
+    <html lang="da">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{html.escape(og_title)}</title>
+    <meta property="og:url" content="{html.escape(url)}"> 
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{html.escape(og_title)}">
+    <meta property="og:description" content="{html.escape(og_desc)}">
+    <meta property="og:site_name" content="DOFbasen Notifikationer">
+    <meta property="og:image" content="{html.escape(og_image)}">
+    <meta property="og:image:type" content="{og_image_type}">
+    <meta property="og:image:width" content="{og_image_width}">
+    <meta property="og:image:height" content="{og_image_height}">
+    <meta property="og:locale" content="da_DK">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{html.escape(og_title)}">
+    <meta name="twitter:description" content="{html.escape(og_desc)}">
+    <meta name="twitter:image" content="{html.escape(og_image)}">
+    <meta name="twitter:image:alt" content="{html.escape(og_title)}">
+    {canonical}
+    {meta_refresh}
+    </head>
+    <body>
+    <p>Omdirigerer til <a href="https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}">https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}</a>...</p>
+    </body>
+    </html>
+    """
+    print(f"[DEBUG] share_obsid: returnerer HTML ({len(html_out)} bytes)")
+    return HTMLResponse(content=html_out, status_code=200)
     
 @app.get("/api/dofbasen")
 async def dofbasen_tur(obsid: str = Query(...)):

@@ -10,6 +10,8 @@
   </style>
 </head>
 <body>
+  <button id="push-btn" style="float:right;margin-bottom:1em;">Send push-test til denne enhed</button>
+  <span id="push-status" style="margin-left:1em;color:#007700;"></span>
   <h2>Debug-info</h2>
   <p style="color:#b00;font-weight:bold;margin-bottom:1em;">
     <b>VIGTIGT:</b> Denne side skal åbnes på <u>den enhed</u> hvor du oplever problemer.<br>
@@ -141,6 +143,30 @@ ${cacheInfo}
       const txt = document.getElementById("debug").textContent;
       navigator.clipboard.writeText(txt).then(() => alert("Debug-info kopieret!"));
     }
+
+    document.getElementById("push-btn").onclick = async function() {
+      const userId = localStorage.getItem("userid") || "";
+      const deviceId = localStorage.getItem("deviceid") || "";
+      const status = document.getElementById("push-status");
+      status.textContent = "Sender push...";
+      try {
+        const res = await fetch("/api/debug-push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, device_id: deviceId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          status.textContent = "Push sendt!";
+        } else {
+          status.textContent = "Fejl: " + (data.error || "Ukendt fejl");
+          status.style.color = "#b00";
+        }
+      } catch (e) {
+        status.textContent = "Netværksfejl";
+        status.style.color = "#b00";
+      }
+    };
 
     showDebug();
   </script>

@@ -163,23 +163,42 @@ def to_region_slug(dept: str) -> str:
 
 def compute_kategori(row: Dict[str, str]) -> str:
     art = (row.get("Artnavn") or "").strip()
-    klass = KLASS_MAP.get(art)
-    if klass == "SU":
-        return "SU"
-    if klass == "SUB":
-        return "SUB"
-    # Fænologi-tjek
-    perioder = FAENOLOGI_PERIODER.get(art)
     obsdato = (row.get("Dato") or "").strip()
+    # 1) fænologi -> bemaerk
+    perioder = FAENOLOGI_PERIODER.get(art)
     if perioder and obsdato and _dato_in_faenologi_periode(obsdato, perioder):
         return "bemaerk"
-    # Bemærk-tærskel-tjek
+    # 2) bemærk-tærskel -> bemaerk
     region_slug = to_region_slug(row.get("DOF_afdeling") or "")
     thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
     thr = thresholds.get(art)
     if thr is not None and parse_float(row.get("Antal")) >= float(thr):
         return "bemaerk"
+    # 3) ellers SU/SUB
+    klass = KLASS_MAP.get(art)
+    if klass == "SU":
+        return "SU"
+    if klass == "SUB":
+        return "SUB"
+    # 4) standard
     return "alm"
+
+def _select_representative_row_for_change(
+    k: str, rows_by_key: Dict[str, List[Dict[str, str]]]
+) -> Dict[str, str] | None:
+    lst = rows_by_key.get(k) or []
+    if not lst:
+        return None
+    # helst bemaerk
+    b_rows = [r for r in lst if (r.get("kategori") or "").strip().lower() == "bemaerk"]
+    if b_rows:
+        return max(b_rows, key=_parse_dt_from_row)
+    # ellers SU/SUB
+    su_rows = [r for r in lst if (r.get("kategori") or "") in ("SU", "SUB")]
+    if su_rows:
+        return max(su_rows, key=_parse_dt_from_row)
+    # ellers seneste
+    return max(lst, key=_parse_dt_from_row)
 
 def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     for r in rows:
@@ -199,17 +218,22 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             obsdate_fmt = obsdate
         dofnot_url = f"https://notifikation.dofbasen.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
         dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
+        obsid_url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}/"
         if kat in ("SU", "SUB"):
             r["url"] = dofnot_url
             r["url2"] = dofbasen_url
+            r["obsid_url"] = obsid_url
         elif kat in ("alm", "bemaerk"):
             r["url"] = dofbasen_url
+            r["obsid_url"] = obsid_url
             if "url2" in r:
                 del r["url2"]
         else:
             r["url"] = ""
             if "url2" in r:
                 del r["url2"]
+            if "obsid_url" in r:
+                del r["obsid_url"]
     return rows
 
 def fix_smart_quotes(text: str) -> str:
@@ -515,13 +539,10 @@ def parse_float(val: str) -> float:
 
 
 def _key(row: Dict[str, str]) -> str:
-    return "\n".join([
-        (row.get('Artnavn') or '').strip(),
-        (row.get('Loknr') or '').strip(),
-        (row.get('Fornavn') or '').strip(),
-        (row.get('Efternavn') or '').strip(),
-        (row.get('Obserkode') or '').strip(),
-    ])
+    """Fælles nøgle for state og rows_by_key: Artnavn|Loknr (pipe)."""
+    art = (row.get('Artnavn') or '').strip()
+    lok = (row.get('Loknr') or '').strip()
+    return f"{art}|{lok}" if art or lok else ""
 
 def _obsid(row: Dict[str, str]) -> str:
     return (row.get("Obsid") or "").strip()
@@ -575,7 +596,12 @@ def _state_get_antal(state_val) -> float | None:
     if state_val is None:
         return None
     if isinstance(state_val, dict):
-        return state_val.get("antal")
+        # Dit ønskede format bruger "max_antal"
+        v = state_val.get("max_antal", state_val.get("antal"))
+        try:
+            return float(v) if v is not None else None
+        except Exception:
+            return None
     # gammel: direkte tal
     try:
         return float(state_val)
@@ -583,28 +609,44 @@ def _state_get_antal(state_val) -> float | None:
         return None
 
 def _state_get_obsids(state_val) -> Set[str]:
-    if isinstance(state_val, dict):
-        obsids = state_val.get("obsids") or []
+    """Træk alle obsid’er ud af obserkoder-mappet."""
+    if not isinstance(state_val, dict):
+        return set()
+    obk = state_val.get("obserkoder")
+    if not isinstance(obk, dict):
+        # back-compat: hvis nogen gang 'obsids' findes
+        obsids = state_val.get("obsids")
         if isinstance(obsids, list):
             return {str(x) for x in obsids if str(x)}
-    return set()
+        return set()
+    s: Set[str] = set()
+    for lst in obk.values():
+        if isinstance(lst, list):
+            s.update(str(x) for x in lst if str(x))
+    return s
 
 
 def build_state(rows: List[Dict[str, str]]) -> Dict[str, dict]:
-    state = {}
+    """
+    State pr. key (Artnavn|Loknr) i dit ønskede format:
+      {"max_antal": float, "obserkoder": { <kode>: [obsid,...] }}
+    """
+    state: Dict[str, dict] = {}
     for r in rows:
-        art = (r.get("Artnavn") or "").strip()
-        lok = (r.get("Loknr") or "").strip()
-        key = f"{art}|{lok}"
+        key = _key(r)
+        if not key:
+            continue
         antal = parse_float(r.get("Antal"))
         obserkode = (r.get("Obserkode") or "").strip()
         obsid = _obsid(r)
-        if not key or not obserkode or not obsid:
+        if not obserkode or not obsid:
+            # vi vil kun tracke obsid’er vi kender + kunne diff’e pr. observerkode
             continue
-        entry = state.setdefault(key, {"max_antal": 0, "obserkoder": {}})
-        entry["max_antal"] = max(entry["max_antal"], antal)
+        entry = state.setdefault(key, {"max_antal": 0.0, "obserkoder": {}})
+        if antal > entry["max_antal"]:
+            entry["max_antal"] = antal
         entry["obserkoder"].setdefault(obserkode, set()).add(obsid)
-    # Konverter sets til lister for JSON
+    # konverter sets til sorteret liste for JSON
     for entry in state.values():
         for k in entry["obserkoder"]:
             entry["obserkoder"][k] = sorted(list(entry["obserkoder"][k]))
@@ -637,15 +679,8 @@ def get_new_obsids_by_key(
     """Find nye obsid’er pr. key: obsid i new_state men ikke i old_state."""
     result: Dict[str, Set[str]] = {}
     for k, v in new_state.items():
-        # Saml alle obsids fra alle observerkoder
-        new_ids = set()
-        for obsids in (v.get("obserkoder") or {}).values():
-            new_ids.update(obsids)
-        # Saml gamle obsids
-        old_ids = set()
-        old_v = old_state.get(k) or {}
-        for obsids in (old_v.get("obserkoder") or {}).values():
-            old_ids.update(obsids)
+        new_ids = _state_get_obsids(v)
+        old_ids = _state_get_obsids(old_state.get(k))
         diff = new_ids - old_ids
         if diff:
             result[k] = diff
@@ -708,17 +743,25 @@ def run_once(date_str=None, send_notifications=True):
 
     new_state = build_state(enriched_all)
 
-    # første sync: vi sender kun SU/SUB med nye obsid’er (alle er nye), statechanged=1 hvis ny key ellers 0
+    # første sync: vi sender SU/SUB med nye obsid’er (alle er nye), og bemaerk kun hvis ny key (statechanged=1)
     if not old_state:
         batch_by_obsid: Dict[str, Dict[str, str]] = {}
         for k, v in new_state.items():
             obsids = v.get("obsids") or []
             for oid in obsids:
                 row = rows_by_obsid.get(oid)
-                if not row or row.get("kategori") not in ("SU", "SUB"):
+                if not row:
                     continue
+                kategori = row.get("kategori")
+                # SU/SUB: altid, bemaerk: kun hvis ny key
+                if kategori not in ("SU", "SUB", "bemaerk"):
+                    continue
+                if kategori == "bemaerk":
+                    # kun hvis ny key (første sync = alle keys er nye)
+                    # så vi sender kun én bemaerk pr. key
+                    if oid != obsids[0]:
+                        continue
                 r2 = dict(row)
-                # ny key => state change
                 r2["statechanged"] = 1
                 batch_by_obsid[oid] = r2
         if batch_by_obsid:
@@ -744,35 +787,37 @@ def run_once(date_str=None, send_notifications=True):
     # byg batch (deduplikér pr. Obsid)
     batch_by_obsid: Dict[str, Dict[str, str]] = {}
 
-    # a) alle state-ændringer -> tag seneste række for key, statechanged=1
+    # a) statechanged = 1 -> send bemaerk + SU + SUB (repræsentativ række pr. key)
     for k in changed_keys:
-        row = latest_row_for_key(k, rows_by_key)
+        row = _select_representative_row_for_change(k, rows_by_key)
         if not row:
+            continue
+        kat = (row.get("kategori") or "").strip()
+        if kat not in ("bemaerk", "SU", "SUB"):
             continue
         oid = _obsid(row)
         if not oid:
-            # uden obsid deduplikerer vi ikke, men vi kan stadig sende
             r2 = dict(row)
             r2["statechanged"] = 1
-            # brug key som pseudo-id for deduplikering
             batch_by_obsid.setdefault(f"KEY::{k}", r2)
         else:
             r2 = dict(row)
             r2["statechanged"] = 1
             batch_by_obsid[oid] = r2
 
-    # b) SU/SUB: send alle nye obsid’er (uanset antal). statechanged=1 hvis key er i changed_keys, ellers 0
+    # b) statechanged = 0, men nye obsid’er -> kun SU/SUB
     for k, oid_set in new_obsids.items():
         for oid in oid_set:
             row = rows_by_obsid.get(oid)
             if not row:
                 continue
-            if row.get("kategori") not in ("SU", "SUB"):
+            kategori = (row.get("kategori") or "").strip()
+            if kategori not in ("SU", "SUB"):
                 continue
             if oid in batch_by_obsid:
                 continue
             r2 = dict(row)
-            r2["statechanged"] = 1 if k in changed_keys else 0
+            r2["statechanged"] = 0
             batch_by_obsid[oid] = r2
 
     batch = list(batch_by_obsid.values())

@@ -1,4 +1,4 @@
-/* Version: 4.7.4.5 - 2025-11-17 15.16.23 */
+/* Version: 4.7.4.10 - 2025-11-17 23.46.47 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -576,6 +576,7 @@ header.wrap .brand:hover {
 .art-name.cat-bemærk,
 .art-name.cat-bemaerk { color: #92400e; font-weight: 700; }
 .art-name.cat-alm     { color: var(--col-alm); font-weight: 700; }
+.art-name.cat-faenologi { color: #719eba; font-weight: 700; }
 
 /* ===== Count badge ===== */
 .count {
