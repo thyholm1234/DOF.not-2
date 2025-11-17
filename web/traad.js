@@ -1,4 +1,4 @@
-// Version: 4.7.4.4 - 2025-11-17 14.57.05
+// Version: 4.7.4.5 - 2025-11-17 15.16.23
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -257,9 +257,9 @@
           const titleRow = el('div', 'card-top');
           const left = el('div', 'left');
           left.innerHTML = `
-              <span class="art-name cat-${(ev.kategori || '').toLowerCase()}">
-                ${(ev.Antal ? ev.Antal + ' ' : '')}${ev.Artnavn || ''}
-              </span>
+            <span class="art-name cat-${(ev.kategori || '').toLowerCase()}">
+              ${(ev.Antal ? ev.Antal + ' ' : '')}${ev.Artnavn || ''}
+            </span>
           `;
           const right = el('div', 'right');
 
@@ -306,9 +306,12 @@
 
           // Indsæt badge synkront hvis appUserMap siger true
           if (appUserMap[obserkode]) {
-            observerNameBadge.insertAdjacentHTML('beforeend',
-              `<img src="/icons/verified-symbol-icon.svg" alt="App-bruger" title="App-bruger" class="verified-badge">`
-            );
+            const badgeImg = document.createElement('img');
+            badgeImg.src = "/icons/verified-symbol-icon.svg";
+            badgeImg.alt = "App-bruger";
+            badgeImg.title = "Denne observatør er registreret i appen";
+            badgeImg.className = "verified-badge";
+            observerNameBadge.appendChild(badgeImg);
           }
 
           if (adfaerd) {

@@ -1110,6 +1110,154 @@ async def api_threads_index(day: str):
         thread["comment_count"] = comment_count
 
     return JSONResponse(out)
+    
+@app.get("/api/dofbasen")
+async def dofbasen_tur(obsid: str = Query(...)):
+    import urllib.request
+    import html
+    import re
+
+    url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (DOF.not server)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        raw = resp.read()
+        html_text = raw.decode("ISO-8859-1", errors="replace")
+
+    def clean(val):
+        return html.unescape(re.sub(r'<[^>]+>', '', val)).strip()
+
+    # DKU-status
+    m = re.search(r'<acronym[^>]*class=["\']behandl["\'][^>]*title=["\']([^"\']+)["\']', html_text, re.IGNORECASE)
+    status = m.group(1) if m else ""
+
+    # Billeder
+    images = _extract_service_image_urls(html_text)
+
+    # Lydklip
+    matches = re.findall(r"""<a[^>]+href=['"]([^'"]*sound_proxy\.php[^'"]+)['"]""", html_text, re.IGNORECASE)
+    sound_urls = []
+    for href in matches:
+        href = html.unescape(href)
+        if href.startswith("/"):
+            sound_url = "https://dofbasen.dk" + href
+        else:
+            sound_url = href
+        sound_urls.append(sound_url)
+
+    # Art (dansk og latin) - også SU
+    art_match = re.search(r'<font class="(?:subart|defaultart|su)">([^<]+)</font>(?:\s*\(SU\))?\s*\(<i>([^<]+)</i>\)', html_text)
+    art_dansk = art_match.group(1) if art_match else None
+    art_latin = art_match.group(2) if art_match else None
+
+    # Antal (første <td valign="top"> efter art)
+    antal = None
+    if art_match:
+        end = art_match.end()
+        m_antal = re.search(r'<td[^>]*valign="top"[^>]*>(\d+)</td>', html_text[end:])
+        if m_antal:
+            antal = m_antal.group(1)
+
+    # Adfærd
+    adfaerd_match = re.search(r'Adfærd</acronym>:</td><td[^>]*>([^<]+)</td>', html_text)
+    adfaerd = adfaerd_match.group(1) if adfaerd_match else None
+
+    # Tid (obstid)
+    tid_match = re.search(r'Tid</acronym>:</td><td[^>]*>([^<]+)</td>', html_text)
+    obstid = tid_match.group(1) if tid_match else None
+
+    # Kommentar til tur
+    tur_note_match = re.search(
+        r'Kommentar til tur</acronym>:</td[^>]*><td[^>]*>(.*?)</td>',
+        html_text, re.DOTALL | re.IGNORECASE
+    )
+    kommentar_til_tur = None
+    if tur_note_match:
+        raw = tur_note_match.group(1)
+        kommentar_til_tur = html.unescape(re.sub(r'<[^>]+>', '', raw)).strip()
+
+    # Kommentar til obs.
+    obsnote_match = re.search(r'Kommentar til obs\.</acronym>:</td><td[^>]*>([^<]+)</td>', html_text)
+    obsnote = obsnote_match.group(1) if obsnote_match else None
+
+    # Lokalitet, loknr, loknavn, turtid (turtid valgfri)
+    lok_match = re.search(
+        r"loknr=(\d+)[^>]+title=\"Information om ([^\"]+)\">([^<]+)</a>(?:\s*&nbsp;\(([\d: \-]+)\))?",
+        html_text
+    )
+    loknr = lok_match.group(1) if lok_match else None
+    loknavn = lok_match.group(3) if lok_match else None
+    loklink = f"https://dofbasen.dk/poplok.php?loknr={loknr}" if loknr else None
+    turtid = lok_match.group(4) if lok_match and lok_match.lastindex >= 4 else None
+
+    # Koordinater
+    koord_match = re.search(r'lng=([0-9.]+)&lat=([0-9.]+)', html_text)
+    lng = koord_match.group(1) if koord_match else None
+    lat = koord_match.group(2) if koord_match else None
+    koordinater = {"lng": float(lng), "lat": float(lat)} if lng and lat else None
+
+    # Observatør
+    obs_match = re.search(r'Observatør</acronym>:</td><td[^>]*>.*?title="([^"]+)">([^<]+)</a>', html_text)
+    observatoer = obs_match.group(2) if obs_match else None
+
+    # Observatør (obserkode og obserlink)
+    obs_match = re.search(
+        r"href=['\"]javascript:openwin\('(/popobser\.php\?obserkode=([A-Z0-9]+)[^']*)'",
+        html_text
+    )
+    obs_match = re.search(
+        r"openwin\('(/popobser\.php\?obserkode=([A-Z0-9]+)[^']*)'",
+        html_text
+    )
+    obserlink = None
+    obserkode = None
+    if obs_match:
+        obserlink = "https://dofbasen.dk" + obs_match.group(1)
+        obserkode = obs_match.group(2)
+
+    # Medobservatør
+    medobs_match = re.search(r'Medobservatør</acronym>:</td><td[^>]*>([^<]+)</td>', html_text)
+    medobservatoer = medobs_match.group(1) if medobs_match else None
+
+    # Indtastet
+    indtastet_match = re.search(r'Indtastet</acronym>:</td><td[^>]*>([^<]+)', html_text)
+    indtastet = indtastet_match.group(1).strip() if indtastet_match else None
+
+    # Find dato i header
+    m = re.search(r'DATA FOR OBSERVATION NR\. \d+ - (\d{2}/\d{2}/\d{4})', html_text)
+    dato = m.group(1) if m else None
+
+    result = {
+        "dato": dato,
+        "art": art_dansk,
+        "latin": art_latin,
+        "antal": antal,
+        "adfaerd": adfaerd,
+        "obstid": obstid,
+        "loknr": loknr,
+        "loknavn": loknavn,
+        "loklink": loklink,
+        "turtid": turtid,
+        "turnote": kommentar_til_tur,
+        "obsnote": obsnote,
+        "obstid_param": obsid,
+        "naal": koordinater,
+        "navn": observatoer,
+        "obserkode": obserkode,
+        "obserlink": obserlink,
+        "medobservatør": medobservatoer,
+        "indtastet": indtastet,
+        "status": status,
+        "images": images,
+        "sound_urls": sound_urls
+    }
+
+    return JSONResponse(result)
 
 
 # In-memory rate limiting: user_id -> [timestamps]
