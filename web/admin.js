@@ -1,4 +1,4 @@
-// Version: 4.7.4.10 - 2025-11-17 23.46.47
+// Version: 4.7.4.12 - 2025-11-18 00.13.45
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -373,11 +373,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (page.endsWith(".html")) {
           link = `/${page}`;
         }
+        let sharelinkHtml = "";
+        if (page === "obsid.html" && typeof info.sharelink === "number" && info.sharelink > 0) {
+          sharelinkHtml = `<div>Fra sharelink: <b>${info.sharelink}</b></div>`;
+        }
         const cardHtml = `
           <div class="card" style="margin-bottom:0.5em;">
             <div style="font-weight:bold;">${page}</div>
             <div>Unikke brugere: <b>${info.unique}</b></div>
             <div>Visninger: <b>${info.total}</b></div>
+            ${sharelinkHtml}
           </div>
         `;
         if (link) {
@@ -1155,7 +1160,14 @@ document.getElementById("show-database-btn").onclick = async function() {
     if (aRed !== bRed) return aRed - bRed;
     const aHas = (a.obserkode && a.obserkode.trim()) ? 0 : 1;
     const bHas = (b.obserkode && b.obserkode.trim()) ? 0 : 1;
-    return aHas - bHas;
+    if (aHas !== bHas) return aHas - bHas;
+    // Sidste sortering: obserkode alfabetisk (tomme til sidst)
+    const ao = (a.obserkode || "").toLowerCase();
+    const bo = (b.obserkode || "").toLowerCase();
+    if (ao && bo) return ao.localeCompare(bo);
+    if (!ao && bo) return 1;
+    if (ao && !bo) return -1;
+    return 0;
   });
 
   let html = `<table style="width:auto;border-collapse:collapse;">

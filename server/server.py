@@ -13,7 +13,7 @@ import html
 import urllib.request
 from urllib.parse import urljoin, urlparse, parse_qs
 from fastapi import Query  # Kun hvis du stadig bruger Query i nogle endpoints
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
@@ -39,9 +39,10 @@ SYNC_PATH = os.path.join(os.path.dirname(__file__), "request_sync.json")
 comment_file_locks = defaultdict(threading.Lock)
 dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Oprydning i baggrundstråd (blocking)
+    # Oprydning i baggrundstråd (blocking) – uændret
     def run_and_repeat():
         while True:
             try:
@@ -49,24 +50,62 @@ async def lifespan(app: FastAPI):
                 cleanup_dirs(os.path.join(web_dir, "obs"), days=3)
                 database_maintenance()
             except Exception as e:
-                print(f"Fejl under oprydning: {e}")
+                logging.exception(f"[cleanup] Fejl under oprydning: {e}")
             time.sleep(3600)
+
     t = threading.Thread(target=run_and_repeat, daemon=True)
     t.start()
 
-    # Midnat-task (asynkron)
+    # Midnat-task (asynkron) – robust udgave
+    stop_event = asyncio.Event()
+
     async def midnight_task():
         tz = pytz.timezone("Europe/Copenhagen")
-        while True:
-            now = datetime.now(tz)
-            next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-            seconds = (next_midnight - now).total_seconds()
-            await asyncio.sleep(seconds)
-            yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
-            archive_and_reset_pageview_log(for_date=yesterday, reset_log=True)
-    asyncio.create_task(midnight_task())
+        while not stop_event.is_set():
+            try:
+                now = datetime.now(tz)
+                next_midnight = (now + timedelta(days=1)).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                seconds = max(1, int((next_midnight - now).total_seconds()))
+                logging.info(f"[midnight] Sover {seconds}s til {next_midnight.isoformat()}")
 
-    yield  # Lifespan fortsætter mens app kører
+                # Sov, men afbryd pænt ved shutdown
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=seconds)
+                    # blev vi vækket pga. stop? så ud
+                    if stop_event.is_set():
+                        break
+                except asyncio.TimeoutError:
+                    pass  # normal opvågning ved "timeout"
+
+                # Kør arkivering for gårsdagen
+                run_date = (datetime.now(tz) - timedelta(days=1)).date().isoformat()
+                logging.info(f"[midnight] Arkiverer pageviews for {run_date}")
+
+                # Flyt IO-arbejdet i en tråd
+                await asyncio.to_thread(archive_and_reset_pageview_log,
+                                        for_date=run_date, reset_log=True)
+
+                logging.info(f"[midnight] Færdig for {run_date}")
+            except Exception:
+                # Log og prøv igen efter 60 sekunder
+                logging.exception("[midnight] Uventet fejl i midnat-task – prøver igen om 60s")
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=60)
+                except asyncio.TimeoutError:
+                    pass
+
+    task = asyncio.create_task(midnight_task(), name="midnight_task")
+    try:
+        yield  # appen kører
+    finally:
+        # pæn nedlukning
+        stop_event.set()
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -1991,15 +2030,40 @@ async def admin_pageview_stats(data: dict = Body(...)):
                         traad_sharelink_total += 1
                 elif is_sharelink:
                     traad_sharelink_total += 1
-            stats[page]["total"] += 1
-            stats[page]["unique"].add(user_id)
+
+            # --- NYT: obsid.html sharelink-tælling ---
+            if page.startswith("obsid.html"):
+                stats["obsid.html"]["total"] += 1
+                stats["obsid.html"]["unique"].add(user_id)
+                # Tæl sharelink for obsid.html
+                if "obsid=" in url:
+                    m_obsid = re.search(r"obsid=([0-9]+)", url)
+                    if m_obsid and is_sharelink:
+                        stats.setdefault("obsid.html_sharelink", {"total": 0, "unique": set()})
+                        stats["obsid.html_sharelink"]["total"] += 1
+                        stats["obsid.html_sharelink"]["unique"].add(user_id)
+
+        # Saml obsid.html statistik
+    obsid_stats = stats.get("obsid.html", {"total": 0, "unique": set()})
+    obsid_sharelink = stats.get("obsid.html_sharelink", {"total": 0, "unique": set()})
 
     stats_out = {}
     for page, d in stats.items():
+        # Spring obsid.html_sharelink over, den lægges separat
+        if page == "obsid.html_sharelink":
+            continue
         stats_out[page] = {
             "total": d["total"],
             "unique": len(d["unique"])
         }
+
+    # Tilføj obsid.html statistik samlet
+    stats_out["obsid.html"] = {
+        "total": obsid_stats["total"],
+        "unique": len(obsid_stats["unique"]),
+        "sharelink": obsid_sharelink["total"]
+    }
+
     stats_out["traad.html"] = {
         "total": traad_total["total"],
         "unique": len(traad_total["unique"]),

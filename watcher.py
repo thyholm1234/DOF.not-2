@@ -161,27 +161,33 @@ def to_region_slug(dept: str) -> str:
         s = s[4:]
     return slugify(s)
 
+
 def compute_kategori(row: Dict[str, str]) -> str:
     art = (row.get("Artnavn") or "").strip()
     obsdato = (row.get("Dato") or "").strip()
-    # 1) fænologi -> bemaerk
-    perioder = FAENOLOGI_PERIODER.get(art)
-    if perioder and obsdato and _dato_in_faenologi_periode(obsdato, perioder):
-        return "bemaerk"
-    # 2) bemærk-tærskel -> bemaerk
-    region_slug = to_region_slug(row.get("DOF_afdeling") or "")
-    thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
-    thr = thresholds.get(art)
-    if thr is not None and parse_float(row.get("Antal")) >= float(thr):
-        return "bemaerk"
-    # 3) ellers SU/SUB
+
+    # 1) SU/SUB fra klassifikationen HAR FORRANG
     klass = KLASS_MAP.get(art)
     if klass == "SU":
         return "SU"
     if klass == "SUB":
         return "SUB"
+
+    # 2) fænologi -> bemaerk
+    perioder = FAENOLOGI_PERIODER.get(art)
+    if perioder and obsdato and _dato_in_faenologi_periode(obsdato, perioder):
+        return "bemaerk"
+
+    # 3) bemærk-tærskel -> bemaerk
+    region_slug = to_region_slug(row.get("DOF_afdeling") or "")
+    thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
+    thr = thresholds.get(art)
+    if thr is not None and parse_float(row.get("Antal")) >= float(thr):
+        return "bemaerk"
+
     # 4) standard
     return "alm"
+
 
 def _select_representative_row_for_change(
     k: str, rows_by_key: Dict[str, List[Dict[str, str]]]
@@ -218,14 +224,12 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             obsdate_fmt = obsdate
         dofnot_url = f"https://notifikation.dofbasen.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
         dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
-        obsid_url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}/"
+        obsid_url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}"
         if kat in ("SU", "SUB"):
             r["url"] = dofnot_url
             r["url2"] = dofbasen_url
-            r["obsid_url"] = obsid_url
         elif kat in ("alm", "bemaerk"):
-            r["url"] = dofbasen_url
-            r["obsid_url"] = obsid_url
+            r["url"] = obsid_url
             if "url2" in r:
                 del r["url2"]
         else:
