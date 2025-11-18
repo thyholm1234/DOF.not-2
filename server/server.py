@@ -56,55 +56,7 @@ async def lifespan(app: FastAPI):
     t = threading.Thread(target=run_and_repeat, daemon=True)
     t.start()
 
-    # Midnat-task (asynkron) – robust udgave
-    stop_event = asyncio.Event()
-
-    async def midnight_task():
-        tz = pytz.timezone("Europe/Copenhagen")
-        while not stop_event.is_set():
-            try:
-                now = datetime.now(tz)
-                next_midnight = (now + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
-                seconds = max(1, int((next_midnight - now).total_seconds()))
-                logging.info(f"[midnight] Sover {seconds}s til {next_midnight.isoformat()}")
-
-                # Sov, men afbryd pænt ved shutdown
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=seconds)
-                    # blev vi vækket pga. stop? så ud
-                    if stop_event.is_set():
-                        break
-                except asyncio.TimeoutError:
-                    pass  # normal opvågning ved "timeout"
-
-                # Kør arkivering for gårsdagen
-                run_date = (datetime.now(tz) - timedelta(days=1)).date().isoformat()
-                logging.info(f"[midnight] Arkiverer pageviews for {run_date}")
-
-                # Flyt IO-arbejdet i en tråd
-                await asyncio.to_thread(archive_and_reset_pageview_log,
-                                        for_date=run_date, reset_log=True)
-
-                logging.info(f"[midnight] Færdig for {run_date}")
-            except Exception:
-                # Log og prøv igen efter 60 sekunder
-                logging.exception("[midnight] Uventet fejl i midnat-task – prøver igen om 60s")
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=60)
-                except asyncio.TimeoutError:
-                    pass
-
-    task = asyncio.create_task(midnight_task(), name="midnight_task")
-    try:
-        yield  # appen kører
-    finally:
-        # pæn nedlukning
-        stop_event.set()
-        task.cancel()
-        with suppress(asyncio.CancelledError):
-            await task
+    yield  # appen kører
 
 
 app = FastAPI(lifespan=lifespan)
