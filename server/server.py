@@ -706,6 +706,8 @@ async def fetch_all_bemaerk_csv(request: Request):
     import urllib.request
     import re
     import html
+    import unicodedata
+    import hashlib
 
     # Mapping fra list-param til filnavn
     region_map = {
@@ -728,60 +730,139 @@ async def fetch_all_bemaerk_csv(request: Request):
     results = {}
     changed_any = False
 
+    # Regex: <tr><td>ART</td><td align="right">KOL2</td>
+    row_re = re.compile(
+        r"""
+        <tr>\s*
+           <td>\s*(?:<span[^>]*>)?        # evt. <span ...>
+               (?P<art>[^<]+?)            # artsnavn (tekst)
+           (?:</span>)?\s*</td>\s*
+           <td[^>]*\balign=["']right["'][^>]*>\s*
+               (?P<col2>[0-9][0-9\ \.,]*) # kolonne 2: tal med evt. separators
+           \s*</td>
+        """,
+        re.IGNORECASE | re.DOTALL | re.VERBOSE,
+    )
+
+    def clean_text(s: str) -> str:
+        """Hård normalisering: unescape, Unicode NFKC, NBSP->space, kollaps whitespace."""
+        if s is None:
+            return ""
+        s = html.unescape(s)
+        s = unicodedata.normalize("NFKC", s)
+        s = s.replace("\u00A0", " ")          # NBSP -> normal space
+        s = re.sub(r"[ \t\r\f\v]+", " ", s)   # kollaps horisontal whitespace
+        return s.strip()
+
+    def normalize_number(s: str) -> str:
+        """Fjern tusind-separatorer/mellemrum -> behold kun cifre."""
+        return re.sub(r"[^\d]", "", s or "")
+
+    def normalize_for_diff(s: str) -> str:
+        """Diff-normalisering af hele filindholdet."""
+        if s is None:
+            return ""
+        s = s.lstrip("\ufeff")                # fjern BOM
+        s = s.replace("\r\n", "\n")           # CRLF -> LF
+        s = s.replace("\r", "\n")             # ensret CR -> LF
+        s = unicodedata.normalize("NFKC", s)
+        s = s.replace("\u00A0", " ")          # NBSP -> space
+
+        # Trim trailing spaces pr. linje
+        s = "\n".join(line.rstrip(" \t") for line in s.split("\n"))
+        # Fjern afsluttende blanke linjer
+        s = s.rstrip("\n")
+        return s
+
+    def hash_str(s: str) -> str:
+        return hashlib.md5(s.encode("utf-8")).hexdigest()
+
     for region, filename in region_map.items():
         url = base_url.format(region)
-        req = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (DOF.not server)",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            html_text = resp.read().decode("windows-1252", errors="replace")
+        region_result = {
+            "file": filename,
+            "rows_total": 0,
+            "numeric_rows": 0,
+            "changed": False,
+            "error": None,
+            "reason": None,
+        }
+        try:
+            # Hent HTML
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (DOF.not server; fetch-bemaerk-csv)",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                charset = resp.headers.get_content_charset() or "windows-1252"
+                html_text = resp.read().decode(charset, errors="replace")
 
-        # Find alle rækker i tabellen
-        rows = []
-        for m in re.finditer(
-            r"<tr><td>(?:<span[^>]*>)?([^<]+)(?:</span>)?</td><td[^>]*align=[\"']right[\"'][^>]*>(\d+)</td>",
-            html_text
-        ):
-            artsnavn, bemaerk_antal = m.groups()
-            artsnavn = html.unescape(artsnavn).strip()
-            rows.append([artsnavn, bemaerk_antal])
+            # Parse rækker
+            all_rows = []
+            numeric_rows = []
+            for m in row_re.finditer(html_text):
+                art_raw = m.group("art")
+                col2_raw = m.group("col2")
+                art = clean_text(art_raw)
+                col2_clean = clean_text(col2_raw)
+                num = normalize_number(col2_clean)
 
-        # Byg CSV-indhold (ensartet LF som linjeskift)
-        csv_header = "artsnavn;bemaerk_antal\n"
-        csv_body = "\n".join(";".join(row) for row in rows)
-        csv_content = csv_header + csv_body + "\n"
+                all_rows.append((art, col2_clean))
+                if num.isdigit():
+                    numeric_rows.append((art, num))
 
-        # Sammenlign med eksisterende fil
-        csv_path = os.path.join(os.path.dirname(__file__), "..", "data", filename)
-        old_content = ""
-        if os.path.exists(csv_path):
-            with open(csv_path, "r", encoding="utf-8", newline="") as f:
-                old_content = f.read()
+            region_result["rows_total"] = len(all_rows)
+            region_result["numeric_rows"] = len(numeric_rows)
 
-        # Fjern evt. BOM fra tidligere filer + normalisér linjeskift og trailing whitespace
-        def normalize(s: str) -> str:
-            if s is None:
-                return ""
-            s = s.lstrip("\ufeff")          # fjern BOM hvis den er der
-            s = s.replace("\r\n", "\n")     # normalisér til LF
-            s = s.rstrip("\n\r")            # fjern kun afsluttende linjeskift
-            return s
+            # Ingen numeriske rækker? Skriv ikke.
+            if not numeric_rows:
+                region_result["reason"] = "no-numeric-second-column"
+                results[region] = region_result
+                continue
 
-        old_norm = normalize(old_content)
-        new_norm = normalize(csv_content)
+            # Gør output deterministisk: sortér rækker
+            numeric_rows.sort(key=lambda x: (x[0].casefold(), int(x[1])))
 
-        changed = (new_norm != old_norm)
-        results[region] = {"rows": len(rows), "changed": changed, "file": filename}
+            # Byg CSV
+            lines = ["artsnavn;bemaerk_antal"]
+            for art, num in numeric_rows:
+                lines.append(f"{art};{num}")
+            csv_content = "\n".join(lines) + "\n"
 
-        if changed:
-            changed_any = True
-            # Skriv konsekvent uden BOM og med newline="\n"
-            with open(csv_path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(csv_content)
+            # Sammenlign med eksisterende fil
+            csv_path = os.path.join(os.path.dirname(__file__), "..", "data", filename)
+            old_content = ""
+            if os.path.exists(csv_path):
+                with open(csv_path, "r", encoding="utf-8", newline="") as f:
+                    old_content = f.read()
+
+            old_norm = normalize_for_diff(old_content)
+            new_norm = normalize_for_diff(csv_content)
+            changed = (new_norm != old_norm)
+            region_result["changed"] = changed
+
+            # (Valgfrit) medtag hashes i results for nem fejlsøgning
+            if changed:
+                region_result["old_md5"] = hash_str(old_norm)
+                region_result["new_md5"] = hash_str(new_norm)
+
+                # Skriv deterministisk: UTF-8 uden BOM og LF
+                with open(csv_path, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(csv_content)
+                changed_any = True
+            else:
+                region_result["old_md5"] = hash_str(old_norm)
+                region_result["new_md5"] = region_result["old_md5"]
+
+            results[region] = region_result
+
+        except Exception as e:
+            region_result["error"] = str(e)
+            results[region] = region_result
+            # fortsæt til næste region
 
     # Kør update_version.py small hvis noget ændret
     if changed_any:
