@@ -1,4 +1,4 @@
-Artnr;Artnavn;Datofra;Datotil
+﻿Artnr;Artnavn;Datofra;Datotil
 01530;Pibesvane;21-04;25-09
 01570;Tajgasædgås/Tundrasædgås;01-05;31-08
 01590;Blisgås;01-06;15-09
@@ -10,7 +10,7 @@ Artnr;Artnavn;Datofra;Datotil
 02200;Lille Skallesluger;01-06;15-10
 00110;Nordisk Lappedykker;01-06;15-09
 05180;Enkeltbekkasin;10-05;20-09
-05462;Rødben, Islandsk (ssp. robusta)16-05;10-07
+05462;Rødben, Islandsk (ssp. robusta);16-05;10-07
 05100;Sortgrå Ryle;20-05;10-08
 05660;Mellemkjove;11-06;31-07
 06540;Lunde;01-04;15-08
@@ -32,8 +32,7 @@ Artnr;Artnavn;Datofra;Datotil
 16680;Stor Korsnæb;01-05;15-09
 18500;Snespurv;01-05;20-09
 18479;Lapværling/Snespurv;21-05;05-09
-18470;Lapværling;21-05;05-091
-Artnr;Artnavn;Datofra;Datotil
+18470;Lapværling;21-05;05-09
 01910;Atlingand;10-10;11-03
 03700;Vagtel;30-09;20-04
 00120;Sorthalset Lappedykker;20-10;11-03

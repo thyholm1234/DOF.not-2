@@ -1,7 +1,8 @@
-﻿artsnavn;bemaerk_antal
+artsnavn;bemaerk_antal
 Hvidhovedet And;1
 Amerikansk Skarveand;1
-Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Amerikansk Skarveand x 	
+Hvidhovedet And (hybrid);1
 Sorthalset Svane;1
 Knopsvane;500
 Sortsvane;1
@@ -297,12 +298,12 @@ Kjove sp.;1
 Lunde;1
 Tejst;1
 Tejst, Arktisk (ssp. mandtii);1
-Sodfarvet Terne;1
 Tejst, Atlantisk (ssp. arcticus);1
+Sodfarvet Terne;1
 Tejst, Baltisk (ssp. grylle);1
 Alk;5
-Alk, Nordlig (ssp. torda);1
 Alaskaryle;1
+Alk, Nordlig (ssp. torda);1
 Alk, Atlantisk (ssp. islandica);1
 Søkonge;1
 Polarlomvie;1
@@ -473,8 +474,8 @@ Lille Skrigeørn/Stor Skrigeørn;1
 Lille Skrigeørn;1
 Dværgørn;1
 Steppeørn;1
-Gråspætte;1
 Kejserørn;1
+Gråspætte;1
 Kongeørn;1
 Høgeørn;1
 Ørn sp.;1
@@ -543,8 +544,8 @@ Soldaterara;1
 Stor Alexanderparakit;1
 Alexanderparakit;1
 Undulat;1
-Papegøje sp.;1
 Huskrage;1
+Papegøje sp.;1
 Rødøjet Vireo;1
 Pirol;1
 Stor Tornskade;1
@@ -558,8 +559,8 @@ Brun Tornskade;1
 Tornskade sp.;1
 Iberisk Blåskade;1
 Skovskade;10
-Kalanderlærke;1
 Husskade;50
+Kalanderlærke;1
 Nøddekrige;1
 Nøddekrige, Tyknæbbet (ssp. caryocatactes);1
 Nøddekrige, Tyndnæbbet (ssp. macrorhynchos);1
@@ -705,8 +706,8 @@ Ringdrossel;1
 Sortstrubet Drossel;1
 Brundrossel;1
 Rødstrubet Drossel;1
-Rødstrubet Drossel/Sortstrubet Drossel;1
 Gråstrubet Drossel;1
+Rødstrubet Drossel/Sortstrubet Drossel;1
 Vandredrossel;1
 Drossel sp.;200
 Brun Fluesnapper;1

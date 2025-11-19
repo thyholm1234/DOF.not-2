@@ -1,4 +1,4 @@
-<!-- Version: 4.8 - 2025-11-18 01.26.52 -->
+<!-- Version: 4.8.27 - 2025-11-19 01.12.31 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -15,10 +15,10 @@
       navigator.serviceWorker.register('/sw.js');
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.8.27"></script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.8">
+  <link rel="stylesheet" href="/style.css?v=4.8.27">
 </head>
 <body>
   <header class="wrap">
@@ -38,7 +38,6 @@
     <!-- Admin action card: kun for hovedadmin -->
     <div id="admin-action-card" class="card" style="display:none; margin-bottom:1em; padding:1em; gap:1em; display:flex; flex-wrap:wrap;">
       <button id="show-csv-files-btn" style="margin: 0;">Artsdata</button>
-      <button id="add-art-btn" style="margin: 0;">Ny art</button>
       <button id="show-admins-btn" style="margin: 0;">Admins</button>
       <button id="show-users-btn" style="margin:0;">Brugere</button>
       <button id="show-database-btn" style="margin: 0;">Database</button>
@@ -53,21 +52,6 @@
     <div id="arter-editor" style="display:none;">
       <h2>Rediger arter</h2>
       <div id="arter-list"></div>
-      <div id="art-edit-modal" style="display:none;">
-        <form id="art-edit-form">
-          <label>artsid: <input id="edit-artsid" readonly></label><br>
-          <label>artsnavn: <input id="edit-artsnavn"></label><br>
-          <label>klassifikation: 
-            <select id="edit-klassifikation">
-              <option value="Alm">Alm</option>
-              <option value="SUB">SUB</option>
-              <option value="SU">SU</option>
-            </select>
-          </label><br>
-          <button type="submit">Gem</button>
-          <button type="button" id="cancel-edit-art">Annullér</button>
-        </form>
-      </div>
     </div>
 
     <div id="sync-modal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
@@ -117,29 +101,6 @@
       </div>
     </div>
 
-    <!-- Modal tilføj ny art -->
-    <div id="add-art-modal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center;">
-      <div class="modal-content card" style="max-width:400px; margin:auto;">
-        <h2 style="margin-top:0;">Tilføj ny art</h2>
-        <form id="add-art-form">
-          <label>artsid<br><input id="add-artsid" required style="width:100%"></label><br>
-          <label>artsnavn<br><input id="add-artsnavn" required style="width:100%"></label><br>
-          <label>klassifikation<br>
-            <select id="add-klassifikation" style="width:100%">
-              <option value="Alm">Alm</option>
-              <option value="SU">SU</option>
-              <option value="SUB">SUB</option>
-            </select>
-          </label><br>
-          <label>bemærk_antal (default = 1)<br><input id="add-bemaerk-antal" required style="width:100%"></label><br>
-          <div style="display:flex; gap:1em; margin-top:1em;">
-            <button type="submit" class="primary-btn">Tilføj</button>
-            <button type="button" onclick="document.getElementById('add-art-modal').style.display='none'">Annullér</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <!-- Adminpanel indhold -->
     <div id="admin-content" style="display:none;">
       <h2>Adminpanel</h2>
@@ -156,8 +117,8 @@
 
     
   </main>
-  <script src="admin.js?v=4.8"></script>
-  <script src="app.js?v=4.8"></script>
+  <script src="admin.js?v=4.8.27"></script>
+  <script src="app.js?v=4.8.27"></script>
   <div id="blacklist-modal" class="modal" style="display:none;">
     <div class="modal-content card" style="max-width:400px; margin:auto;">
       <h3>Blacklist observation</h3>

@@ -1,7 +1,8 @@
-﻿artsnavn;bemaerk_antal
+artsnavn;bemaerk_antal
 Hvidhovedet And;1
 Amerikansk Skarveand;1
-Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Amerikansk Skarveand x 	
+Hvidhovedet And (hybrid);1
 Sorthalset Svane;1
 Knopsvane;50
 Sortsvane;1
@@ -67,8 +68,8 @@ Ederfugl;500
 Ederfugl, Arktisk (ssp. borealis);1
 Kongeederfugl x Ederfugl (hybrid);1
 Sortand;50
-Amerikansk Sortand;1
 Tanggås;1
+Amerikansk Sortand;1
 Brilleand;1
 Fløjlsand;5
 Amerikansk Fløjlsand;1
@@ -120,8 +121,8 @@ Amerikansk Pibeand;1
 Amerikansk Pibeand x Pibeand (hybrid);1
 Chilepibeand;1
 Pibeand x Knarand (hybrid);1
-Stenhøne;1
 Pibeand x Chilepibeand (hybrid);1
+Stenhøne;1
 Pibeand/Spidsand;10
 Gråand;500
 Gråand x Knarand (hybrid);1
@@ -297,12 +298,12 @@ Kjove sp.;1
 Lunde;1
 Tejst;1
 Tejst, Arktisk (ssp. mandtii);1
-Tejst, Atlantisk (ssp. arcticus);1
 Sodfarvet Terne;1
+Tejst, Atlantisk (ssp. arcticus);1
 Tejst, Baltisk (ssp. grylle);1
 Alk;10
-Alk, Nordlig (ssp. torda);1
 Alaskaryle;1
+Alk, Nordlig (ssp. torda);1
 Alk, Atlantisk (ssp. islandica);1
 Søkonge;1
 Polarlomvie;1
@@ -543,8 +544,8 @@ Soldaterara;1
 Stor Alexanderparakit;1
 Alexanderparakit;1
 Undulat;1
-Papegøje sp.;1
 Huskrage;1
+Papegøje sp.;1
 Rødøjet Vireo;1
 Pirol;1
 Stor Tornskade;1
@@ -703,8 +704,8 @@ Sjagger;250
 Sjagger x Solsort (hybrid);1
 Ringdrossel;1
 Sortstrubet Drossel;1
-Rødstrubet Drossel;1
 Brundrossel;1
+Rødstrubet Drossel;1
 Gråstrubet Drossel;1
 Rødstrubet Drossel/Sortstrubet Drossel;1
 Vandredrossel;1

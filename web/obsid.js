@@ -1,4 +1,4 @@
-// Version: 4.8 - 2025-11-18 01.26.52
+// Version: 4.8.27 - 2025-11-19 01.12.31
 // © Christian Vemmelund Helligsø
 
 function getObsIdFromUrl() {

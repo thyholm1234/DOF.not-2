@@ -1,12 +1,15 @@
-// Version: 4.8 - 2025-11-18 01.26.52
+// Version: 4.8.27 - 2025-11-19 01.12.31
 // © Christian Vemmelund Helligsø
-const CACHE_NAME = 'dofnot-v4.8';
+const CACHE_NAME = 'dofnot-v4.8.27';
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/data/arter_dof_content.csv',
+  '/data/arter_filter_klassificeret.csv',
+  '/data/faenologi.csv'
 ];
 
 // Install: precache core

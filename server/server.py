@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request as StarletteRequest
 import pytz
 import logging
+import subprocess
 
 load_dotenv()
 
@@ -635,55 +636,247 @@ def append_line_robust(path, line):
             f.write("\n")
         f.write(line if line.endswith("\n") else line + "\n")
 
-@app.post("/api/admin/add-art")
-async def add_art(data: dict = Body(...)):
-    artsid = data.get("artsid", "").strip()
-    artsnavn = data.get("artsnavn", "").strip()
-    klassifikation = data.get("klassifikation", "").strip()
-    bemaerk_antal = data.get("bemaerk_antal", "").strip()
-    user_id = data.get("user_id", "")
-    device_id = data.get("device_id", "")
+@app.api_route("/api/admin/fetch-faenologi-csv", methods=["GET", "POST"])
+async def fetch_faenologi_csv(request: Request):
+    import urllib.request
+    import re
+    import html
 
-    # Superadmin-tjek
-    obserkode = get_obserkode_from_userprefs(user_id)
-    superadmins = load_superadmins()
-    if obserkode not in superadmins:
-        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+    urls = {
+        "sommer": "https://dofbasen.dk/opslag/wsdata.php?tid=sommer",
+        "vinter": "https://dofbasen.dk/opslag/wsdata.php?tid=vinter"
+    }
+    rows = []
+    for season, url in urls.items():
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (DOF.not server)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            html_text = resp.read().decode("windows-1252", errors="replace")
+        for m in re.finditer(
+            r"<tr><td>(\d+)</td><td[^>]*>.*?</td><td>(?:<span[^>]*>)?([^<]+)(?:</span>)?</td><td>\(([\d/]+)-([\d/]+)\)</td></tr>",
+            html_text
+        ):
+            artnr, artnavn, datofra, datotil = m.groups()
+            artnavn = html.unescape(artnavn)
+            def fix_date(s):
+                d, m = s.split("/")
+                return f"{int(d):02d}-{int(m):02d}"
+            datofra = fix_date(datofra)
+            datotil = fix_date(datotil)
+            rows.append([artnr, artnavn, datofra, datotil])
 
-    # 1. Tilføj til arter_filter_klassificeret.csv hvis ikke findes
-    arter_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
-    with open(arter_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    exists = any(line.split(";")[0].strip() == artsid for line in lines)
-    if not exists:
-        append_line_robust(arter_path, f"{artsid};{artsnavn};{klassifikation}")
-        # Synkroniser til web/data også hvis nødvendigt
-        web_arter_path = os.path.join(os.path.dirname(__file__), "..", "web", "data", "arter_filter_klassificeret.csv")
-        if os.path.exists(web_arter_path):
-            append_line_robust(web_arter_path, f"{artsid};{artsnavn};{klassifikation}")
+    csv_header = "Artnr;Artnavn;Datofra;Datotil\n"
+    csv_content = csv_header + "\n".join(";".join(row) for row in rows) + "\n"
 
-    # 2. Tilføj til alle bemærk-filer (undtagen faenologi)
-    bemaerk_files = [
-        "bornholm_bemaerk_parsed.csv", "fyn_bemaerk_parsed.csv", "koebenhavn_bemaerk_parsed.csv",
-        "nordjylland_bemaerk_parsed.csv", "nordsjaelland_bemaerk_parsed.csv", "nordvestjylland_bemaerk_parsed.csv",
-        "oestjylland_bemaerk_parsed.csv", "soenderjylland_bemaerk_parsed.csv", "storstroem_bemaerk_parsed.csv",
-        "sydoestjylland_bemaerk_parsed.csv", "sydvestjylland_bemaerk_parsed.csv", "vestjylland_bemaerk_parsed.csv",
-        "vestsjaelland_bemaerk_parsed.csv"
+    # Skriv til begge placeringer hvis ændret
+    csv_paths = [
+        os.path.join(os.path.dirname(__file__), "..", "data", "faenologi.csv"),
+        os.path.join(os.path.dirname(__file__), "..", "web", "data", "faenologi.csv"),
     ]
-    for fname in bemaerk_files:
-        path = os.path.join(os.path.dirname(__file__), "..", "data", fname)
-        # Tjek om artsnavn allerede findes
-        exists = False
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.split(";")[0].strip().lower() == artsnavn.lower():
-                        exists = True
-                        break
-        if not exists:
-            append_line_robust(path, f"{artsnavn};{bemaerk_antal}")
+    old_content = ""
+    if os.path.exists(csv_paths[0]):
+        with open(csv_paths[0], "r", encoding="utf-8-sig") as f:
+            old_content = f.read()
+    changed = (csv_content != old_content)
 
-    return {"ok": True}
+    if changed:
+        for path in csv_paths:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8-sig", newline="") as f:
+                f.write(csv_content)
+        try:
+            subprocess.run(
+                ["python", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "update_version.py")), "small"],
+                check=True,
+                cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            )
+        except Exception as e:
+            return {"ok": True, "rows": len(rows), "changed": changed, "update_version_error": str(e)}
+    return {"ok": True, "rows": len(rows), "changed": changed}
+
+@app.api_route("/api/admin/fetch-all-bemaerk-csv", methods=["GET", "POST"])
+async def fetch_all_bemaerk_csv(request: Request):
+    import os
+    import subprocess
+    import urllib.request
+    import re
+    import html
+
+    # Mapping fra list-param til filnavn
+    region_map = {
+        "kbh": "koebenhavn_bemaerk_parsed.csv",
+        "nsjl": "nordsjaelland_bemaerk_parsed.csv",
+        "vsjl": "vestsjaelland_bemaerk_parsed.csv",
+        "ss": "storstroem_bemaerk_parsed.csv",
+        "b": "bornholm_bemaerk_parsed.csv",
+        "f": "fyn_bemaerk_parsed.csv",
+        "sdrj": "soenderjylland_bemaerk_parsed.csv",
+        "soej": "sydoestjylland_bemaerk_parsed.csv",
+        "svj": "sydvestjylland_bemaerk_parsed.csv",
+        "vj": "vestjylland_bemaerk_parsed.csv",
+        "oej": "oestjylland_bemaerk_parsed.csv",
+        "nvj": "nordvestjylland_bemaerk_parsed.csv",
+        "nj": "nordjylland_bemaerk_parsed.csv",
+    }
+
+    base_url = "https://dofbasen.dk/opslag/bemaerk.php?list={}"
+    results = {}
+    changed_any = False
+
+    for region, filename in region_map.items():
+        url = base_url.format(region)
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (DOF.not server)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            html_text = resp.read().decode("windows-1252", errors="replace")
+
+        # Find alle rækker i tabellen
+        rows = []
+        for m in re.finditer(
+            r"<tr><td>(?:<span[^>]*>)?([^<]+)(?:</span>)?</td><td[^>]*align=[\"']right[\"'][^>]*>(\d+)</td>",
+            html_text
+        ):
+            artsnavn, bemaerk_antal = m.groups()
+            artsnavn = html.unescape(artsnavn).strip()
+            rows.append([artsnavn, bemaerk_antal])
+
+        # Byg CSV-indhold (ensartet LF som linjeskift)
+        csv_header = "artsnavn;bemaerk_antal\n"
+        csv_body = "\n".join(";".join(row) for row in rows)
+        csv_content = csv_header + csv_body + "\n"
+
+        # Sammenlign med eksisterende fil
+        csv_path = os.path.join(os.path.dirname(__file__), "..", "data", filename)
+        old_content = ""
+        if os.path.exists(csv_path):
+            with open(csv_path, "r", encoding="utf-8", newline="") as f:
+                old_content = f.read()
+
+        # Fjern evt. BOM fra tidligere filer + normalisér linjeskift og trailing whitespace
+        def normalize(s: str) -> str:
+            if s is None:
+                return ""
+            s = s.lstrip("\ufeff")          # fjern BOM hvis den er der
+            s = s.replace("\r\n", "\n")     # normalisér til LF
+            s = s.rstrip("\n\r")            # fjern kun afsluttende linjeskift
+            return s
+
+        old_norm = normalize(old_content)
+        new_norm = normalize(csv_content)
+
+        changed = (new_norm != old_norm)
+        results[region] = {"rows": len(rows), "changed": changed, "file": filename}
+
+        if changed:
+            changed_any = True
+            # Skriv konsekvent uden BOM og med newline="\n"
+            with open(csv_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(csv_content)
+
+    # Kør update_version.py small hvis noget ændret
+    if changed_any:
+        try:
+            subprocess.run(
+                [
+                    "python",
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "update_version.py")),
+                    "small",
+                ],
+                check=True,
+                cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+            )
+        except Exception as e:
+            return {"ok": True, "results": results, "update_version_error": str(e)}
+
+    return {"ok": True, "results": results}
+
+
+@app.api_route("/api/admin/fetch-arter-csv", methods=["GET", "POST"])
+async def fetch_arter_csv(request: Request):
+    url = "https://statistik.dofbasen.dk/arter?aar=&slutAar=&startAar=&afdeling=&kommune=&lokalitet=&obser=&visArter=ja&_visArter=on&visHybrider=ja&_visHybrider=on&visUbestemte=ja&_visUbestemte=on&_visAndre=on"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (DOF.not server)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        html_text = resp.read().decode("utf-8", errors="replace")
+
+    # Find tabel med arter (id="table")
+    m_table = re.search(r'<table[^>]*id=["\']table["\'][^>]*>(.*?)</table>', html_text, re.DOTALL | re.IGNORECASE)
+    if not m_table:
+        raise HTTPException(status_code=500, detail="Kunne ikke finde tabel i HTML")
+    table_html = m_table.group(1)
+
+    # Find alle rækker (skip header)
+    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL | re.IGNORECASE)[1:]
+    data_rows = []
+    for row_html in rows:
+        tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
+        if len(tds) < 3:
+            continue
+        artsid = html.unescape(re.sub(r'<[^>]+>', '', tds[0][1])).strip().lstrip("0") or "0"
+        td1_class = tds[1][0]
+        artnavn = html.unescape(re.sub(r'<[^>]+>', '', tds[1][1])).strip()
+        m_class = re.search(r'class=["\']([^"\']+)["\']', td1_class)
+        kategori = ""
+        if m_class:
+            for cls in m_class.group(1).split():
+                if cls in ("su", "subart", "hybrid_sp"):
+                    kategori = cls
+        # Map kategori til ønsket output
+        if kategori == "su":
+            kategori_out = "SU"
+        elif kategori == "subart":
+            kategori_out = "SUB"
+        else:
+            kategori_out = "Alm"
+        data_rows.append([artsid, artnavn, kategori_out])
+
+    # Byg nyt CSV-indhold som tekst
+    csv_header = "artsid;artsnavn;klassifikation\n"
+    csv_content = csv_header + "\n".join(";".join(row) for row in data_rows) + "\n"
+
+    # Sammenlign med eksisterende fil (data/arter_filter_klassificeret.csv)
+    csv_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
+    old_content = ""
+    if os.path.exists(csv_path):
+        with open(csv_path, "r", encoding="utf-8") as f:
+            old_content = f.read()
+    changed = (csv_content != old_content)
+
+    # Skriv til CSV begge steder hvis ændret
+    csv_paths = [
+        os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv"),
+        os.path.join(os.path.dirname(__file__), "..", "web", "data", "arter_filter_klassificeret.csv"),
+    ]
+    if changed:
+        for path in csv_paths:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(csv_content)
+        # Kør update_version.py small i roden hvis ændret
+        try:
+            subprocess.run(
+                ["python", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "update_version.py")), "small"],
+                check=True,
+                cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            )
+        except Exception as e:
+            return {"ok": True, "rows": len(data_rows), "changed": changed, "update_version_error": str(e)}
+    return {"ok": True, "rows": len(data_rows), "changed": changed}
 
 @app.get("/api/obs/full")
 async def api_obs_full(obsid: str = Query(..., min_length=3, description="DOFbasen observation id")):
@@ -849,10 +1042,13 @@ async def update_data(request: Request):
                     species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
                     # Find brugerens obserkode
                     user_obserkode = prefs.get("obserkode", "").strip().upper()
-                    # Find observationens obserkode
-                    obs_obserkode = (obs.get("Obserkode") or obs.get("obserkode") or "").strip().upper()
-                    # Spring over hvis brugerens obserkode matcher observationens
-                    if user_obserkode and obs_obserkode and user_obserkode == obs_obserkode:
+                    # Hent obserstate som liste af koder (kan være None)
+                    obs_obserstate = obs.get("obserstate") or []
+                    if isinstance(obs_obserstate, str):
+                        obs_obserstate = [obs_obserstate]
+                    obs_obserstate = [k.strip().upper() for k in obs_obserstate if k]
+                    # Spring over hvis brugerens obserkode findes i obserstate-listen
+                    if user_obserkode and user_obserkode in obs_obserstate:
                         continue
                     if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
                         tasks.append(
@@ -883,7 +1079,18 @@ async def update_data(request: Request):
                     "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
                     (day, thread_id)
                 ).fetchall()
+                # --- NY LOGIK: filtrer brugere fra hvis deres obserkode findes i obserstate ---
+                obs_obserstate = obs.get("obserstate") or []
+                if isinstance(obs_obserstate, str):
+                    obs_obserstate = [obs_obserstate]
+                obs_obserstate = [k.strip().upper() for k in obs_obserstate if k]
                 for user_id, device_id in rows:
+                    # Find brugerens obserkode
+                    prefs = get_prefs(user_id)
+                    user_obserkode = (prefs.get("obserkode") or "").strip().upper()
+                    # Hvis obserstate ikke er tom og brugerens obserkode findes i listen, så spring over
+                    if obs_obserstate and user_obserkode and user_obserkode in obs_obserstate:
+                        continue
                     sub_row = conn.execute(
                         "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
                         (user_id, device_id)
@@ -2216,7 +2423,7 @@ async def get_server_log(data: dict = Body(...)):
     log_path = os.path.join(os.path.dirname(__file__), "server.log")
     if not os.path.isfile(log_path):
         return {"log": ""}
-    with open(log_path, "r", encoding="utf-8") as f:
+    with open(log_path, "r", encoding="utf-8", errors="replace") as f:
         lines = f.readlines()[-1000:]
     return {"log": "".join(lines)}
 

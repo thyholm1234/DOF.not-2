@@ -1,7 +1,8 @@
-﻿artsnavn;bemaerk_antal
+artsnavn;bemaerk_antal
 Hvidhovedet And;1
 Amerikansk Skarveand;1
-Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Amerikansk Skarveand x 	
+Hvidhovedet And (hybrid);1
 Sorthalset Svane;1
 Knopsvane;1000
 Sortsvane;1
@@ -147,8 +148,8 @@ Fasan;50
 Påfugl;1
 Vagtel;1
 Rødhøne;1
-Chukarhøne;1
 Rødhalset Natravn;1
+Chukarhøne;1
 Lille Flamingo;1
 Flamingo sp.;1
 Chileflamingo;1
@@ -301,8 +302,8 @@ Sodfarvet Terne;1
 Tejst, Atlantisk (ssp. arcticus);1
 Tejst, Baltisk (ssp. grylle);1
 Alk;5
-Alk, Nordlig (ssp. torda);1
 Alaskaryle;1
+Alk, Nordlig (ssp. torda);1
 Alk, Atlantisk (ssp. islandica);1
 Søkonge;1
 Polarlomvie;1
@@ -387,8 +388,8 @@ Scopolis Skråpe;1
 Atlantisk Skråpe;1
 Atlantisk Skråpe/Scopolis Skråpe;1
 Atlantisk/Scopolis/Storskråpe;1
-Sodfarvet Skråpe;1
 Amerikansk Sølvmåge;1
+Sodfarvet Skråpe;1
 Storskråpe;1
 Almindelig Skråpe;1
 Middelhavsskråpe/Almindelig Skråpe;1
@@ -405,8 +406,8 @@ Brun Sule;1
 Dværgskarv;1
 Middelhavsskråpe, Ægæerskråpe (ssp. yelkouan);1
 Topskarv;1
-Makaronesisk Skråpe;1
 Skarv;500
+Makaronesisk Skråpe;1
 Skarv, Storskarv (ssp. carbo);10
 Skarv, Mellemskarv (ssp. sinensis);500
 Skarv sp.;1
@@ -543,8 +544,8 @@ Soldaterara;1
 Stor Alexanderparakit;1
 Alexanderparakit;1
 Undulat;1
-Papegøje sp.;1
 Huskrage;1
+Papegøje sp.;1
 Rødøjet Vireo;1
 Pirol;1
 Stor Tornskade;1
@@ -558,8 +559,8 @@ Brun Tornskade;1
 Tornskade sp.;1
 Iberisk Blåskade;1
 Skovskade;10
-Kalanderlærke;1
 Husskade;75
+Kalanderlærke;1
 Nøddekrige;1
 Nøddekrige, Tyknæbbet (ssp. caryocatactes);1
 Nøddekrige, Tyndnæbbet (ssp. macrorhynchos);1
@@ -703,8 +704,8 @@ Sjagger;500
 Sjagger x Solsort (hybrid);1
 Ringdrossel;1
 Sortstrubet Drossel;1
-Brundrossel;1
 Rødstrubet Drossel;1
+Brundrossel;1
 Rødstrubet Drossel/Sortstrubet Drossel;1
 Gråstrubet Drossel;1
 Vandredrossel;1
@@ -733,8 +734,8 @@ Rødstjert;10
 Stendrossel;1
 Bynkefugl;10
 Sibirisk Bynkefugl;1
-Sibirisk Bynkefugl/Japansk Bynkefugl;1
 Sibirisk Bynkefugl, Kaukasusbynkefugl (ssp. hemprichii);1
+Sibirisk Bynkefugl/Japansk Bynkefugl;1
 Sibirisk Bynkefugl, Steppebynkefugl (ssp. variegatus);1
 Sibirisk Bynkefugl, Bjergbynkefugl (ssp. stejnegeri);1
 Sibirisk Bynkefugl (ssp. maurus);1

@@ -1,7 +1,8 @@
-﻿artsnavn;bemaerk_antal
+artsnavn;bemaerk_antal
 Hvidhovedet And;1
 Amerikansk Skarveand;1
-Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Amerikansk Skarveand x 	
+Hvidhovedet And (hybrid);1
 Sorthalset Svane;1
 Knopsvane;100
 Sortsvane;1
@@ -301,8 +302,8 @@ Sodfarvet Terne;1
 Tejst, Atlantisk (ssp. arcticus);1
 Tejst, Baltisk (ssp. grylle);1
 Alk;1
-Alk, Nordlig (ssp. torda);1
 Alaskaryle;1
+Alk, Nordlig (ssp. torda);1
 Alk, Atlantisk (ssp. islandica);1
 Søkonge;1
 Polarlomvie;1
@@ -387,8 +388,8 @@ Scopolis Skråpe;1
 Atlantisk Skråpe;1
 Atlantisk Skråpe/Scopolis Skråpe;1
 Atlantisk/Scopolis/Storskråpe;1
-Amerikansk Sølvmåge;1
 Sodfarvet Skråpe;1
+Amerikansk Sølvmåge;1
 Storskråpe;1
 Almindelig Skråpe;1
 Middelhavsskråpe/Almindelig Skråpe;1
@@ -403,8 +404,8 @@ Pragtfregatfugl;1
 Sule;1
 Brun Sule;1
 Dværgskarv;1
-Topskarv;1
 Middelhavsskråpe, Ægæerskråpe (ssp. yelkouan);1
+Topskarv;1
 Makaronesisk Skråpe;1
 Skarv;500
 Skarv, Storskarv (ssp. carbo);10
@@ -558,8 +559,8 @@ Brun Tornskade;1
 Tornskade sp.;1
 Iberisk Blåskade;1
 Skovskade;10
-Husskade;75
 Kalanderlærke;1
+Husskade;75
 Nøddekrige;1
 Nøddekrige, Tyknæbbet (ssp. caryocatactes);1
 Nøddekrige, Tyndnæbbet (ssp. macrorhynchos);1
@@ -636,8 +637,8 @@ Himalayasanger;1
 Fuglekongesanger;1
 Schwarz Løvsanger;1
 Sinkiangløvsanger;1
-Tamarisksanger;1
 Brun Løvsanger;1
+Tamarisksanger;1
 Løvsanger;20
 Løvsanger, Almindelig (ssp. trochilus);1
 Løvsanger, Nordlig (ssp. acredula);1
@@ -676,8 +677,8 @@ Rødtoppet Fuglekonge;1
 Fuglekonge;20
 Spætmejse;10
 Spætmejse, Mørkbuget (ssp. caesia);1
-Bynkefugl x Sortstrubet Bynkefugl (hybrid);1
 Spætmejse, Lysbuget (ssp. europaea);1
+Bynkefugl x Sortstrubet Bynkefugl (hybrid);1
 Træløber;4
 Træløber, Sydlig (ssp. macrodactyla);1
 Træløber, Nordlig (ssp. familiaris);4
@@ -851,4 +852,3 @@ Småfugl sp. (Pibere, Finker, Spurve o.lign.);1000
 Burfugl sp.;1
 Ny fugleart for landet;1
 Hybrid sp.;1
-

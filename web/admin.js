@@ -1,4 +1,4 @@
-// Version: 4.8 - 2025-11-18 01.26.52
+// Version: 4.8.27 - 2025-11-19 01.12.31
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -266,7 +266,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("admin-action-card").style.display = "flex";
     document.getElementById("show-admins-btn").style.display = "";
     document.getElementById("add-admin-btn").style.display = "";
-    document.getElementById("add-art-btn").style.display = "";
     document.getElementById("sync-threads-btn").style.display = "";
     document.getElementById("traffic-btn").style.display = "";
   } else {
@@ -691,6 +690,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+
   async function loadAdminsList() {
     const res = await fetch("/api/admin/list-admins", {
       method: "POST",
@@ -917,13 +917,128 @@ document.addEventListener('DOMContentLoaded', async () => {
       csvPanel.style.display = "none";
       if (csvEditor) csvEditor.style.display = "none";
     } else {
-      csvPanel.innerHTML = "<h2>Vælg en fil</h2><ul>" +
-        csvFiles.map(f => `<li><a href=\"#\" onclick=\"loadCsvEditor('${f.file}', '${f.title}');return false;\">${f.title}</a></li>`).join("") +
-        "</ul>";
+      csvPanel.innerHTML = `
+        <h2>Vælg en fil</h2>
+        <div class="card" style="margin:1em; display:flex; gap:1em; flex-wrap:wrap;">
+          <button id="fetch-arter-csv-btn" style="margin:0;">Opdater arter</button>
+          <button id="fetch-faenologi-btn" style="margin:0;">Opdater fænologi</button>
+          <button id="fetch-bemaerk-btn" style="margin:0;">Opdater bemærkelsesværdige</button>
+          <button id="fetch-all-btn" style="margin:0;">Opdater alt</button>
+        </div>
+        <ul>
+          ${csvFiles.map(f => `<li><a href="#" onclick="loadCsvEditor('${f.file}', '${f.title}');return false;">${f.title}</a></li>`).join("")}
+        </ul>
+      `;
       csvPanel.style.display = "block";
       if (csvEditor) csvEditor.style.display = "none";
+
+      const fetchAllBtn = document.getElementById("fetch-all-btn");
+      if (fetchAllBtn) {
+        fetchAllBtn.onclick = async function() {
+          if (!confirm("Vil du opdatere alle arter, fænologi og bemærkelsesværdige?")) return;
+          fetchAllBtn.disabled = true;
+          fetchAllBtn.textContent = "Opdaterer alt...";
+          try {
+            // Opdater arter
+            const arterBtn = document.getElementById("fetch-arter-csv-btn");
+            arterBtn.disabled = true;
+            arterBtn.textContent = "Opdaterer...";
+            let res = await fetch("/api/admin/fetch-arter-csv", { method: "POST" });
+            arterBtn.disabled = false;
+            arterBtn.textContent = "Opdater arter fra DOFbasen";
+            if (!res.ok) throw new Error("Fejl ved arter");
+
+            // Opdater fænologi
+            const faenologiBtn = document.getElementById("fetch-faenologi-btn");
+            faenologiBtn.disabled = true;
+            faenologiBtn.textContent = "Opdaterer...";
+            res = await fetch("/api/admin/fetch-faenologi-csv", { method: "POST" });
+            faenologiBtn.disabled = false;
+            faenologiBtn.textContent = "Opdater fænologi";
+            if (!res.ok) throw new Error("Fejl ved fænologi");
+
+            // Opdater bemærkelsesværdige
+            const bemaerkBtn = document.getElementById("fetch-bemaerk-btn");
+            bemaerkBtn.disabled = true;
+            bemaerkBtn.textContent = "Opdaterer...";
+            res = await fetch("/api/admin/fetch-all-bemaerk-csv", { method: "POST" });
+            bemaerkBtn.disabled = false;
+            bemaerkBtn.textContent = "Opdater bemærkelsesværdige";
+            if (!res.ok) throw new Error("Fejl ved bemærkelsesværdige");
+
+            alert("Alle data opdateret!");
+          } catch (e) {
+            alert("Fejl under opdatering: " + (e.message || e));
+          }
+          fetchAllBtn.disabled = false;
+          fetchAllBtn.textContent = "Opdater alt";
+        };
+      }
+
+      // Tilføj event handler HER:
+      document.getElementById("fetch-faenologi-btn").onclick = async function() {
+        if (!confirm("Hent og opdater fænologi fra DOFbasen?")) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = "Opdaterer...";
+        try {
+          const res = await fetch("/api/admin/fetch-faenologi-csv", { method: "POST" });
+          if (res.ok) {
+            alert("Fænologi opdateret!");
+          } else {
+            alert("Fejl ved opdatering af fænologi.");
+          }
+        } catch {
+          alert("Netværksfejl ved opdatering.");
+        }
+        btn.disabled = false;
+        btn.textContent = "Opdater fænologi";
+      };
+
+      document.getElementById("fetch-bemaerk-btn").onclick = async function() {
+        if (!confirm("Hent og opdater bemærkelsesværdige for alle regioner?")) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = "Opdaterer...";
+        try {
+          const res = await fetch("/api/admin/fetch-all-bemaerk-csv", { method: "POST" });
+          if (res.ok) {
+            alert("Bemærkelsesværdige opdateret!");
+          } else {
+            alert("Fejl ved opdatering af bemærkelsesværdige.");
+          }
+        } catch {
+          alert("Netværksfejl ved opdatering.");
+        }
+        btn.disabled = false;
+        btn.textContent = "Opdater bemærkelsesværdige";
+      };
+
+      const fetchBtn = document.getElementById("fetch-arter-csv-btn");
+      if (fetchBtn) {
+        fetchBtn.onclick = async function() {
+          if (!confirm("Hent og opdater arter fra DOFbasen?")) return;
+          const btn = this;
+          btn.disabled = true;
+          btn.textContent = "Opdaterer...";
+          try {
+            const res = await fetch("/api/admin/fetch-arter-csv", { method: "POST" });
+            if (res.ok) {
+              alert("Arter opdateret!");
+            } else {
+              alert("Fejl ved opdatering af arter.");
+            }
+          } catch {
+            alert("Netværksfejl ved opdatering.");
+          }
+          btn.disabled = false;
+          btn.textContent = "Opdater arter fra DOFbasen";
+        };
+      }
     }
   };
+
+
 
   window.loadCsvEditor = async function(filename, title) {
     const user_id = getOrCreateUserId();
@@ -961,35 +1076,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       alert("Kunne ikke gemme filen (mangler admin-rettigheder?)");
     }
-  };
-
-  document.getElementById("add-art-btn").onclick = function() {
-    document.getElementById("add-art-modal").style.display = "flex";
-  };
-
-  document.getElementById("add-art-form").onsubmit = async function(e) {
-    e.preventDefault();
-    const artsid = document.getElementById("add-artsid").value.trim();
-    const artsnavn = document.getElementById("add-artsnavn").value.trim();
-    const klassifikation = document.getElementById("add-klassifikation").value;
-    const bemaerk_antal = document.getElementById("add-bemaerk-antal").value.trim();
-    const user_id = getOrCreateUserId();
-    const device_id = getOrCreateDeviceId();
-
-    // Kald backend
-    const res = await fetch("/api/admin/add-art", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ artsid, artsnavn, klassifikation, bemaerk_antal, user_id, device_id })
-    });
-    if (res.ok) {
-      alert("Art tilføjet!");
-      document.getElementById("add-art-modal").style.display = "none";
-    } else {
-      alert("Kunne ikke tilføje art (mangler admin-rettigheder?)");
-    }
-  };
-  
+  };  
 
   document.getElementById("show-users-btn").onclick = async function() {
     const container = document.getElementById("all-users-list");

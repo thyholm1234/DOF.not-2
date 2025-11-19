@@ -1,7 +1,8 @@
-﻿artsnavn;bemaerk_antal
+artsnavn;bemaerk_antal
 Hvidhovedet And;1
 Amerikansk Skarveand;1
-Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Amerikansk Skarveand x 	
+Hvidhovedet And (hybrid);1
 Sorthalset Svane;1
 Knopsvane;300
 Sortsvane;1
@@ -147,8 +148,8 @@ Fasan;1100
 Påfugl;1
 Vagtel;1
 Rødhøne;1
-Chukarhøne;1
 Rødhalset Natravn;1
+Chukarhøne;1
 Lille Flamingo;1
 Flamingo sp.;1
 Chileflamingo;1
@@ -301,8 +302,8 @@ Sodfarvet Terne;1
 Tejst, Atlantisk (ssp. arcticus);1
 Tejst, Baltisk (ssp. grylle);1
 Alk;10
-Alk, Nordlig (ssp. torda);1
 Alaskaryle;1
+Alk, Nordlig (ssp. torda);1
 Alk, Atlantisk (ssp. islandica);1
 Søkonge;1
 Polarlomvie;1
@@ -403,8 +404,8 @@ Pragtfregatfugl;1
 Sule;75
 Brun Sule;1
 Dværgskarv;1
-Topskarv;1
 Middelhavsskråpe, Ægæerskråpe (ssp. yelkouan);1
+Topskarv;1
 Makaronesisk Skråpe;1
 Skarv;800
 Skarv, Storskarv (ssp. carbo);500
@@ -473,8 +474,8 @@ Lille Skrigeørn/Stor Skrigeørn;1
 Lille Skrigeørn;1
 Dværgørn;1
 Steppeørn;1
-Gråspætte;1
 Kejserørn;1
+Gråspætte;1
 Kongeørn;1
 Høgeørn;1
 Ørn sp.;1
@@ -558,8 +559,8 @@ Brun Tornskade;1
 Tornskade sp.;1
 Iberisk Blåskade;1
 Skovskade;10
-Husskade;50
 Kalanderlærke;1
+Husskade;50
 Nøddekrige;1
 Nøddekrige, Tyknæbbet (ssp. caryocatactes);1
 Nøddekrige, Tyndnæbbet (ssp. macrorhynchos);1
@@ -703,8 +704,8 @@ Sjagger;500
 Sjagger x Solsort (hybrid);1
 Ringdrossel;1
 Sortstrubet Drossel;1
-Rødstrubet Drossel;1
 Brundrossel;1
+Rødstrubet Drossel;1
 Rødstrubet Drossel/Sortstrubet Drossel;1
 Gråstrubet Drossel;1
 Vandredrossel;1

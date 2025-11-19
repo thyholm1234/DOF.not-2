@@ -1,7 +1,8 @@
-﻿artsnavn;bemaerk_antal
+artsnavn;bemaerk_antal
 Hvidhovedet And;1
 Amerikansk Skarveand;1
-Amerikansk Skarveand x Hvidhovedet And (hybrid);1
+Amerikansk Skarveand x 	
+Hvidhovedet And (hybrid);1
 Sorthalset Svane;1
 Knopsvane;400
 Sortsvane;1
@@ -67,8 +68,8 @@ Ederfugl;750
 Ederfugl, Arktisk (ssp. borealis);1
 Kongeederfugl x Ederfugl (hybrid);1
 Sortand;800
-Tanggås;1
 Amerikansk Sortand;1
+Tanggås;1
 Brilleand;1
 Fløjlsand;15
 Amerikansk Fløjlsand;1
@@ -301,8 +302,8 @@ Sodfarvet Terne;1
 Tejst, Atlantisk (ssp. arcticus);1
 Tejst, Baltisk (ssp. grylle);1
 Alk;10
-Alk, Nordlig (ssp. torda);1
 Alaskaryle;1
+Alk, Nordlig (ssp. torda);1
 Alk, Atlantisk (ssp. islandica);1
 Søkonge;1
 Polarlomvie;1
@@ -403,8 +404,8 @@ Pragtfregatfugl;1
 Sule;100
 Brun Sule;1
 Dværgskarv;1
-Middelhavsskråpe, Ægæerskråpe (ssp. yelkouan);1
 Topskarv;1
+Middelhavsskråpe, Ægæerskråpe (ssp. yelkouan);1
 Makaronesisk Skråpe;1
 Skarv;1000
 Skarv, Storskarv (ssp. carbo);100
@@ -473,8 +474,8 @@ Lille Skrigeørn/Stor Skrigeørn;1
 Lille Skrigeørn;1
 Dværgørn;1
 Steppeørn;1
-Kejserørn;1
 Gråspætte;1
+Kejserørn;1
 Kongeørn;1
 Høgeørn;1
 Ørn sp.;1
@@ -543,8 +544,8 @@ Soldaterara;1
 Stor Alexanderparakit;1
 Alexanderparakit;1
 Undulat;1
-Papegøje sp.;1
 Huskrage;1
+Papegøje sp.;1
 Rødøjet Vireo;1
 Pirol;1
 Stor Tornskade;1
@@ -636,8 +637,8 @@ Himalayasanger;1
 Fuglekongesanger;1
 Schwarz Løvsanger;1
 Sinkiangløvsanger;1
-Tamarisksanger;1
 Brun Løvsanger;1
+Tamarisksanger;1
 Løvsanger;20
 Løvsanger, Almindelig (ssp. trochilus);1
 Løvsanger, Nordlig (ssp. acredula);1
@@ -676,8 +677,8 @@ Rødtoppet Fuglekonge;1
 Fuglekonge;20
 Spætmejse;5
 Spætmejse, Mørkbuget (ssp. caesia);5
-Bynkefugl x Sortstrubet Bynkefugl (hybrid);1
 Spætmejse, Lysbuget (ssp. europaea);1
+Bynkefugl x Sortstrubet Bynkefugl (hybrid);1
 Træløber;3
 Træløber, Sydlig (ssp. macrodactyla);1
 Træløber, Nordlig (ssp. familiaris);1
@@ -705,8 +706,8 @@ Ringdrossel;1
 Sortstrubet Drossel;1
 Brundrossel;1
 Rødstrubet Drossel;1
-Rødstrubet Drossel/Sortstrubet Drossel;1
 Gråstrubet Drossel;1
+Rødstrubet Drossel/Sortstrubet Drossel;1
 Vandredrossel;1
 Drossel sp.;200
 Brun Fluesnapper;1

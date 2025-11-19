@@ -826,6 +826,15 @@ def run_once(date_str=None, send_notifications=True):
 
     batch = list(batch_by_obsid.values())
 
+    # Tilføj obserstate til hver observation i batchen
+    for row in batch:
+        key = _key(row)
+        ns_entry = new_state.get(key)
+        if ns_entry and "obserkoder" in ns_entry:
+            row["obserstate"] = list(ns_entry["obserkoder"].keys())
+        else:
+            row["obserstate"] = []
+
     # gem ny state
     save_state(new_state)
 
