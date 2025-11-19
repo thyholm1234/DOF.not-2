@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pytz
 import server
 import os
+import requests
 
 def wait_until_next_run():
     tz = pytz.timezone("Europe/Copenhagen")
@@ -25,6 +26,18 @@ def wait_until_next_run():
                 print("server.log findes ikke.")
         except Exception as e:
             print(f"Kunne ikke slette server.log: {e}")
+        # Kald endpoints
+        try:
+            for url in [
+                "https://notifikation.dofbasen.dk/api/admin/fetch-arter-csv",
+                "https://notifikation.dofbasen.dk/api/admin/fetch-faenologi-csv",
+                "https://notifikation.dofbasen.dk/api/admin/fetch-all-bemaerk-csv",
+            ]:
+                print(f"Kald: {url}")
+                r = requests.post(url, timeout=120)
+                print(f"Status: {r.status_code}")
+        except Exception as e:
+            print(f"Fejl ved kald af endpoints: {e}")
         print("Done.")
 
 if __name__ == "__main__":
