@@ -1,4 +1,4 @@
-// Version: 4.8.81 - 2025-11-21 12.56.56
+// Version: 4.8.87 - 2025-11-21 15.00.10
 // © Christian Vemmelund Helligsø
 
 function getObsIdFromUrl() {
@@ -7,15 +7,22 @@ function getObsIdFromUrl() {
 }
 
 function shareCoords(lat, lng) {
-  const url = `https://maps.google.com/?q=${lat},${lng}`;
-  const geoUrl = `geo:${lat},${lng}?q=${lat},${lng}`;
   const ua = navigator.userAgent || navigator.vendor || window.opera;
-  const isAndroid = /android/i.test(ua);
   const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isMac = /macintosh|mac os x/i.test(ua);
+  const isAndroid = /android/i.test(ua);
 
-  if (isAndroid || isIOS) {
+  if (isIOS || isMac) {
+    // Apple Maps-link
+    const appleMapsUrl = `https://maps.apple.com/?ll=${lat},${lng}`;
+    window.location.href = appleMapsUrl;
+  } else if (isAndroid) {
+    // geo-link åbner Maps-app på Android
+    const geoUrl = `geo:${lat},${lng}?q=${lat},${lng}`;
     window.location.href = geoUrl;
   } else {
+    // Google Maps-link til desktop og andre platforme
+    const url = `https://maps.google.com/?q=${lat},${lng}`;
     window.open(url, '_blank');
   }
 }
@@ -314,7 +321,7 @@ async function fetchAndRenderObs(obsid) {
             return R * c;
           }
           const d = haversine(userPosition.lat, userPosition.lng, mapLat, mapLng);
-          let distTxt = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
+          let distTxt = d > 1000 ? (d/1000).toFixed(2).replace('.', ',') + " km" : Math.round(d) + " m";
           noteDiv.textContent = `Placering for seneste nål i DOFbasen. Afstand: ${distTxt}`;
         }
       }, 0);
@@ -396,7 +403,7 @@ async function fetchAndRenderObs(obsid) {
                       return R * c;
                     }
                     const d = haversine(userPosition.lat, userPosition.lng, lat, lng);
-                    let distTxt = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
+                    let distTxt = d > 1000 ? (d/1000).toFixed(2).replace('.', ',') + " km" : Math.round(d) + " m";
                     noteDiv.textContent = `Kortet viser midten af lokalitetens placering. Afstand: ${distTxt}`;
                   }
                 }, 0);
@@ -417,3 +424,25 @@ async function fetchAndRenderObs(obsid) {
 }
 
 fetchAndRenderObs(obsid);
+
+function showIosLocationHintIfNeeded() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+  if (!isIOS) return;
+
+  // Tjek om tilladelse allerede er givet
+  if (navigator.permissions) {
+    navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+      if (result.state !== 'granted' && !localStorage.getItem('iosLocationHintShown')) {
+        alert(
+          "For at denne app kan vise din position, skal du tillade lokalitetstjenester:\n\n" +
+          "Gå til Indstillinger → Safari → Lokation → Tillad"
+        );
+        localStorage.setItem('iosLocationHintShown', '1');
+      }
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', showIosLocationHintIfNeeded);

@@ -2318,6 +2318,11 @@ async def admin_pageview_stats(data: dict = Body(...)):
                         stats["obsid.html_sharelink"]["total"] += 1
                         stats["obsid.html_sharelink"]["unique"].add(user_id)
 
+    # Beregn union af alle unikke brugere for traad.html-undersider
+    traad_unique_users = set()
+    for v in traad_per_thread.values():
+        traad_unique_users.update(v["unique"])
+
         # Saml obsid.html statistik
     obsid_stats = stats.get("obsid.html", {"total": 0, "unique": set()})
     obsid_sharelink = stats.get("obsid.html_sharelink", {"total": 0, "unique": set()})
@@ -2341,7 +2346,7 @@ async def admin_pageview_stats(data: dict = Body(...)):
 
     stats_out["traad.html"] = {
         "total": traad_total["total"],
-        "unique": len(traad_total["unique"]),
+        "unique": len(traad_unique_users),
         "sharelink": traad_sharelink_total,
         "threads": {
             k: {
