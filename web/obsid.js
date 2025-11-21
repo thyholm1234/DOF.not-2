@@ -1,9 +1,23 @@
-// Version: 4.8.71 - 2025-11-21 11.59.17
+// Version: 4.8.81 - 2025-11-21 12.56.56
 // © Christian Vemmelund Helligsø
 
 function getObsIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("obsid") || "38040196";
+}
+
+function shareCoords(lat, lng) {
+  const url = `https://maps.google.com/?q=${lat},${lng}`;
+  const geoUrl = `geo:${lat},${lng}?q=${lat},${lng}`;
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  const isAndroid = /android/i.test(ua);
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+  if (isAndroid || isIOS) {
+    window.location.href = geoUrl;
+  } else {
+    window.open(url, '_blank');
+  }
 }
 
 const obsid = getObsIdFromUrl();
@@ -261,6 +275,22 @@ async function fetchAndRenderObs(obsid) {
 
         // Tilføj brugerens placering og beregn afstand
         const noteDiv = document.querySelector('.dofbasen-pin-note');
+        if (noteDiv && mapLat && mapLng) {
+          let navRow = document.createElement('div');
+          navRow.className = "navigate-row";
+          navRow.style.display = "flex";
+          navRow.style.justifyContent = "flex-end";
+          navRow.style.marginTop = "0.5em";
+          noteDiv.parentNode.insertBefore(navRow, noteDiv.nextSibling);
+
+          let shareBtn = document.createElement('button');
+          shareBtn.id = "share-coords-btn";
+          shareBtn.textContent = "Navigér";
+          shareBtn.className = "share-btn";
+          shareBtn.onclick = () => shareCoords(mapLat, mapLng);
+          navRow.appendChild(shareBtn);
+        }
+        
         if (userPosition && noteDiv) {
           L.marker([userPosition.lat, userPosition.lng], {
             title: "Din placering",
@@ -326,6 +356,23 @@ async function fetchAndRenderObs(obsid) {
 
                   // Tilføj brugerens placering og beregn afstand
                   const noteDiv = card.querySelector('.dofbasen-pin-note');
+                  if (noteDiv && lat && lng) {
+                    // Tilføj "Del koordinater"-knap under note
+                    let navRow = document.createElement('div');
+                    navRow.className = "navigate-row";
+                    navRow.style.display = "flex";
+                    navRow.style.justifyContent = "flex-end";
+                    navRow.style.marginTop = "0.5em";
+                    noteDiv.parentNode.insertBefore(navRow, noteDiv.nextSibling);
+
+                    let shareBtn = document.createElement('button');
+                    shareBtn.id = "share-coords-btn";
+                    shareBtn.textContent = "Navigér";
+                    shareBtn.className = "share-btn";
+                    shareBtn.onclick = () => shareCoords(lat, lng);
+                    navRow.appendChild(shareBtn);
+                  }
+
                   if (userPosition && noteDiv) {
                     L.marker([userPosition.lat, userPosition.lng], {
                       title: "Din placering",

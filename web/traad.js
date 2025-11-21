@@ -1,4 +1,4 @@
-// Version: 4.8.71 - 2025-11-21 11.59.17
+// Version: 4.8.81 - 2025-11-21 12.56.56
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -26,9 +26,25 @@
     return `${d} d`;
   }
 
+  
+
   function ensureObsHr(obsRow) {
     if (!obsRow.querySelector('.obs-hr')) {
       obsRow.appendChild(el('hr', 'obs-hr'));
+    }
+  }
+
+  function shareCoords(lat, lng) {
+    const url = `https://maps.google.com/?q=${lat},${lng}`;
+    const geoUrl = `geo:${lat},${lng}?q=${lat},${lng}`;
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    const isAndroid = /android/i.test(ua);
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+    if (isAndroid || isIOS) {
+      window.location.href = geoUrl;
+    } else {
+      window.open(url, '_blank');
     }
   }
 
@@ -242,15 +258,33 @@
       // Find thread-header card (øverste card med titel og meta)
       const threadHeader = document.querySelector('.thread-header.card');
 
-      // Indsæt kort-card EFTER thread-header card
-      if (mapHtml && threadHeader) {
+      if (mapLat !== null && mapLng !== null && mapHtml && threadHeader) {
+        // Indsæt kort-card EFTER thread-header card
         const temp = document.createElement('div');
         temp.innerHTML = mapHtml;
         const mapCard = temp.firstElementChild;
         threadHeader.parentNode.insertBefore(mapCard, threadHeader.nextSibling);
-      }
 
-      if (mapLat !== null && mapLng !== null) {
+        // Find note-div i kortet
+        const noteDiv = mapCard.querySelector('.dofbasen-pin-note');
+
+        // Opret container til knap under noten
+        let navRow = document.createElement('div');
+        navRow.className = "navigate-row";
+        navRow.style.display = "flex";
+        navRow.style.justifyContent = "flex-end";
+        navRow.style.marginTop = "0.5em";
+        mapCard.appendChild(navRow);
+
+        // Opret knappen
+        let shareBtn = document.createElement('button');
+        shareBtn.id = "share-coords-btn";
+        shareBtn.textContent = "Navigér";
+        shareBtn.className = "share-btn";
+        shareBtn.onclick = () => shareCoords(mapLat, mapLng);
+        navRow.appendChild(shareBtn);
+
+        // Opret og vis Leaflet-kort + evt. afstand
         setTimeout(() => {
           const map = L.map('thread-map').setView([mapLat, mapLng], 12);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -260,7 +294,6 @@
           L.marker([mapLat, mapLng]).addTo(map);
 
           // Tilføj brugerens placering og beregn afstand
-          const noteDiv = document.querySelector('.dofbasen-pin-note');
           if (navigator.geolocation && noteDiv) {
             navigator.geolocation.getCurrentPosition(pos => {
               const userLat = pos.coords.latitude;
@@ -672,6 +705,23 @@
             <div class="dofbasen-pin-note">Kortet viser midten af lokalitetens placering</div>
           `;
           threadHeader.parentNode.insertBefore(card, threadHeader.nextSibling);
+
+          // Opret container til knap under noten
+          let navRow = document.createElement('div');
+          navRow.className = "navigate-row";
+          navRow.style.display = "flex";
+          navRow.style.justifyContent = "flex-end";
+          navRow.style.marginTop = "0.5em";
+          card.appendChild(navRow);
+
+          // Opret knappen hvis ikke findes
+          let shareBtn = document.createElement('button');
+          shareBtn.id = "share-coords-btn";
+          shareBtn.textContent = "Navigér";
+          shareBtn.className = "share-btn";
+          shareBtn.onclick = () => shareCoords(lat, lng);
+          navRow.appendChild(shareBtn);
+
           setTimeout(() => {
             const map = L.map('thread-map').setView([lat, lng], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -682,7 +732,8 @@
 
             // Tilføj brugerens placering og beregn afstand
             const noteDiv = card.querySelector('.dofbasen-pin-note');
-            if (userPosition && noteDiv) {
+            let distTxt = "";
+            if (userPosition) {
               L.marker([userPosition.lat, userPosition.lng], {
                 title: "Din placering",
                 icon: L.icon({
@@ -705,8 +756,10 @@
                 return R * c;
               }
               const d = haversine(userPosition.lat, userPosition.lng, lat, lng);
-              let distTxt = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
-              noteDiv.textContent = `Kortet viser midten af lokalitetens placering. Afstand: ${distTxt}`;
+              distTxt = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
+            }
+            if (noteDiv) {
+              noteDiv.textContent = `Kortet viser midten af lokalitetens placering${distTxt ? ". Afstand: " + distTxt : ""}`;
             }
           }, 0);
         }
