@@ -881,6 +881,41 @@ async def fetch_all_bemaerk_csv(request: Request):
 
     return {"ok": True, "results": results}
 
+@app.get("/api/lok_koordinater")
+async def lok_koordinater(loknr: str):
+    """
+    Henter koordinater for en lokalitet fra dofbasen.dk/poplok.php?loknr=...
+    Returnerer laengde og bredde (float) eller fejl.
+    """
+    import urllib.request
+    import re
+
+    url = f"https://dofbasen.dk/poplok.php?loknr={loknr}"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (DOF.not server)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html_text = resp.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        return {"ok": False, "error": f"Kunne ikke hente HTML: {e}"}
+
+    m_lon = re.search(r'<span id="lok_center_lon">([0-9\.\-]+)</span>', html_text)
+    m_lat = re.search(r'<span id="lok_center_lat">([0-9\.\-]+)</span>', html_text)
+    if not m_lon or not m_lat:
+        return {"ok": False, "error": "Koordinater ikke fundet"}
+
+    try:
+        laengde = float(m_lon.group(1))
+        bredde = float(m_lat.group(1))
+    except Exception as e:
+        return {"ok": False, "error": f"Ugyldige koordinater: {e}"}
+
+    return {"ok": True, "laengde": laengde, "bredde": bredde}
 
 @app.api_route("/api/admin/fetch-arter-csv", methods=["GET", "POST"])
 async def fetch_arter_csv(request: Request):

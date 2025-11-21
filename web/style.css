@@ -1,4 +1,4 @@
-/* Version: 4.8.49 - 2025-11-19 02.18.20 */
+/* Version: 4.8.71 - 2025-11-21 11.59.17 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1908,4 +1908,12 @@ header.wrap .brand {
   margin: 10px 0 10px 0;
   width: 100%;
   grid-column: 1 / span 2;
+}
+
+.dofbasen-pin-note {
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+  margin-bottom: 0;
+  font-size: 1em;
 }

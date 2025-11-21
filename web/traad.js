@@ -1,4 +1,4 @@
-// Version: 4.8.49 - 2025-11-19 02.18.20
+// Version: 4.8.71 - 2025-11-21 11.59.17
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -75,6 +75,18 @@
     return {};
   }
 
+  let userPosition = null;
+
+  // Start hentning af brugerens position så tidligt som muligt
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      userPosition = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      };
+    });
+  }
+
   async function loadThread() {
       await loadArterContentMap();
       const day = getParam('date');
@@ -118,6 +130,30 @@
         artnr = String(thread.Artnr).padStart(5, '0');
       } else if (data.events && data.events.length && data.events[0].Artnr) {
         artnr = String(data.events[0].Artnr).padStart(5, '0');
+      }
+
+      // Find første event med obs_laengdegrad og obs_breddegrad
+      let mapLat = null, mapLng = null;
+      if (data.events && data.events.length) {
+        for (const ev of data.events) {
+          const lat = ev.obs_breddegrad && ev.obs_breddegrad.replace(',', '.');
+          const lng = ev.obs_laengdegrad && ev.obs_laengdegrad.replace(',', '.');
+          if (lat && lng && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+            mapLat = Number(lat);
+            mapLng = Number(lng);
+            break;
+          }
+        }
+      }
+
+      let mapHtml = "";
+      if (mapLat !== null && mapLng !== null) {
+        mapHtml = `
+          <div class="card" style="margin:1em 0;">
+            <div id="thread-map" style="height:240px; width:100%;"></div>
+            <div class="dofbasen-pin-note">Placering for seneste nål i DOFbasen.</div>
+          </div>
+        `;
       }
 
       // Kun lav link hvis content=1 for artnr
@@ -200,8 +236,63 @@
       if (isSubscribed) subBtn.classList.add("is-on");
       titleRow.appendChild(subBtn);
 
+      $title.innerHTML = "";
       $title.appendChild(titleRow);
-      $meta.innerHTML = "";
+
+      // Find thread-header card (øverste card med titel og meta)
+      const threadHeader = document.querySelector('.thread-header.card');
+
+      // Indsæt kort-card EFTER thread-header card
+      if (mapHtml && threadHeader) {
+        const temp = document.createElement('div');
+        temp.innerHTML = mapHtml;
+        const mapCard = temp.firstElementChild;
+        threadHeader.parentNode.insertBefore(mapCard, threadHeader.nextSibling);
+      }
+
+      if (mapLat !== null && mapLng !== null) {
+        setTimeout(() => {
+          const map = L.map('thread-map').setView([mapLat, mapLng], 12);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
+          L.marker([mapLat, mapLng]).addTo(map);
+
+          // Tilføj brugerens placering og beregn afstand
+          const noteDiv = document.querySelector('.dofbasen-pin-note');
+          if (navigator.geolocation && noteDiv) {
+            navigator.geolocation.getCurrentPosition(pos => {
+              const userLat = pos.coords.latitude;
+              const userLng = pos.coords.longitude;
+              L.marker([userLat, userLng], {
+                title: "Din placering",
+                icon: L.icon({
+                  iconUrl: "https://notifikation.dofbasen.dk/icons/bino-64.png",
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 16]
+                })
+              }).addTo(map).bindPopup("Din placering");
+
+              // Beregn afstand (Haversine)
+              function toRad(x) { return x * Math.PI / 180; }
+              function haversine(lat1, lng1, lat2, lng2) {
+                const R = 6371000; // meter
+                const dLat = toRad(lat2 - lat1);
+                const dLng = toRad(lng2 - lng1);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                          Math.sin(dLng/2) * Math.sin(dLng/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+              }
+              const d = haversine(userLat, userLng, mapLat, mapLng);
+              let distTxt = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
+              noteDiv.textContent = `Placering for seneste nål i DOFbasen. Afstand: ${distTxt}`;
+            });
+          }
+        }, 0);
+      }
 
       subBtn.onclick = async () => {
         const userid = getOrCreateUserId();
@@ -552,6 +643,84 @@
       }
   }
 
+  async function insertLokMapIfNeeded() {
+    const threadHeader = document.querySelector('.thread-header.card');
+    if (!threadHeader || document.getElementById('thread-map')) return;
+
+    // Prøv at finde loknr fra linket i headeren
+    const lokLink = document.querySelector('a[href*="poplok.php?loknr="]');
+    let loknr = '';
+    if (lokLink) {
+      const m = lokLink.href.match(/loknr=(\d+)/);
+      if (m) loknr = m[1];
+    }
+    if (!loknr) return;
+
+    try {
+      const lokRes = await fetch(`/api/lok_koordinater?loknr=${encodeURIComponent(loknr)}`);
+      if (lokRes.ok) {
+        const lokData = await lokRes.json();
+        if (lokData.ok && lokData.laengde && lokData.bredde) {
+          let lat = Number(lokData.bredde);
+          let lng = Number(lokData.laengde);
+          if (lat < lng) [lat, lng] = [lng, lat];
+          const card = document.createElement('div');
+          card.className = "card";
+          card.style.margin = "1em 0";
+          card.innerHTML = `
+            <div id="thread-map" style="height:240px; width:100%;"></div>
+            <div class="dofbasen-pin-note">Kortet viser midten af lokalitetens placering</div>
+          `;
+          threadHeader.parentNode.insertBefore(card, threadHeader.nextSibling);
+          setTimeout(() => {
+            const map = L.map('thread-map').setView([lat, lng], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap'
+            }).addTo(map);
+            L.marker([lat, lng]).addTo(map);
+
+            // Tilføj brugerens placering og beregn afstand
+            const noteDiv = card.querySelector('.dofbasen-pin-note');
+            if (userPosition && noteDiv) {
+              L.marker([userPosition.lat, userPosition.lng], {
+                title: "Din placering",
+                icon: L.icon({
+                  iconUrl: "https://notifikation.dofbasen.dk/icons/bino-64.png",
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 16]
+                })
+              }).addTo(map).bindPopup("Din placering");
+
+              // Beregn afstand (Haversine)
+              function toRad(x) { return x * Math.PI / 180; }
+              function haversine(lat1, lng1, lat2, lng2) {
+                const R = 6371000; // meter
+                const dLat = toRad(lat2 - lat1);
+                const dLng = toRad(lng2 - lng1);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                          Math.sin(dLng/2) * Math.sin(dLng/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+              }
+              const d = haversine(userPosition.lat, userPosition.lng, lat, lng);
+              let distTxt = d > 1000 ? (d/1000).toFixed(2) + " km" : Math.round(d) + " m";
+              noteDiv.textContent = `Kortet viser midten af lokalitetens placering. Afstand: ${distTxt}`;
+            }
+          }, 0);
+        }
+      }
+    } catch {}
+  }
+
+  async function loadThreadAndMap() {
+    await loadThread();
+    if (!document.getElementById('thread-map')) {
+      await insertLokMapIfNeeded();
+    }
+  }
+
   let arterContentMap = {};
 
   async function loadArterContentMap() {
@@ -655,5 +824,5 @@
     };
   }
 
-  document.addEventListener('DOMContentLoaded', loadThread);
+  document.addEventListener('DOMContentLoaded', loadThreadAndMap);
 })();
