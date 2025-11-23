@@ -12,6 +12,7 @@ from typing import List, Dict, Tuple, Set
 from collections import defaultdict
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import shutil
 
 # DOF "excel"-endpoint. Dato indsættes dynamisk i DD-MM-YYYY
 BASE_URL = (
@@ -431,6 +432,12 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
     # Gem index
     with open(os.path.join(base_dir, "index.json"), "w", encoding="utf-8") as f:
         json.dump(index, f, ensure_ascii=False, indent=2)
+
+    existing_thread_dirs = set(os.listdir(threads_dir))
+    current_thread_dirs = set(threads.keys())
+    for thread_id in existing_thread_dirs:
+        if thread_id not in current_thread_dirs:
+            shutil.rmtree(os.path.join(threads_dir, thread_id), ignore_errors=True)
 
 def today_date_str() -> str:
     # Lokal tid, format DD-MM-YYYY

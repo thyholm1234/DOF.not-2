@@ -1,4 +1,4 @@
-// Version: 4.9.12 - 2025-11-23 20.26.50
+// Version: 4.9.13 - 2025-11-23 21.18.57
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -549,7 +549,8 @@ function startLiveGeolocation(targetLat, targetLng) {
                     badge.style.color = "#fff";
                     badge.style.fontWeight = "bold";
                     dkuRow.appendChild(badge);
-                    const statusSpan = el('span', 'dku-status-text', data.status);
+                    // Tilføj både note-text og dku-status-text for ens layout
+                    const statusSpan = el('span', 'note-text dku-status-text', data.status);
                     dkuRow.appendChild(statusSpan);
                     // Find første turnote- eller obsnote-row, ellers indsæt sidst
                     const firstNote = Array.from(obsRow.children).find(
@@ -562,7 +563,6 @@ function startLiveGeolocation(targetLat, targetLng) {
                       obsRow.appendChild(dkuRow);
                     }
                   }
-
                   // Billeder
                   if (data.images && data.images.length) {
                     ensureObsHr(obsRow);
