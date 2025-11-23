@@ -2264,7 +2264,6 @@ async def admin_pageview_stats(data: dict = Body(...)):
 
     with open(log_path, encoding="utf-8") as f:
         for line in f:
-            # Find første URL i linjen (efter user_id)
             m_url = re.search(r"https?://[^\s]+", line)
             if not m_url:
                 continue
@@ -2278,16 +2277,15 @@ async def admin_pageview_stats(data: dict = Body(...)):
             user_id = parts[2]
             all_users.add(user_id)
             total_views += 1
-            # Find obserkode for user_id
             okode = get_obserkode_from_userprefs(user_id)
             if okode:
                 unique_obserkoder.add(okode)
-            # Find side
             m = re.search(r"https?://[^/]+/([^?]+)", url)
             page = m.group(1) if m else url
 
             is_sharelink = "SHARELINK: True" in line
 
+            # Både / og /index.html tælles som index.html
             if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
                 page = "index.html"
 
@@ -2306,36 +2304,28 @@ async def admin_pageview_stats(data: dict = Body(...)):
                 elif is_sharelink:
                     traad_sharelink_total += 1
 
-            # --- NYT: obsid.html sharelink-tælling ---
+            # --- obsid.html sharelink-tælling ---
             if page.startswith("obsid.html"):
                 stats["obsid.html"]["total"] += 1
                 stats["obsid.html"]["unique"].add(user_id)
-                # Tæl sharelink for obsid.html
                 if "obsid=" in url:
                     m_obsid = re.search(r"obsid=([0-9]+)", url)
                     if m_obsid and is_sharelink:
                         stats.setdefault("obsid.html_sharelink", {"total": 0, "unique": set()})
                         stats["obsid.html_sharelink"]["total"] += 1
                         stats["obsid.html_sharelink"]["unique"].add(user_id)
+            # Tæl ALLE andre sider også
+            stats[page]["total"] += 1
+            stats[page]["unique"].add(user_id)
 
-    # Beregn union af alle unikke brugere for traad.html-undersider
     traad_unique_users = set()
     for v in traad_per_thread.values():
         traad_unique_users.update(v["unique"])
 
-        # Saml obsid.html statistik
     obsid_stats = stats.get("obsid.html", {"total": 0, "unique": set()})
     obsid_sharelink = stats.get("obsid.html_sharelink", {"total": 0, "unique": set()})
 
     stats_out = {}
-    for page, d in stats.items():
-        # Spring obsid.html_sharelink over, den lægges separat
-        if page == "obsid.html_sharelink":
-            continue
-        stats_out[page] = {
-            "total": d["total"],
-            "unique": len(d["unique"])
-        }
 
     # Tilføj obsid.html statistik samlet
     stats_out["obsid.html"] = {
@@ -2357,6 +2347,16 @@ async def admin_pageview_stats(data: dict = Body(...)):
             for k, v in traad_per_thread.items()
         }
     }
+
+    # Tilføj statistik for alle andre sider (index.html, settings.html, info.html osv.)
+    for page, d in stats.items():
+        if page in ("obsid.html", "obsid.html_sharelink", "traad.html"):
+            continue
+        stats_out[page] = {
+            "total": d["total"],
+            "unique": len(d["unique"])
+        }
+
     stats_out["unique_users_total"] = len(all_users)
     stats_out["total_views"] = total_views
     return stats_out

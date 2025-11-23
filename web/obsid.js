@@ -1,10 +1,12 @@
-// Version: 4.9.0 - 2025-11-21 15.07.58
+// Version: 4.9.12 - 2025-11-23 20.26.50
 // © Christian Vemmelund Helligsø
+
 
 function getObsIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("obsid") || "38040196";
 }
+
 
 function shareCoords(lat, lng) {
   const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -29,17 +31,110 @@ function shareCoords(lat, lng) {
 
 const obsid = getObsIdFromUrl();
 
-let userPosition = null;
+let userPosition = null; // behold variablen, hvis du bruger den senere
 
-// Start hentning af brugerens position så tidligt som muligt
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(pos => {
-    userPosition = {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude
-    };
-  });
+// --- Globale referencer, så watchPosition kan opdatere kortet ---
+window.map = null;
+window.userMarker = null;
+window.noteDiv = null;
+window.geoWatchId = null;
+
+// Hjælpefunktioner til afstand
+function toRad(x) { return x * Math.PI / 180; }
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // meter
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1); // <- skal være longitude-difference
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
+
+function formatDistanceMeters(d) {
+  return d > 1000 ? (d/1000).toFixed(2).replace('.', ',') + " km" : Math.round(d) + " m";
+}
+
+// Starter eller opdaterer live geolocation
+
+function startLiveGeolocation(targetLat, targetLng) {
+  if (!navigator.geolocation) return;
+
+  // Stop evt. gammel watch
+  if (window.geoWatchId !== null) {
+    navigator.geolocation.clearWatch(window.geoWatchId);
+    window.geoWatchId = null;
+  }
+
+  let gotFirstFix = false;
+
+  const applyPosition = (pos) => {
+    const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+    // Opret/udpér brugerens markør
+    if (window.map) {
+      if (!window.userMarker) {
+        window.userMarker = L.marker([lat, lng], {
+          title: "Din placering",
+          icon: L.icon({
+            iconUrl: "https://notifikation.dofbasen.dk/icons/bino-64.png",
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          })
+        }).addTo(window.map).bindPopup("Din placering");
+      } else {
+        window.userMarker.setLatLng([lat, lng]);
+      }
+
+      // Opdater note med live-afstand
+      if (window.noteDiv && targetLat != null && targetLng != null) {
+        const d = haversine(lat, lng, targetLat, targetLng);
+        const distTxt = formatDistanceMeters(d);
+        const isNaal = !!document.querySelector('#obs-map-card .badge-pin, .dofbasen-pin-note');
+        window.noteDiv.textContent =
+          `${(window.kortKilde === "naal") ? "Placering for seneste nål i DOFbasen." : "Kortet viser midten af lokalitetens placering."} Afstand: ${distTxt}`;
+      }
+    }
+  };
+
+  const startWatch = (highAccuracy) => {
+    const opts = {
+      enableHighAccuracy: highAccuracy,
+      timeout: highAccuracy ? 30000 : 8000,
+      maximumAge: highAccuracy ? 0 : 15000
+    };
+
+    window.geoWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        applyPosition(pos);
+
+        // Skift til high accuracy efter første fix
+        if (!gotFirstFix && !highAccuracy) {
+          gotFirstFix = true;
+          navigator.geolocation.clearWatch(window.geoWatchId);
+          window.geoWatchId = null;
+          startWatch(true); // Start GPS-watch
+        }
+      },
+      (err) => console.error("Geolocation fejl:", err),
+      opts
+    );
+  };
+
+  // Start med lav præcision
+  startWatch(false);
+}
+
+
+// Ryd watch ved unload (valgfrit)
+window.addEventListener('beforeunload', () => {
+  if (window.geoWatchId !== null) {
+    navigator.geolocation.clearWatch(window.geoWatchId);
+    window.geoWatchId = null;
+  }
+});
 
 // 1. Læs CSV og lav map fra artsnavn til kategori
 let arterKategoriMap = {};
@@ -203,6 +298,10 @@ async function fetchAndRenderObs(obsid) {
     mapLng = data.naal.lng;
     mapNote = "Placering for seneste nål i DOFbasen.";
     kortKilde = "naal";
+    window.kortKilde = "naal";
+  } else if (data.loknr && data.loknavn) {
+    kortKilde = "lok";
+    window.kortKilde = "lok";
   }
 
   if (mapLat && mapLng) {
@@ -273,23 +372,24 @@ async function fetchAndRenderObs(obsid) {
 
     if (mapLat && mapLng) {
       setTimeout(() => {
-        const map = L.map('obs-map').setView([mapLat, mapLng], 11);
+        
+        window.map = L.map('obs-map').setView([lat, lng], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '© OpenStreetMap'
-        }).addTo(map);
-        L.marker([mapLat, mapLng]).addTo(map);
+        }).addTo(window.map);
+        L.marker([lat, lng]).addTo(window.map);
+        window.noteDiv = document.querySelector('.dofbasen-pin-note');
+        startLiveGeolocation(lat, lng);
 
-        // Tilføj brugerens placering og beregn afstand
-        const noteDiv = document.querySelector('.dofbasen-pin-note');
-        if (noteDiv && mapLat && mapLng) {
+        // Navigér-knap
+        if (window.noteDiv && mapLat && mapLng) {
           let navRow = document.createElement('div');
           navRow.className = "navigate-row";
           navRow.style.display = "flex";
           navRow.style.justifyContent = "flex-end";
           navRow.style.marginTop = "0.5em";
-          noteDiv.parentNode.insertBefore(navRow, noteDiv.nextSibling);
-
+          window.noteDiv.parentNode.insertBefore(navRow, window.noteDiv.nextSibling);
           let shareBtn = document.createElement('button');
           shareBtn.id = "share-coords-btn";
           shareBtn.textContent = "Navigér";
@@ -297,33 +397,8 @@ async function fetchAndRenderObs(obsid) {
           shareBtn.onclick = () => shareCoords(mapLat, mapLng);
           navRow.appendChild(shareBtn);
         }
-        
-        if (userPosition && noteDiv) {
-          L.marker([userPosition.lat, userPosition.lng], {
-            title: "Din placering",
-            icon: L.icon({
-              iconUrl: "https://notifikation.dofbasen.dk/icons/bino-64.png",
-              iconSize: [32, 32],
-              iconAnchor: [16, 16]
-            })
-          }).addTo(map).bindPopup("Din placering");
-
-          // Beregn afstand (Haversine)
-          function toRad(x) { return x * Math.PI / 180; }
-          function haversine(lat1, lng1, lat2, lng2) {
-            const R = 6371000; // meter
-            const dLat = toRad(lat2 - lat1);
-            const dLng = toRad(lng2 - lng1);
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                      Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-          }
-          const d = haversine(userPosition.lat, userPosition.lng, mapLat, mapLng);
-          let distTxt = d > 1000 ? (d/1000).toFixed(2).replace('.', ',') + " km" : Math.round(d) + " m";
-          noteDiv.textContent = `Placering for seneste nål i DOFbasen. Afstand: ${distTxt}`;
-        }
+        // Start live geolocation (opretter/udpér marker + afstand)
+        startLiveGeolocation(mapLat, mapLng);
       }, 0);
     } else if (data.loknr) {
       // Hent koordinater asynkront og tilføj kortet dynamisk
@@ -354,15 +429,19 @@ async function fetchAndRenderObs(obsid) {
               if (threadHeader && threadHeader.parentNode) {
                 threadHeader.parentNode.insertBefore(card, threadHeader.nextSibling);
                 setTimeout(() => {
-                  const map = L.map('obs-map').setView([lat, lng], 11);
+                  
+                  window.map = L.map('obs-map').setView([lat, lng], 11);
                   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '© OpenStreetMap'
-                  }).addTo(map);
-                  L.marker([lat, lng]).addTo(map);
+                  }).addTo(window.map);
+                  L.marker([lat, lng]).addTo(window.map);
+                  window.noteDiv = document.querySelector('.dofbasen-pin-note');
+                  startLiveGeolocation(lat, lng);
+
 
                   // Tilføj brugerens placering og beregn afstand
-                  const noteDiv = card.querySelector('.dofbasen-pin-note');
+                  const noteDiv = document.querySelector('.dofbasen-pin-note');
                   if (noteDiv && lat && lng) {
                     // Tilføj "Del koordinater"-knap under note
                     let navRow = document.createElement('div');
@@ -392,16 +471,18 @@ async function fetchAndRenderObs(obsid) {
 
                     // Beregn afstand (Haversine)
                     function toRad(x) { return x * Math.PI / 180; }
+                    
                     function haversine(lat1, lng1, lat2, lng2) {
                       const R = 6371000; // meter
                       const dLat = toRad(lat2 - lat1);
-                      const dLng = toRad(lng2 - lng1);
+                      const dLng = toRad(lng2 - lng1); // <- skal være longitude-difference
                       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
                                 Math.sin(dLng/2) * Math.sin(dLng/2);
                       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
                       return R * c;
                     }
+
                     const d = haversine(userPosition.lat, userPosition.lng, lat, lng);
                     let distTxt = d > 1000 ? (d/1000).toFixed(2).replace('.', ',') + " km" : Math.round(d) + " m";
                     noteDiv.textContent = `Kortet viser midten af lokalitetens placering. Afstand: ${distTxt}`;

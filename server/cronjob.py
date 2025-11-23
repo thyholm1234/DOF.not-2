@@ -20,8 +20,9 @@ def wait_until_next_run():
         log_path = os.path.join(os.path.dirname(__file__), "server.log")
         try:
             if os.path.exists(log_path):
-                os.remove(log_path)
-                print("server.log slettet.")
+                with open(log_path, "w", encoding="utf-8") as f:
+                    pass  # Tøm filen
+                print("server.log tømt.")
             else:
                 print("server.log findes ikke.")
         except Exception as e:
