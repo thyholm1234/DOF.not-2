@@ -271,10 +271,11 @@ def slugify(s):
     return s.strip('-')
 
 def group_and_sum_by_observer(obs_list):
-    # key = (Fornavn, Efternavn, Artnavn, Loknr, Obserkode)
+    # key = (Turid, Fornavn, Efternavn, Artnavn, Loknr, Obserkode)
     grouped = defaultdict(lambda: None)
     for row in obs_list:
         key = (
+            row.get("Turid", "").strip(),
             row.get("Fornavn", "").strip(),
             row.get("Efternavn", "").strip(),
             row.get("Artnavn", "").strip(),
@@ -620,27 +621,25 @@ def _state_get_antal(state_val) -> float | None:
         return None
 
 def _state_get_obsids(state_val) -> Set[str]:
-    """Træk alle obsid’er ud af obserkoder-mappet."""
+    """Træk alle obsid’er ud af hele obserkoder/turid-mappet."""
     if not isinstance(state_val, dict):
         return set()
     obk = state_val.get("obserkoder")
     if not isinstance(obk, dict):
-        # back-compat: hvis nogen gang 'obsids' findes
-        obsids = state_val.get("obsids")
-        if isinstance(obsids, list):
-            return {str(x) for x in obsids if str(x)}
         return set()
     s: Set[str] = set()
-    for lst in obk.values():
-        if isinstance(lst, list):
-            s.update(str(x) for x in lst if str(x))
+    for turids in obk.values():
+        if isinstance(turids, dict):
+            for obsids in turids.values():
+                if isinstance(obsids, list):
+                    s.update(str(x) for x in obsids if str(x))
     return s
 
 
 def build_state(rows: List[Dict[str, str]]) -> Dict[str, dict]:
     """
-    State pr. key (Artnavn|Loknr) i dit ønskede format:
-      {"max_antal": float, "obserkoder": { <kode>: [obsid,...] }}
+    Ny struktur:
+      {"max_antal": float, "obserkoder": { <kode>: { <turid>: [obsid,...] } } }
     """
     state: Dict[str, dict] = {}
     for r in rows:
@@ -649,18 +648,19 @@ def build_state(rows: List[Dict[str, str]]) -> Dict[str, dict]:
             continue
         antal = parse_float(r.get("Antal"))
         obserkode = (r.get("Obserkode") or "").strip()
+        turid = (r.get("Turid") or "").strip()
         obsid = _obsid(r)
-        if not obserkode or not obsid:
-            # vi vil kun tracke obsid’er vi kender + kunne diff’e pr. observerkode
+        if not obserkode or not obsid or not turid:
             continue
         entry = state.setdefault(key, {"max_antal": 0.0, "obserkoder": {}})
         if antal > entry["max_antal"]:
             entry["max_antal"] = antal
-        entry["obserkoder"].setdefault(obserkode, set()).add(obsid)
+        entry["obserkoder"].setdefault(obserkode, {}).setdefault(turid, set()).add(obsid)
     # konverter sets til sorteret liste for JSON
     for entry in state.values():
-        for k in entry["obserkoder"]:
-            entry["obserkoder"][k] = sorted(list(entry["obserkoder"][k]))
+        for obk in entry["obserkoder"].values():
+            for turid in obk:
+                obk[turid] = sorted(list(obk[turid]))
     return state
 
 
