@@ -1,4 +1,4 @@
-// Version: 4.9.46 - 2025-11-29 22.03.19
+// Version: 4.9.51 - 2025-11-30 00.27.28
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",

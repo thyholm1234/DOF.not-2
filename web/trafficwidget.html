@@ -128,8 +128,9 @@
             <div class="icon">💬</div>
             <div class="label">Kommentarer</div>
             <div class="big">${formatInt(data.comments_today)}</div>
-            <div class="dev">SU-tråde: <b>${formatInt(data.su_threads_today)}</b></div>
-            <div class="dev">SUB-tråde: <b>${formatInt(data.sub_threads_today)}</b></div>
+            <div class="dev">I går: <b>${formatInt(data.comments_yesterday)}</b></div>
+            <div class="dev">SU-tråde: <b>${formatInt(data.su_threads_today)}</b> <span style="color:#888;">(${formatInt(data.su_threads_yesterday)})</span></div>
+            <div class="dev">SUB-tråde: <b>${formatInt(data.sub_threads_today)}</b> <span style="color:#888;">(${formatInt(data.sub_threads_yesterday)})</span></div>
           </div>
         `;
 

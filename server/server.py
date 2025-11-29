@@ -1268,7 +1268,6 @@ async def users_overview(data: dict = Body(...)):
             subscriptions = [json.loads(s[0]) for s in subs if s and s[0]]
             users.append({
                 "user_id": uid,
-                "subscription": subscriptions,
                 "lokalafdelinger": lokalafdelinger,
                 "obserkode": obserkode,
                 "advanced": sf_active
@@ -1800,14 +1799,16 @@ async def traffic_diffs_public():
                     continue
 
     # Beregn dagens statistik fra pageviews.log (samme logik som archive_and_reset_pageview_log)
-    today = datetime.datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
+    tz = pytz.timezone("Europe/Copenhagen")
+    today = datetime.datetime.now(tz).strftime("%Y-%m-%d")
     today_date = datetime.datetime.strptime(today, "%Y-%m-%d").date()
-    comment_count = 0
 
-    # Tæl kommentarer for dags dato
-    try:
+    def count_comments_and_threads_for_day(day_date):
+        comment_count = 0
+        su_count = 0
+        sub_count = 0
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
-        threads_dir = os.path.join(base_dir, today_date.strftime("%d-%m-%Y"), "threads")
+        threads_dir = os.path.join(base_dir, day_date.strftime("%d-%m-%Y"), "threads")
         if os.path.isdir(threads_dir):
             for thread_folder in os.listdir(threads_dir):
                 kommentar_path = os.path.join(threads_dir, thread_folder, "kommentar.json")
@@ -1818,15 +1819,6 @@ async def traffic_diffs_public():
                         comment_count += len(comments)
                     except Exception:
                         continue
-    except Exception:
-        comment_count = 0
-
-    # Tæl SU og SUB tråde for dags dato
-    su_count = 0
-    sub_count = 0
-    try:
-        if os.path.isdir(threads_dir):
-            for thread_folder in os.listdir(threads_dir):
                 thread_json_path = os.path.join(threads_dir, thread_folder, "thread.json")
                 if os.path.isfile(thread_json_path):
                     try:
@@ -1839,10 +1831,14 @@ async def traffic_diffs_public():
                             sub_count += 1
                     except Exception:
                         continue
-    except Exception:
-        su_count = 0
-        sub_count = 0
+        return comment_count, su_count, sub_count
 
+    # For både i dag og i går
+    comments_today, su_threads_today, sub_threads_today = count_comments_and_threads_for_day(today_date)
+    comments_yesterday, su_threads_yesterday, sub_threads_yesterday = count_comments_and_threads_for_day(today_date - datetime.timedelta(days=1))
+
+    # --- Diffs/statistik ---
+    # (kopieret fra din eksisterende kode)
     if os.path.isfile(log_path):
         stats = collections.defaultdict(lambda: {"total": 0, "unique": set()})
         all_users = set()
@@ -1920,9 +1916,9 @@ async def traffic_diffs_public():
         return 0
 
     stats_keys = [
-        ("unique_users_total", "Besøgende"),
-        ("unique_obserkoder_total_db", "Obserkoder"),
-        ("users_total", "Abonnenter"),
+        ("unique_users_total", "Unikke besøgende"),
+        ("unique_obserkoder_total_db", "Unikke obserkoder"),
+        ("users_total", "Antal enheder"),
         ("total_views", "Sidevisninger"),
     ]
     diffs = {}
@@ -1946,23 +1942,22 @@ async def traffic_diffs_public():
         diffs[key] = {
             "label": label,
             "today": today_val,
-            "yesterday": yesterday,
             "diff_yesterday": diff_yesterday,
             "pct_yesterday": pct_diff(today_val, yesterday) if yesterday else None,
-            "week_ago_avg": week_ago_avg,
             "diff_week": today_val - week_ago_avg if week_ago_avg is not None else None,
             "pct_week": pct_diff(today_val, week_ago_avg) if week_ago_avg else None,
-            "month_ago_avg": month_ago_avg,
             "diff_month": today_val - month_ago_avg if month_ago_avg is not None else None,
             "pct_month": pct_diff(today_val, month_ago_avg) if month_ago_avg else None,
         }
 
-    # Tilføj antal kommentarer og SU/SUB tråde for dags dato
     return {
         "diffs": diffs,
-        "comments_today": comment_count,
-        "su_threads_today": su_count,
-        "sub_threads_today": sub_count
+        "comments_today": comments_today,
+        "su_threads_today": su_threads_today,
+        "sub_threads_today": sub_threads_today,
+        "comments_yesterday": comments_yesterday,
+        "su_threads_yesterday": su_threads_yesterday,
+        "sub_threads_yesterday": sub_threads_yesterday
     }
 
 @app.post("/api/admin/traffic-graphs")
