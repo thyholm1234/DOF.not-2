@@ -1828,8 +1828,10 @@ async def admin_traffic_graphs(data: dict = Body(...)):
                 okode = get_obserkode_from_userprefs(user_id)
                 if okode:
                     unique_obserkoder.add(okode)
-                m = re.search(r"https?://[^/]+/([^?]+)", url)
+                m = re.search(r"https?://[^/]+/([^?#]+)", url)
                 page = m.group(1) if m else url
+                if page.startswith("info.html"):
+                    page = "info.html"
                 if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
                     page = "index.html"
                 if page.startswith("traad.html"):
@@ -1904,7 +1906,8 @@ async def admin_traffic_graphs(data: dict = Body(...)):
                 "users_without_obserkode": obj.get("users_without_obserkode", 0),
                 "unique_obserkoder": obj.get("unique_obserkoder", 0),
                 "unique_obserkoder_total_db": obj.get("unique_obserkoder_total_db", 0),
-                "users_total": obj.get("users_total", 0)
+                "users_total": obj.get("users_total", 0),
+                "total_views": obj.get("total_views", 0),  # <-- tilføj denne linje
             })
         else:
             last7.append({
@@ -1914,7 +1917,8 @@ async def admin_traffic_graphs(data: dict = Body(...)):
                 "users_without_obserkode": 0,
                 "unique_obserkoder": 0,
                 "unique_obserkoder_total_db": 0,
-                "users_total": 0
+                "users_total": 0,
+                "total_views": 0,  # <-- tilføj denne linje
             })
 
     # Sidste 365 dage (pr. dag)
@@ -1927,7 +1931,8 @@ async def admin_traffic_graphs(data: dict = Body(...)):
             "users_without_obserkode": obj.get("users_without_obserkode", 0),
             "unique_obserkoder": obj.get("unique_obserkoder", 0),
             "unique_obserkoder_total_db": obj.get("unique_obserkoder_total_db", 0),
-            "users_total": obj.get("users_total", 0)
+            "users_total": obj.get("users_total", 0),
+            "total_views": obj.get("total_views", 0),  # <-- tilføj denne linje
         })
 
     # Uge-totaler for sidste 52 uger
@@ -1992,11 +1997,62 @@ async def admin_traffic_graphs(data: dict = Body(...)):
             "pwa_not_installed": pwa_not_installed
         }
 
+    # --- NYT: Udregn forskelle ---
+    def pct_diff(now, prev):
+        if prev == 0:
+            return 100.0 if now > 0 else 0.0
+        return ((now - prev) / prev) * 100
+
+    def safe_get(lst, idx, key):
+        if -len(lst) <= idx < len(lst):
+            return lst[idx].get(key, 0)
+        return 0
+
+    stats_keys = [
+        ("unique_users_total", "Unikke besøgende"),
+        ("unique_obserkoder_total_db", "Unikke obserkoder"),
+        ("users_total", "Antal enheder"),
+        ("total_views", "Visninger"),  # <-- tilføj denne linje
+    ]
+    diffs = {}
+
+    for key, label in stats_keys:
+        today = safe_get(last365, -1, key)
+        yesterday = safe_get(last365, -2, key)
+        week_ago_vals = [safe_get(last365, -i, key) for i in (7, 8, 9)]
+        week_ago_vals_nonzero = [v for v in week_ago_vals if v is not None]
+        week_ago_avg = sum(week_ago_vals_nonzero) / len(week_ago_vals_nonzero) if week_ago_vals_nonzero else None
+
+        month_ago_vals = [safe_get(last365, -i, key) for i in (30, 31, 32)]
+        month_ago_vals_nonzero = [v for v in month_ago_vals if v is not None and v != 0]
+        if month_ago_vals_nonzero:
+            month_ago_avg = sum(month_ago_vals_nonzero) / len(month_ago_vals_nonzero)
+        else:
+            month_ago_avg = None
+
+        # Nu er det bare en simpel differens for alle tre nøgler
+        diff_yesterday = today - yesterday if yesterday is not None else None
+
+        diffs[key] = {
+            "label": label,
+            "today": today,
+            "yesterday": yesterday,
+            "diff_yesterday": diff_yesterday,
+            "pct_yesterday": pct_diff(today, yesterday) if yesterday else None,
+            "week_ago_avg": week_ago_avg,
+            "diff_week": today - week_ago_avg if week_ago_avg is not None else None,
+            "pct_week": pct_diff(today, week_ago_avg) if week_ago_avg else None,
+            "month_ago_avg": month_ago_avg,
+            "diff_month": today - month_ago_avg if month_ago_avg is not None else None,
+            "pct_month": pct_diff(today, month_ago_avg) if month_ago_avg else None,
+        }
+
     return {
         "last7": last7,
         "last365": last365,
         "week_data": week_data,
-        "userplatforms": userplatforms
+        "userplatforms": userplatforms,
+        "diffs": diffs
     }
 
 @app.post("/api/is-app-user-bulk")
@@ -2352,6 +2408,8 @@ async def admin_pageview_stats(data: dict = Body(...)):
     for page, d in stats.items():
         if page in ("obsid.html", "obsid.html_sharelink", "traad.html"):
             continue
+        if page.startswith("info.html") and page != "info.html":
+            continue  # spring alle info.html#... og info.html?... over
         stats_out[page] = {
             "total": d["total"],
             "unique": len(d["unique"])

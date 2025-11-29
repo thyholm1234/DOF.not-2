@@ -1,9 +1,10 @@
-<!-- Version: 4.9.17 - 2025-11-23 22.01.11 -->
+<!-- Version: 4.9.28 - 2025-11-29 14.31.39 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
 <head>
   <meta charset="UTF-8" />
+  <title>ADMINPANEL</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Seneste observation</title>
   <meta name="theme-color" content="#0b3d91" />
@@ -15,10 +16,11 @@
       navigator.serviceWorker.register('/sw.js');
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.9.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.9.28"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js?v=4.9.28"></script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.9.17">
+  <link rel="stylesheet" href="/style.css?v=4.9.28">
 </head>
 <body>
   <header class="wrap">
@@ -117,8 +119,8 @@
 
     
   </main>
-  <script src="admin.js?v=4.9.17"></script>
-  <script src="app.js?v=4.9.17"></script>
+  <script src="admin.js?v=4.9.28"></script>
+  <script src="app.js?v=4.9.28"></script>
   <div id="blacklist-modal" class="modal" style="display:none;">
     <div class="modal-content card" style="max-width:400px; margin:auto;">
       <h3>Blacklist observation</h3>

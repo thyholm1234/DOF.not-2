@@ -1,4 +1,4 @@
-// Version: 4.9.17 - 2025-11-23 22.01.11
+// Version: 4.9.28 - 2025-11-29 14.31.39
 // © Christian Vemmelund Helligsø
 
 
@@ -373,14 +373,14 @@ async function fetchAndRenderObs(obsid) {
     if (mapLat && mapLng) {
       setTimeout(() => {
         
-        window.map = L.map('obs-map').setView([lat, lng], 11);
+        window.map = L.map('obs-map').setView([mapLat, mapLng], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '© OpenStreetMap'
         }).addTo(window.map);
-        L.marker([lat, lng]).addTo(window.map);
+        L.marker([mapLat, mapLng]).addTo(window.map);
         window.noteDiv = document.querySelector('.dofbasen-pin-note');
-        startLiveGeolocation(lat, lng);
+        startLiveGeolocation(mapLat, mapLng);
 
         // Navigér-knap
         if (window.noteDiv && mapLat && mapLng) {

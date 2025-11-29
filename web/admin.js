@@ -1,4 +1,4 @@
-// Version: 4.9.17 - 2025-11-23 22.01.11
+// Version: 4.9.28 - 2025-11-29 14.31.39
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -347,6 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button id="archive-traffic-log-btn">Gem masterlog nu</button>
             <button type="button" id="download-masterlog-btn">Download masterlog</button>
             <button type="button" id="download-pageviews-btn">Download pageviews.log</button>
+            <button type="button" id="save-traffic-panel-png">Gem som PNG</button>
           </div>
         `;
       }
@@ -356,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         html += `<div class="card" style="margin-bottom:1em;">
           <b>Unikke brugere i alt: ${stats.unique_users_total}</b><br>
           <b>Visninger i alt: ${stats.total_views}</b>
-        </div><hr>`;
+        </div><hr style="margin:1em 0;">`;
       }
       // Side-statistik som cards (inkl. traad.html)
       const pageStats = Object.entries(stats)
@@ -393,16 +394,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // traad.html total som card
       if (stats["traad.html"]) {
-        html += `<div class="card" style="margin-bottom:0.5em;">
+        // Fold-ud container og knap
+        html += `<div class="card" style="margin-bottom:0.5em; position:relative;">
           <div style="font-weight:bold;">traad.html (alle tråde)</div>
           <div>Unikke brugere: <b>${stats["traad.html"].unique}</b></div>
           <div>Visninger: <b>${stats["traad.html"].total}</b></div>
           ${stats["traad.html"].sharelink > 0 ? `<div>Fra sharelink: <b>${stats["traad.html"].sharelink}</b></div>` : ""}
-        </div><hr>`;
+          <button id="toggle-threads-btn" style="position:absolute;top:10px;right:10px;">Vis tråde ▼</button>
+          <div id="threads-list" style="display:none;margin-top:1em;"></div>
+        </div><hr style="margin:1em 0;">`;
 
         // Pr. tråd som cards, sorteret efter flest unikke brugere
         const threads = Object.entries(stats["traad.html"].threads || {})
           .sort((a, b) => (b[1].unique || 0) - (a[1].unique || 0));
+        let threadsHtml = "";
         for (const [thread, tinfo] of threads) {
           const match = thread.match(/(.+)-(\d{6,})-(\d{2}-\d{2}-\d{4})$/);
           let link = "#";
@@ -411,7 +416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const date = match[3];
             link = `/traad.html?date=${encodeURIComponent(date)}&id=${encodeURIComponent(id)}`;
           }
-          html += `<a href="${link}" style="text-decoration:none;color:inherit;">
+          threadsHtml += `<a href="${link}" style="text-decoration:none;color:inherit;">
             <div class="card" style="margin-bottom:0.5em;">
               <div style="font-weight:bold;">${thread}</div>
               <div>Unikke brugere: <b>${tinfo.unique}</b></div>
@@ -420,13 +425,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           </a>`;
         }
+        setTimeout(() => {
+          const btn = document.getElementById("toggle-threads-btn");
+          const list = document.getElementById("threads-list");
+          if (btn && list) {
+            btn.onclick = function() {
+              if (list.style.display === "none") {
+                list.innerHTML = threadsHtml;
+                list.style.display = "block";
+                btn.textContent = "Skjul tråde ▲";
+              } else {
+                list.style.display = "none";
+                btn.textContent = "Vis tråde ▼";
+              }
+            };
+          }
+        }, 0);
+
       }
 
       // Tilføj grafer for superadmin
       if (window.isSuperadmin) {
         // Tilføj horisontal linje før første graf
-        html += `<hr style="margin:1.5em 0;">
-          <div class="card" style="margin-bottom:1em;">
+        html += `<div class="card" style="margin-bottom:1em;">
             <h4>Traffik de sidste 7 dage</h4>
             <canvas id="traffic-graph-7d" height="120"></canvas>
           </div>
@@ -434,7 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h4>Traffik det sidste år</h4>
             <canvas id="traffic-graph-52w" height="120"></canvas>
           </div>
-          <hr style="margin:1.5em 0;">
+          <hr style="margin:1em 0;">
           <div class="card" style="margin-bottom:1em;">
             <h4>PWA installation blandt brugere i dag</h4>
             <canvas id="traffic-pwa-pie" style="max-height:400px;height:400px;width:100%;"></canvas>
@@ -446,6 +467,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
       }
       panel.innerHTML = html;    
+
+      setTimeout(() => {
+        const saveBtn = document.getElementById("save-traffic-panel-png");
+        if (saveBtn) {
+          saveBtn.onclick = async function() {
+            const panel = document.getElementById("traffic-panel");
+            saveBtn.disabled = true;
+            saveBtn.textContent = "Gemmer...";
+            await html2canvas(panel, {
+              backgroundColor: "#fff",
+              scale: 3 // <-- højere opløsning
+            }).then(canvas => {
+              const link = document.createElement("a");
+              link.download = "trafik-rapport.png";
+              link.href = canvas.toDataURL();
+              link.click();
+            });
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Gem som PNG";
+          };
+        }
+      }, 0);
 
       // Tilføj event handler til "Gem masterlog nu"-knap
       if (window.isSuperadmin) {
@@ -512,6 +555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const users7 = data.last7.map(d => d.unique_users_total);
             const uniqueObserkoder7 = data.last7.map(d => d.unique_obserkoder_total_db);
             const usersTotal7 = data.last7.map(d => d.users_total);
+            const totalViews7 = data.last7.map(d => d.total_views);
 
             new Chart(document.getElementById("traffic-graph-7d").getContext("2d"), {
               type: "line",
@@ -520,7 +564,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 datasets: [
                   { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false },
                   { label: "Unikke obserkoder", data: uniqueObserkoder7, borderColor: "#2ECC40", fill: false },
-                  { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false }
+                  { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false },
+                  { label: "Visninger", data: totalViews7, borderColor: "#888", fill: false, hidden: true  } // <-- tilføj denne linje
                 ]
               },
               options: {
@@ -558,6 +603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const users365 = [];
             const uniqueObserkoder365 = [];
             const usersTotal365 = [];
+            const totalViews365 = []; // <-- tilføj denne linje
 
             let dObj = new Date(minDate);
             const maxObj = new Date(maxDate);
@@ -569,10 +615,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 users365.push(dayMap[ds].unique_users_total);
                 uniqueObserkoder365.push(dayMap[ds].unique_obserkoder_total_db);
                 usersTotal365.push(dayMap[ds].users_total);
+                totalViews365.push(dayMap[ds].total_views); // <-- tilføj denne linje
               } else {
                 users365.push(0);
                 uniqueObserkoder365.push(0);
                 usersTotal365.push(0);
+                totalViews365.push(0); // <-- tilføj denne linje
               }
               dObj.setDate(dObj.getDate() + 1);
             }
@@ -584,7 +632,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 datasets: [
                   { label: "Unikke besøgende", data: users365, borderColor: "#0074D9", fill: false, pointRadius: 0 },
                   { label: "Unikke obserkoder", data: uniqueObserkoder365, borderColor: "#2ECC40", fill: false, pointRadius: 0 },
-                  { label: "Antal enheder", data: usersTotal365, borderColor: "#FF4136", fill: false, pointRadius: 0 }
+                  { label: "Antal enheder", data: usersTotal365, borderColor: "#FF4136", fill: false, pointRadius: 0 },
+                  { label: "Visninger", data: totalViews365, borderColor: "#888", fill: false, pointRadius: 0, hidden: true  } // <-- tilføj denne linje
                 ]
               },
               options: {
@@ -594,7 +643,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                   y: { beginAtZero: true },
                   x: {
                     ticks: {
-                      // Vis kun hver 30. dag label for overskuelighed, og altid sidste label
                       callback: function(val, idx) {
                         if (idx % 30 === 0 || idx === labels365.length - 1) return labels365[idx];
                         return "";
@@ -660,6 +708,70 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
               });
             }
+
+            // Tilføj tre kasser med udvikling
+            const diff = data.diffs || {};
+            const metrics = [
+              { key: "unique_users_total", icon: "👤", color: "#0074D9" },
+              { key: "unique_obserkoder_total_db", icon: "🦉", color: "#2ECC40" },
+              { key: "users_total", icon: "📱", color: "#FF4136" },
+              { key: "total_views", icon: "👁️", color: "#888" } // <-- tilføj denne linje
+            ];
+
+            function pctStr(val) {
+              if (val === null || val === undefined) return "-";
+              const pct = Math.round(val); // altid heltal
+              return (pct > 0 ? "+" : "") + pct + "%";
+            }
+            function diffStr(val) {
+              if (val === null || val === undefined) return "-";
+              const n = Math.round(Number(val) || 0); // altid heltal
+              return (n > 0 ? "+" : "") + n;
+            }
+            function formatInt(val) {
+              if (val === null || val === undefined) return "-";
+              const n = Math.round(Number(val) || 0); // altid heltal
+              return String(n);
+            }
+            let cardsHtml = `<div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:1.5em;">`;
+            metrics.forEach(m => {
+              const d = diff[m.key] || {};
+              cardsHtml += `
+                <div class="card" style="flex:1;min-width:220px;max-width:320px;border-left:6px solid ${m.color};">
+                  <div style="font-size:2em;line-height:1">${m.icon}</div>
+                  <div style="font-weight:bold;font-size:1.2em;margin-bottom:0.2em;">${d.label || ""}</div>
+                  <div style="font-size:2em;margin-bottom:0.2em;">${formatInt(d.today)}</div>
+                  <div style="font-size:0.95em;margin-bottom:0.2em;">
+                    <span style="color:#888;">I går:</span> 
+                    <b>${diffStr(d.diff_yesterday)}</b> 
+                    <span style="color:#888;">(${pctStr(d.pct_yesterday)})</span>
+                  </div>
+                  <div style="font-size:0.95em;margin-bottom:0.2em;">
+                    <span style="color:#888;">Uge siden:</span> 
+                    <b>${diffStr(d.diff_week)}</b> 
+                    <span style="color:#888;">(${pctStr(d.pct_week)})</span>
+                  </div>
+                  <div style="font-size:0.95em;">
+                    <span style="color:#888;">Måned siden:</span> 
+                    <b>${diffStr(d.diff_month)}</b> 
+                    <span style="color:#888;">(${pctStr(d.pct_month)})</span>
+                  </div>
+                </div>
+              `;
+            });
+            cardsHtml += `</div>`;
+
+            
+            // Indsæt kasserne før første graf-card
+            const graphPanel = document.getElementById("traffic-panel");
+            const firstGraphCard = document.getElementById("traffic-graph-7d")?.closest(".card");
+            if (firstGraphCard) {
+                firstGraphCard.insertAdjacentHTML("beforebegin", cardsHtml);
+            } else {
+                // fallback: øverst i panelet
+                graphPanel.insertAdjacentHTML("afterbegin", cardsHtml);
+            }
+
           }
         } catch (e) {
           // ignore
@@ -1096,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user_id = getOrCreateUserId();
     const res = await fetch(`/api/admin/all-users?user_id=${encodeURIComponent(user_id)}`);
     if (!res.ok) {
-      alert("Kun hovedadmin kan se listen.");
+      alert("Kunne ikke hente brugere.");
       return;
     }
     const users = await res.json();
@@ -1358,4 +1470,286 @@ function escapeHTML(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+let trafficGraphsTimer = null;
+let trafficChart7d = null;
+let trafficChart365 = null;
+let trafficPwaPie = null;
+let trafficPlatformBar = null;
+
+// Funktion til kun at opdatere grafer og udviklingskasser
+async function refreshTrafficGraphsData() {
+  const panel = document.getElementById("traffic-panel");
+  if (!panel || panel.style.display === "none") return;
+  const user_id = getOrCreateUserId();
+
+  try {
+    const res = await fetch("/api/admin/traffic-graphs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // --- Opdater udviklingskasser ---
+    const diff = data.diffs || {};
+    const metrics = [
+      { key: "unique_users_total", icon: "👤", color: "#0074D9" },
+      { key: "unique_obserkoder_total_db", icon: "🦉", color: "#2ECC40" },
+      { key: "users_total", icon: "📱", color: "#FF4136" },
+      { key: "total_views", icon: "👁️", color: "#888" }
+    ];
+    function pctStr(val) {
+      if (val === null || val === undefined) return "-";
+      const pct = Math.round(val);
+      return (pct > 0 ? "+" : "") + pct + "%";
+    }
+    function diffStr(val) {
+      if (val === null || val === undefined) return "-";
+      const n = Math.round(Number(val) || 0);
+      return (n > 0 ? "+" : "") + n;
+    }
+    function formatInt(val) {
+      if (val === null || val === undefined) return "-";
+      const n = Math.round(Number(val) || 0);
+      return String(n);
+    }
+    let cardsHtml = `<div id="traffic-dev-cards" style="display:flex;gap:1em;flex-wrap:wrap">`;
+    metrics.forEach(m => {
+      const d = diff[m.key] || {};
+      cardsHtml += `
+        <div class="card" style="flex:1;min-width:220px;max-width:320px;border-left:6px solid ${m.color};">
+          <div style="font-size:2em;line-height:1">${m.icon}</div>
+          <div style="font-weight:bold;font-size:1.2em;margin-bottom:0.2em;">${d.label || ""}</div>
+          <div style="font-size:2em;margin-bottom:0.2em;">${formatInt(d.today)}</div>
+          <div style="font-size:0.95em;margin-bottom:0.2em;">
+            <span style="color:#888;">I går:</span> 
+            <b>${diffStr(d.diff_yesterday)}</b> 
+            <span style="color:#888;">(${pctStr(d.pct_yesterday)})</span>
+          </div>
+          <div style="font-size:0.95em;margin-bottom:0.2em;">
+            <span style="color:#888;">Uge siden:</span> 
+            <b>${diffStr(d.diff_week)}</b> 
+            <span style="color:#888;">(${pctStr(d.pct_week)})</span>
+          </div>
+          <div style="font-size:0.95em;">
+            <span style="color:#888;">Måned siden:</span> 
+            <b>${diffStr(d.diff_month)}</b> 
+            <span style="color:#888;">(${pctStr(d.pct_month)})</span>
+          </div>
+        </div>
+      `;
+    });
+    cardsHtml += `</div>`;
+
+    // Udskift kun udviklingskasserne
+    let devCards = document.getElementById("traffic-dev-cards");
+    if (devCards) {
+      devCards.outerHTML = cardsHtml;
+    } else {
+      // fallback: indsæt før første graf
+      const firstGraphCard = document.getElementById("traffic-graph-7d")?.closest(".card");
+      if (firstGraphCard) {
+        firstGraphCard.insertAdjacentHTML("beforebegin", cardsHtml);
+      }
+    }
+
+    // --- Opdater grafer ---
+    // 7 dage
+    const labels7 = data.last7.map(d => d.date.slice(5));
+    const users7 = data.last7.map(d => d.unique_users_total);
+    const uniqueObserkoder7 = data.last7.map(d => d.unique_obserkoder_total_db);
+    const usersTotal7 = data.last7.map(d => d.users_total);
+    const totalViews7 = data.last7.map(d => d.total_views);
+
+    if (trafficChart7d) trafficChart7d.destroy();
+    trafficChart7d = new Chart(document.getElementById("traffic-graph-7d").getContext("2d"), {
+      type: "line",
+      data: {
+        labels: labels7,
+        datasets: [
+          { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false },
+          { label: "Unikke obserkoder", data: uniqueObserkoder7, borderColor: "#2ECC40", fill: false },
+          { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false },
+          { label: "Visninger", data: totalViews7, borderColor: "#888", fill: false, hidden: true }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // 365 dage
+    const allDates = (data.last365 || []).map(d => d.date);
+    let minDate, maxDate;
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const minNeeded = new Date(today);
+    minNeeded.setDate(today.getDate() - 13);
+    const minNeededStr = minNeeded.toISOString().slice(0, 10);
+
+    if (allDates.length >= 1) {
+      minDate = allDates[0];
+      maxDate = allDates[allDates.length - 1];
+      if (minDate > minNeededStr) minDate = minNeededStr;
+      if (maxDate < todayStr) maxDate = todayStr;
+    } else {
+      minDate = minNeededStr;
+      maxDate = todayStr;
+    }
+
+    const dayMap = {};
+    (data.last365 || []).forEach(d => { dayMap[d.date] = d; });
+
+    const labels365 = [];
+    const users365 = [];
+    const uniqueObserkoder365 = [];
+    const usersTotal365 = [];
+    const totalViews365 = [];
+
+    let dObj = new Date(minDate);
+    const maxObj = new Date(maxDate);
+
+    while (dObj <= maxObj) {
+      const ds = dObj.toISOString().slice(0, 10);
+      labels365.push(ds);
+      if (dayMap[ds]) {
+        users365.push(dayMap[ds].unique_users_total);
+        uniqueObserkoder365.push(dayMap[ds].unique_obserkoder_total_db);
+        usersTotal365.push(dayMap[ds].users_total);
+        totalViews365.push(dayMap[ds].total_views);
+      } else {
+        users365.push(0);
+        uniqueObserkoder365.push(0);
+        usersTotal365.push(0);
+        totalViews365.push(0);
+      }
+      dObj.setDate(dObj.getDate() + 1);
+    }
+
+    const userplatforms = data.userplatforms || {};
+    if (userplatforms && typeof userplatforms.pwa_installed === "number") {
+      if (trafficPwaPie) trafficPwaPie.destroy();
+      trafficPwaPie = new Chart(document.getElementById("traffic-pwa-pie").getContext("2d"), {
+        type: "doughnut",
+        data: {
+          labels: ["Installeret", "Ikke installeret"],
+          datasets: [{
+            data: [userplatforms.pwa_installed, userplatforms.pwa_not_installed],
+            backgroundColor: ["#2ECC40", "#FF4136"]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true } }
+        }
+      });
+    }
+
+    // --- Opdater platform-bar ---
+    if (userplatforms && Array.isArray(userplatforms.platform_combinations)) {
+      if (trafficPlatformBar) trafficPlatformBar.destroy();
+      const combos = userplatforms.platform_combinations;
+      const labels = combos.map(c => `${c.os} / ${c.browser}`);
+      const counts = combos.map(c => c.count);
+      trafficPlatformBar = new Chart(document.getElementById("traffic-platform-bar").getContext("2d"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Antal brugere",
+            data: counts,
+            backgroundColor: "#0074D9"
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                callback: function(value) {
+                  if (Number.isInteger(value)) return value;
+                  return '';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    if (trafficChart365) trafficChart365.destroy();
+    trafficChart365 = new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
+      type: "line",
+      data: {
+        labels: labels365,
+        datasets: [
+          { label: "Unikke besøgende", data: users365, borderColor: "#0074D9", fill: false, pointRadius: 0 },
+          { label: "Unikke obserkoder", data: uniqueObserkoder365, borderColor: "#2ECC40", fill: false, pointRadius: 0 },
+          { label: "Antal enheder", data: usersTotal365, borderColor: "#FF4136", fill: false, pointRadius: 0 },
+          { label: "Visninger", data: totalViews365, borderColor: "#888", fill: false, pointRadius: 0, hidden: true }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true } },
+        scales: {
+          y: { beginAtZero: true },
+          x: {
+            ticks: {
+              callback: function(val, idx) {
+                if (idx % 30 === 0 || idx === labels365.length - 1) return labels365[idx];
+                return "";
+              },
+              maxRotation: 0,
+              minRotation: 0
+            }
+          }
+        }
+      }
+    });
+  } catch (e) {
+    // evt. fejl-håndtering
+  }
+}
+
+// Timer-setup
+function isTrafficPanelVisible() {
+  const panel = document.getElementById("traffic-panel");
+  return panel && panel.style.display === "block";
+}
+
+function startTrafficGraphsTimer() {
+  if (!trafficGraphsTimer) {
+    trafficGraphsTimer = setInterval(() => {
+      if (isTrafficPanelVisible()) refreshTrafficGraphsData();
+    }, 30000); // 30 sekunder
+  }
+}
+
+function stopTrafficGraphsTimer() {
+  if (trafficGraphsTimer) {
+    clearInterval(trafficGraphsTimer);
+    trafficGraphsTimer = null;
+  }
+}
+
+// Start/stop timer når trafik-panelet åbnes/lukkes
+document.getElementById("traffic-btn").addEventListener("click", function() {
+  setTimeout(() => {
+    if (isTrafficPanelVisible()) {
+      startTrafficGraphsTimer();
+      refreshTrafficGraphsData(); // Opdater straks ved åbning
+    } else {
+      stopTrafficGraphsTimer();
+    }
+  }, 200);
+});
 
