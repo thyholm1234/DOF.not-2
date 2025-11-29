@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DOF Widget</title>
+  <meta name="viewport" content="width=200, height=800">
+  <style>
+    html, body {
+      background: transparent !important;
+    }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      min-height: 100vh;
+      box-sizing: border-box;
+      overflow-y: auto;
+      background: transparent !important;
+    }
+    #cards {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-height: 100vh;
+      gap: 0;
+    }
+    .card {
+      box-sizing: border-box;
+      width: 200px;
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-left: 6px solid #0074D9;
+      background: #f8f8f8;
+      border-radius: 8px;
+      margin: 0 0 0.5em 0; /* 0.5em margin-bottom mellem kasserne */
+      padding: 0.5em 0.2em 0.2em 0.7em;
+    }
+    .card.flash {
+      background: #ffe066 !important;
+      transition: background 2s;
+    }
+    .icon {
+      font-size: 2.2em;
+      margin-bottom: 0.2em;
+    }
+    .label {
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-bottom: 0.2em;
+      text-align: center;
+    }
+    .big {
+      font-size: 2em;
+      margin-bottom: 0.2em;
+      text-align: center;
+    }
+    .dev {
+      font-size: 1em;
+      margin-bottom: 0.1em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="cards"></div>
+    <script>
+    let prevValues = {};
+
+    async function fetchTraffic() {
+      try {
+        const res = await fetch('/api/admin/traffic-diffs');
+        if (!res.ok) return;
+        const data = await res.json();
+        const diff = data.diffs || {};
+        const metrics = [
+          { key: "total_views", icon: "👁️" },
+          { key: "unique_users_total", icon: "👤" },
+          { key: "users_total", icon: "📱" },
+          { key: "unique_obserkoder_total_db", icon: "🦉" }
+        ];
+        function pctStr(val) {
+          if (val === null || val === undefined) return "-";
+          const pct = Math.round(val);
+          return (pct > 0 ? "+" : "") + pct + "%";
+        }
+        function diffStr(val) {
+          if (val === null || val === undefined) return "-";
+          const n = Math.round(Number(val) || 0);
+          return (n > 0 ? "+" : "") + n;
+        }
+        function formatInt(val) {
+          if (val === null || val === undefined) return "-";
+          const n = Math.round(Number(val) || 0);
+          return String(n);
+        }
+        let html = "";
+        let cardData = [];
+
+        metrics.forEach(m => {
+          const d = diff[m.key] || {};
+          cardData.push({
+            id: m.key,
+            value: Number(d.today) || 0
+          });
+          html += `
+            <div class="card" data-id="${m.key}">
+              <div class="icon">${m.icon}</div>
+              <div class="label">${d.label || ""}</div>
+              <div class="big">${formatInt(d.today)}</div>
+              <div class="dev">I går: <b>${diffStr(d.diff_yesterday)}</b> <span style="color:#888;">(${pctStr(d.pct_yesterday)})</span></div>
+              <div class="dev">Uge siden: <b>${diffStr(d.diff_week)}</b> <span style="color:#888;">(${pctStr(d.pct_week)})</span></div>
+              <div class="dev">Måned siden: <b>${diffStr(d.diff_month)}</b> <span style="color:#888;">(${pctStr(d.pct_month)})</span></div>
+            </div>
+          `;
+        });
+
+        // Ekstra boks for kommentarer og SU/SUB
+        cardData.push({
+          id: "comments_today",
+          value: Number(data.comments_today) || 0
+        });
+        html += `
+          <div class="card" data-id="comments_today">
+            <div class="icon">💬</div>
+            <div class="label">Kommentarer</div>
+            <div class="big">${formatInt(data.comments_today)}</div>
+            <div class="dev">SU-tråde: <b>${formatInt(data.su_threads_today)}</b></div>
+            <div class="dev">SUB-tråde: <b>${formatInt(data.sub_threads_today)}</b></div>
+          </div>
+        `;
+
+        document.getElementById("cards").innerHTML = html;
+
+        // Flash/fade effekt
+        cardData.forEach(cd => {
+          const card = document.querySelector(`.card[data-id="${cd.id}"]`);
+          if (!card) return;
+          const prev = prevValues[cd.id];
+          if (prev !== undefined && cd.value > prev) {
+            card.classList.add("flash");
+            setTimeout(() => {
+              card.style.transition = "background 2s";
+              card.style.background = "";
+              card.classList.remove("flash");
+            }, 2000);
+          }
+          prevValues[cd.id] = cd.value;
+        });
+      } catch(e) {}
+    }
+    fetchTraffic();
+    setInterval(fetchTraffic, 15000); // Opdater hvert 15. sekund
+    </script>
+</body>
+</html>

@@ -1768,10 +1768,208 @@ async def api_is_app_user(data: dict = Body(...)):
             continue
     return {"is_app_user": False}
 
+@app.get("/api/admin/traffic-diffs")
+async def traffic_diffs_public():
+    import datetime
+    import pytz
+    import os
+    import json
+    import collections
+    import sqlite3
+
+    masterlog_path = os.path.join(os.path.dirname(__file__), "pageview_masterlog.jsonl")
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+
+    def parse_date(s):
+        try:
+            return datetime.datetime.strptime(s, "%Y-%m-%d").date()
+        except Exception:
+            return None
+
+    # Læs alle linjer og byg dict med dato -> sidste obj (fra masterlog)
+    days_dict = {}
+    if os.path.isfile(masterlog_path):
+        with open(masterlog_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                    d = parse_date(obj.get("date", ""))
+                    if d:
+                        days_dict[d] = obj  # overskriv, så sidste vinder
+                except Exception:
+                    continue
+
+    # Beregn dagens statistik fra pageviews.log (samme logik som archive_and_reset_pageview_log)
+    today = datetime.datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
+    today_date = datetime.datetime.strptime(today, "%Y-%m-%d").date()
+    comment_count = 0
+
+    # Tæl kommentarer for dags dato
+    try:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
+        threads_dir = os.path.join(base_dir, today_date.strftime("%d-%m-%Y"), "threads")
+        if os.path.isdir(threads_dir):
+            for thread_folder in os.listdir(threads_dir):
+                kommentar_path = os.path.join(threads_dir, thread_folder, "kommentar.json")
+                if os.path.isfile(kommentar_path):
+                    try:
+                        with open(kommentar_path, "r", encoding="utf-8") as f:
+                            comments = json.load(f)
+                        comment_count += len(comments)
+                    except Exception:
+                        continue
+    except Exception:
+        comment_count = 0
+
+    # Tæl SU og SUB tråde for dags dato
+    su_count = 0
+    sub_count = 0
+    try:
+        if os.path.isdir(threads_dir):
+            for thread_folder in os.listdir(threads_dir):
+                thread_json_path = os.path.join(threads_dir, thread_folder, "thread.json")
+                if os.path.isfile(thread_json_path):
+                    try:
+                        with open(thread_json_path, "r", encoding="utf-8") as f:
+                            thread_data = json.load(f)
+                        kategori = (thread_data.get("thread", {}).get("last_kategori") or "").strip().upper()
+                        if kategori == "SU":
+                            su_count += 1
+                        elif kategori == "SUB":
+                            sub_count += 1
+                    except Exception:
+                        continue
+    except Exception:
+        su_count = 0
+        sub_count = 0
+
+    if os.path.isfile(log_path):
+        stats = collections.defaultdict(lambda: {"total": 0, "unique": set()})
+        all_users = set()
+        total_views = 0
+        unique_obserkoder = set()
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 4:
+                    continue
+                ts = parts[0]
+                if not ts.startswith(today):
+                    continue
+                user_id = parts[2]
+                all_users.add(user_id)
+                total_views += 1
+                okode = get_obserkode_from_userprefs(user_id)
+                if okode:
+                    unique_obserkoder.add(okode)
+        stats_out = {
+            "date": today,
+            "unique_users_total": len(all_users),
+            "total_views": total_views,
+            "unique_obserkoder": len(unique_obserkoder)
+        }
+        # Tæl brugere i databasen
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
+            total_users = 0
+            users_with_obserkode = 0
+            users_without_obserkode = 0
+            all_db_obserkoder = set()
+            for (prefs_json,) in rows:
+                try:
+                    prefs = json.loads(prefs_json)
+                    total_users += 1
+                    obserkode = prefs.get("obserkode")
+                    if obserkode:
+                        users_with_obserkode += 1
+                        all_db_obserkoder.add(obserkode)
+                    else:
+                        users_without_obserkode += 1
+                except Exception:
+                    continue
+        stats_out["users_total"] = total_users
+        stats_out["users_with_obserkode"] = users_with_obserkode
+        stats_out["users_without_obserkode"] = users_without_obserkode
+        stats_out["unique_obserkoder_total_db"] = len(all_db_obserkoder)
+        days_dict[today_date] = stats_out
+
+    # Sortér efter dato
+    days = sorted(days_dict.items(), key=lambda x: x[0])
+    # Sidste 365 dage (pr. dag)
+    last365 = []
+    for d, obj in days[-365:]:
+        last365.append({
+            "date": d.strftime("%Y-%m-%d"),
+            "unique_users_total": obj.get("unique_users_total", 0),
+            "users_with_obserkode": obj.get("users_with_obserkode", 0),
+            "users_without_obserkode": obj.get("users_without_obserkode", 0),
+            "unique_obserkoder": obj.get("unique_obserkoder", 0),
+            "unique_obserkoder_total_db": obj.get("unique_obserkoder_total_db", 0),
+            "users_total": obj.get("users_total", 0),
+            "total_views": obj.get("total_views", 0),
+        })
+
+    def pct_diff(now, prev):
+        if prev == 0:
+            return 100.0 if now > 0 else 0.0
+        return ((now - prev) / prev) * 100
+
+    def safe_get(lst, idx, key):
+        if -len(lst) <= idx < len(lst):
+            return lst[idx].get(key, 0)
+        return 0
+
+    stats_keys = [
+        ("unique_users_total", "Besøgende"),
+        ("unique_obserkoder_total_db", "Obserkoder"),
+        ("users_total", "Abonnenter"),
+        ("total_views", "Sidevisninger"),
+    ]
+    diffs = {}
+
+    for key, label in stats_keys:
+        today_val = safe_get(last365, -1, key)
+        yesterday = safe_get(last365, -2, key)
+        week_ago_vals = [safe_get(last365, -i, key) for i in (7, 8, 9)]
+        week_ago_vals_nonzero = [v for v in week_ago_vals if v is not None]
+        week_ago_avg = sum(week_ago_vals_nonzero) / len(week_ago_vals_nonzero) if week_ago_vals_nonzero else None
+
+        month_ago_vals = [safe_get(last365, -i, key) for i in (30, 31, 32)]
+        month_ago_vals_nonzero = [v for v in month_ago_vals if v is not None and v != 0]
+        if month_ago_vals_nonzero:
+            month_ago_avg = sum(month_ago_vals_nonzero) / len(month_ago_vals_nonzero)
+        else:
+            month_ago_avg = None
+
+        diff_yesterday = today_val - yesterday if yesterday is not None else None
+
+        diffs[key] = {
+            "label": label,
+            "today": today_val,
+            "yesterday": yesterday,
+            "diff_yesterday": diff_yesterday,
+            "pct_yesterday": pct_diff(today_val, yesterday) if yesterday else None,
+            "week_ago_avg": week_ago_avg,
+            "diff_week": today_val - week_ago_avg if week_ago_avg is not None else None,
+            "pct_week": pct_diff(today_val, week_ago_avg) if week_ago_avg else None,
+            "month_ago_avg": month_ago_avg,
+            "diff_month": today_val - month_ago_avg if month_ago_avg is not None else None,
+            "pct_month": pct_diff(today_val, month_ago_avg) if month_ago_avg else None,
+        }
+
+    # Tilføj antal kommentarer og SU/SUB tråde for dags dato
+    return {
+        "diffs": diffs,
+        "comments_today": comment_count,
+        "su_threads_today": su_count,
+        "sub_threads_today": sub_count
+    }
+
 @app.post("/api/admin/traffic-graphs")
-async def admin_traffic_graphs(data: dict = Body(...)):
+async def admin_traffic_graphs(data: dict = Body(None)):
+    data = data or {}
     user_id = data.get("user_id", "")
-    device_id = data.get("device_id", "")
+    # Kun superadmins må tilgå dette endpoint
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -2012,7 +2210,7 @@ async def admin_traffic_graphs(data: dict = Body(...)):
         ("unique_users_total", "Unikke besøgende"),
         ("unique_obserkoder_total_db", "Unikke obserkoder"),
         ("users_total", "Antal enheder"),
-        ("total_views", "Visninger"),  # <-- tilføj denne linje
+        ("total_views", "Sidevisninger"),  # <-- tilføj denne linje
     ]
     diffs = {}
 

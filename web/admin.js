@@ -1,4 +1,4 @@
-// Version: 4.9.28 - 2025-11-29 14.31.39
+// Version: 4.9.46 - 2025-11-29 22.03.19
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false },
                   { label: "Unikke obserkoder", data: uniqueObserkoder7, borderColor: "#2ECC40", fill: false },
                   { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false },
-                  { label: "Visninger", data: totalViews7, borderColor: "#888", fill: false, hidden: true  } // <-- tilføj denne linje
+                  { label: "Sidevisninger", data: totalViews7, borderColor: "#888", fill: false, hidden: true  } // <-- tilføj denne linje
                 ]
               },
               options: {
@@ -1372,11 +1372,11 @@ document.getElementById("show-database-btn").onclick = async function() {
   let html = `<table style="width:auto;border-collapse:collapse;">
     <thead>
       <tr style="background:var(--card-bg);">
-        <th style="border:1px solid #eee;">user_id</th>
-        <th style="border:1px solid #eee;">obserkode</th>
-        ${afdShort.map(short => `<th style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;font-size:11px;">${short}</th>`).join("")}
-        <th style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;">Adv</th>
-        <th style="border:1px solid #eee;">Slet</th>
+        <th style="border:1px solid #eee; position:sticky; top:0; background:var(--card-bg); z-index:2;">user_id</th>
+        <th style="border:1px solid #eee; position:sticky; top:0; background:var(--card-bg); z-index:2;">obserkode</th>
+        ${afdShort.map(short => `<th style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle;font-size:11px; position:sticky; top:0; background:var(--card-bg); z-index:2;">${short}</th>`).join("")}
+        <th style="border:1px solid #eee;width:32px;height:32px;text-align:center;vertical-align:middle; position:sticky; top:0; background:var(--card-bg); z-index:2;">Adv</th>
+        <th style="border:1px solid #eee; position:sticky; top:0; background:var(--card-bg); z-index:2;">Slet</th>
       </tr>
     </thead>
     <tbody>`;
@@ -1563,16 +1563,23 @@ async function refreshTrafficGraphsData() {
     const usersTotal7 = data.last7.map(d => d.users_total);
     const totalViews7 = data.last7.map(d => d.total_views);
 
-    if (trafficChart7d) trafficChart7d.destroy();
+    // Gem synlighed for datasets i 7d-grafen
+    let hidden7d = {};
+    if (trafficChart7d) {
+      trafficChart7d.data.datasets.forEach((ds, i) => {
+        hidden7d[ds.label] = trafficChart7d.isDatasetVisible(i) === false;
+      });
+      trafficChart7d.destroy();
+    }
     trafficChart7d = new Chart(document.getElementById("traffic-graph-7d").getContext("2d"), {
       type: "line",
       data: {
         labels: labels7,
         datasets: [
-          { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false },
-          { label: "Unikke obserkoder", data: uniqueObserkoder7, borderColor: "#2ECC40", fill: false },
-          { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false },
-          { label: "Visninger", data: totalViews7, borderColor: "#888", fill: false, hidden: true }
+          { label: "Unikke besøgende", data: users7, borderColor: "#0074D9", fill: false, hidden: hidden7d["Unikke besøgende"] ?? false },
+          { label: "Unikke obserkoder", data: uniqueObserkoder7, borderColor: "#2ECC40", fill: false, hidden: hidden7d["Unikke obserkoder"] ?? false },
+          { label: "Antal enheder", data: usersTotal7, borderColor: "#FF4136", fill: false, hidden: hidden7d["Antal enheder"] ?? false },
+          { label: "Sidevisninger", data: totalViews7, borderColor: "#888", fill: false, hidden: hidden7d["Sidevisninger"] ?? true }
         ]
       },
       options: {
@@ -1630,6 +1637,45 @@ async function refreshTrafficGraphsData() {
       dObj.setDate(dObj.getDate() + 1);
     }
 
+    // Gem synlighed for datasets i 365d-grafen
+    let hidden365 = {};
+    if (trafficChart365) {
+      trafficChart365.data.datasets.forEach((ds, i) => {
+        hidden365[ds.label] = trafficChart365.isDatasetVisible(i) === false;
+      });
+      trafficChart365.destroy();
+    }
+    trafficChart365 = new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
+      type: "line",
+      data: {
+        labels: labels365,
+        datasets: [
+          { label: "Unikke besøgende", data: users365, borderColor: "#0074D9", fill: false, pointRadius: 0, hidden: hidden365["Unikke besøgende"] ?? false },
+          { label: "Unikke obserkoder", data: uniqueObserkoder365, borderColor: "#2ECC40", fill: false, pointRadius: 0, hidden: hidden365["Unikke obserkoder"] ?? false },
+          { label: "Antal enheder", data: usersTotal365, borderColor: "#FF4136", fill: false, pointRadius: 0, hidden: hidden365["Antal enheder"] ?? false },
+          { label: "Sidevisninger", data: totalViews365, borderColor: "#888", fill: false, pointRadius: 0, hidden: hidden365["Sidevisninger"] ?? true }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true } },
+        scales: {
+          y: { beginAtZero: true },
+          x: {
+            ticks: {
+              callback: function(val, idx) {
+                if (idx % 30 === 0 || idx === labels365.length - 1) return labels365[idx];
+                return "";
+              },
+              maxRotation: 0,
+              minRotation: 0
+            }
+          }
+        }
+      }
+    });
+
+    // --- Opdater PWA doughnut ---
     const userplatforms = data.userplatforms || {};
     if (userplatforms && typeof userplatforms.pwa_installed === "number") {
       if (trafficPwaPie) trafficPwaPie.destroy();
@@ -1684,37 +1730,6 @@ async function refreshTrafficGraphsData() {
         }
       });
     }
-
-    if (trafficChart365) trafficChart365.destroy();
-    trafficChart365 = new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
-      type: "line",
-      data: {
-        labels: labels365,
-        datasets: [
-          { label: "Unikke besøgende", data: users365, borderColor: "#0074D9", fill: false, pointRadius: 0 },
-          { label: "Unikke obserkoder", data: uniqueObserkoder365, borderColor: "#2ECC40", fill: false, pointRadius: 0 },
-          { label: "Antal enheder", data: usersTotal365, borderColor: "#FF4136", fill: false, pointRadius: 0 },
-          { label: "Visninger", data: totalViews365, borderColor: "#888", fill: false, pointRadius: 0, hidden: true }
-        ]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: true } },
-        scales: {
-          y: { beginAtZero: true },
-          x: {
-            ticks: {
-              callback: function(val, idx) {
-                if (idx % 30 === 0 || idx === labels365.length - 1) return labels365[idx];
-                return "";
-              },
-              maxRotation: 0,
-              minRotation: 0
-            }
-          }
-        }
-      }
-    });
   } catch (e) {
     // evt. fejl-håndtering
   }

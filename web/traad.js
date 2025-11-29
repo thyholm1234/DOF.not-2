@@ -1,4 +1,4 @@
-// Version: 4.9.28 - 2025-11-29 14.31.39
+// Version: 4.9.46 - 2025-11-29 22.03.19
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -920,11 +920,12 @@ function startLiveGeolocation(targetLat, targetLng) {
           row.innerHTML = `
             <div class="comment-title"><b>${escapeHTML(c.navn)}</b>, <span class="comment-time">${escapeHTML(c.ts.split(' ')[1])}</span></div>
             <div class="comment-body">${linkify(escapeHTML(c.body))}</div>
-            <div class="comment-thumbs">👍 <span>${c.thumbs || 0}</span></div>
+            <div class="comment-thumbs" style="cursor:pointer;">👍 <span>${c.thumbs || 0}</span></div>
           `;
           row.querySelector('.comment-thumbs').onclick = () => {
             const userid = getOrCreateUserId ? getOrCreateUserId() : localStorage.getItem("userid");
-            wsSend({ type: "thumbsup", ts: c.ts, user_id: userid });
+            const deviceid = localStorage.getItem("deviceid");
+            wsSend({ type: "thumbsup", ts: c.ts, user_id: userid, device_id: deviceid });
           };
           $list.appendChild(row);
         });
