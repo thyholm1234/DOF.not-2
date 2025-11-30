@@ -1,4 +1,4 @@
-// Version: 4.9.63 - 2025-11-30 20.09.01
+// Version: 4.9.64 - 2025-12-01 00.26.36
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               const n = Math.round(Number(val) || 0); // altid heltal
               return String(n);
             }
-            let cardsHtml = `<div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:1.5em;">`;
+            let cardsHtml = `<div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:0em;">`;
             metrics.forEach(m => {
               const d = diff[m.key] || {};
               cardsHtml += `
@@ -1676,18 +1676,6 @@ async function refreshTrafficGraphsData() {
       `;
     });
     cardsHtml += `</div>`;
-
-    // Udskift kun udviklingskasserne
-    let devCards = document.getElementById("traffic-dev-cards");
-    if (devCards) {
-      devCards.outerHTML = cardsHtml;
-    } else {
-      // fallback: indsæt før første graf
-      const firstGraphCard = document.getElementById("traffic-graph-7d")?.closest(".card");
-      if (firstGraphCard) {
-        firstGraphCard.insertAdjacentHTML("beforebegin", cardsHtml);
-      }
-    }
 
     // --- Opdater grafer ---
     // 7 dage
