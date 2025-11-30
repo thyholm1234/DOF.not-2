@@ -1081,16 +1081,36 @@ async def update_data(request: Request):
     stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
     stats_lock = threading.Lock()
 
-    def log_obs_notification(user_id, device_id, obs_id=None):
-        entry = {
-            "timestamp": datetime.now().isoformat(),
-            "user_id": user_id,
-            "device_id": device_id,
-            "obs_id": obs_id
-        }
+    def increment_obs_notification_jsonl():
+        import json
+        from datetime import datetime
+
+        stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
+        today = datetime.now().strftime("%Y-%m-%d")
+        stats_lock = threading.Lock()
+
         with stats_lock:
-            with open(stats_jsonl_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            # Læs eksisterende linjer
+            lines = []
+            found = False
+            if os.path.isfile(stats_jsonl_path):
+                with open(stats_jsonl_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            obj = json.loads(line)
+                            if obj.get("date") == today:
+                                obj["obs_notification"] = obj.get("obs_notification", 0) + 1
+                                found = True
+                            lines.append(obj)
+                        except Exception:
+                            continue
+            # Hvis ikke fundet, tilføj ny linje for i dag
+            if not found:
+                lines.append({"date": today, "obs_notification": 1})
+            # Skriv alle linjer tilbage (overskriv filen)
+            with open(stats_jsonl_path, "w", encoding="utf-8") as f:
+                for obj in lines:
+                    f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
     payload = await request.json()
     _save_payload(payload)
@@ -1106,7 +1126,7 @@ async def update_data(request: Request):
                 ttl=3600,
                 headers={"Urgency": "high"}
             )
-            log_obs_notification(user_id, device_id, obs_id)
+            increment_obs_notification_jsonl()
         except WebPushException as ex:
             should_delete = False
             status = None
@@ -1845,6 +1865,24 @@ async def traffic_diffs_public():
     comments_today, su_threads_today, sub_threads_today = count_comments_and_threads_for_day(today_date)
     comments_yesterday, su_threads_yesterday, sub_threads_yesterday = count_comments_and_threads_for_day(today_date - datetime.timedelta(days=1))
 
+    # --- Hent obs_notification fra stats.jsonl ---
+    obs_notif_today = 0
+    obs_notif_yesterday = 0
+    stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
+    today_str = today
+    yesterday_str = (today_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    if os.path.isfile(stats_jsonl_path):
+        with open(stats_jsonl_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                    if obj.get("date") == today_str:
+                        obs_notif_today = obj.get("obs_notification", 0)
+                    elif obj.get("date") == yesterday_str:
+                        obs_notif_yesterday = obj.get("obs_notification", 0)
+                except Exception:
+                    continue
+
     # --- Diffs/statistik ---
     # (kopieret fra din eksisterende kode)
     if os.path.isfile(log_path):
@@ -1965,7 +2003,9 @@ async def traffic_diffs_public():
         "sub_threads_today": sub_threads_today,
         "comments_yesterday": comments_yesterday,
         "su_threads_yesterday": su_threads_yesterday,
-        "sub_threads_yesterday": sub_threads_yesterday
+        "sub_threads_yesterday": sub_threads_yesterday,
+        "obs_notification_today": obs_notif_today,
+        "obs_notification_yesterday": obs_notif_yesterday
     }
 
 @app.post("/api/admin/pageviews-rolling")
