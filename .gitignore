@@ -7,12 +7,12 @@ server/users.db
 server/pageviews.log
 server/pageview_masterlog.jsonl
 server/blacklist.json
-server/users-2025-11-17.db
 server/admin.json
 server/comments.log
 server/superadmin.json
 server/server.log
 server/__init__.py
+server/stats.jsonl
 .env
 list_users.csv
 list_users.json

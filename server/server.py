@@ -1075,11 +1075,28 @@ async def get_subscription_post(day: str, thread_id: str, data: dict = Body(...)
 
 @app.post("/api/update")
 async def update_data(request: Request):
+    import threading
+    from datetime import datetime
+
+    stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
+    stats_lock = threading.Lock()
+
+    def log_obs_notification(user_id, device_id, obs_id=None):
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "user_id": user_id,
+            "device_id": device_id,
+            "obs_id": obs_id
+        }
+        with stats_lock:
+            with open(stats_jsonl_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
     payload = await request.json()
     _save_payload(payload)
     tasks = []
 
-    def push_task(sub, push_payload, user_id, device_id):
+    def push_task(sub, push_payload, user_id, device_id, obs_id=None):
         try:
             webpush(
                 subscription_info=sub,
@@ -1089,6 +1106,7 @@ async def update_data(request: Request):
                 ttl=3600,
                 headers={"Urgency": "high"}
             )
+            log_obs_notification(user_id, device_id, obs_id)
         except WebPushException as ex:
             should_delete = False
             status = None
@@ -1116,7 +1134,6 @@ async def update_data(request: Request):
                         "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
                         (user_id, device_id)
                     )
-                    # Slet user_prefs hvis der ikke er flere subscriptions for user_id
                     remaining = conn2.execute(
                         "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
                         (user_id,)
@@ -1145,9 +1162,9 @@ async def update_data(request: Request):
                 "url": obs.get("url", "https://dofbasen.dk"),
                 "tag": obs.get("tag") or ""
             }
+            obs_id = obs.get("id") or obs.get("obsid") or None
 
             if statechanged == 1:
-                # Send til alle med prefs (uændret)
                 rows = conn.execute(
                     "SELECT user_prefs.user_id, subscriptions.device_id, user_prefs.prefs, subscriptions.subscription "
                     "FROM user_prefs JOIN subscriptions ON user_prefs.user_id = subscriptions.user_id"
@@ -1156,25 +1173,20 @@ async def update_data(request: Request):
                     prefs = json.loads(prefs_json)
                     sub = json.loads(sub_json)
                     species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
-                    # Find brugerens obserkode
                     user_obserkode = prefs.get("obserkode", "").strip().upper()
-                    # Hent obserstate som liste af koder (kan være None)
                     obs_obserstate = obs.get("obserstate") or []
                     if isinstance(obs_obserstate, str):
                         obs_obserstate = [obs_obserstate]
                     obs_obserstate = [k.strip().upper() for k in obs_obserstate if k]
-                    # Spring over hvis brugerens obserkode findes i obserstate-listen
                     if user_obserkode and user_obserkode in obs_obserstate:
                         continue
                     if should_notify(prefs, afd, kat) and should_include_obs(obs, species_filters):
                         tasks.append(
-                            executor.submit(push_task, sub, push_payload, user_id, device_id)
+                            executor.submit(push_task, sub, push_payload, user_id, device_id, obs_id)
                         )
             else:
-                # Send kun til thread-subscribers, men KUN hvis obs matcher trådens art og lokation
                 if not thread_id:
                     continue
-                # Hent tråd-info
                 thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
                 if not os.path.isfile(thread_path):
                     continue
@@ -1188,23 +1200,19 @@ async def update_data(request: Request):
                     continue
                 obs_art = (obs.get("Artnavn") or "").strip().lower()
                 obs_lok = (obs.get("Loknavn") or "").strip().lower()
-                # Kun hvis både art og lokation matcher
                 if obs_art != thread_art or obs_lok != thread_lok:
                     continue
                 rows = conn.execute(
                     "SELECT user_id, device_id FROM thread_subs WHERE day=? AND thread_id=?",
                     (day, thread_id)
                 ).fetchall()
-                # --- NY LOGIK: filtrer brugere fra hvis deres obserkode findes i obserstate ---
                 obs_obserstate = obs.get("obserstate") or []
                 if isinstance(obs_obserstate, str):
                     obs_obserstate = [obs_obserstate]
                 obs_obserstate = [k.strip().upper() for k in obs_obserstate if k]
                 for user_id, device_id in rows:
-                    # Find brugerens obserkode
                     prefs = get_prefs(user_id)
                     user_obserkode = (prefs.get("obserkode") or "").strip().upper()
-                    # Hvis obserstate ikke er tom og brugerens obserkode findes i listen, så spring over
                     if obs_obserstate and user_obserkode and user_obserkode in obs_obserstate:
                         continue
                     sub_row = conn.execute(
@@ -1215,7 +1223,7 @@ async def update_data(request: Request):
                         continue
                     sub = json.loads(sub_row[0])
                     tasks.append(
-                        executor.submit(push_task, sub, push_payload, user_id, device_id)
+                        executor.submit(push_task, sub, push_payload, user_id, device_id, obs_id)
                     )
         for t in tasks:
             t.result()
@@ -1958,6 +1966,81 @@ async def traffic_diffs_public():
         "comments_yesterday": comments_yesterday,
         "su_threads_yesterday": su_threads_yesterday,
         "sub_threads_yesterday": sub_threads_yesterday
+    }
+
+@app.post("/api/admin/pageviews-rolling")
+async def pageviews_rolling(data: dict = Body(...)):
+    import pytz
+    import datetime
+    import math
+
+    user_id = data.get("user_id", "")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
+
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+    if not os.path.isfile(log_path):
+        return {"error": "Ingen log"}
+
+    # Find dagens dato i DK-tid
+    tz = pytz.timezone("Europe/Copenhagen")
+    today = datetime.datetime.now(tz).strftime("%Y-%m-%d")
+
+    # Byg tidsintervaller (5 min) for hele døgnet
+    intervals = []
+    interval_map = {}
+    dt0 = datetime.datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=tz)
+    for i in range(0, 24 * 60, 5):
+        dt = dt0 + datetime.timedelta(minutes=i)
+        label = dt.strftime("%H:%M")
+        intervals.append(label)
+        interval_map[label] = 0
+
+    # Tæl sidevisninger pr. 5. minut
+    with open(log_path, encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 1:
+                continue
+            ts = parts[0]
+            if not ts.startswith(today):
+                continue
+            try:
+                dt = datetime.datetime.fromisoformat(ts)
+                dt = dt.astimezone(tz)
+                # Find nærmeste 5-min interval
+                minute = (dt.minute // 5) * 5
+                label = dt.replace(minute=minute, second=0, microsecond=0).strftime("%H:%M")
+                if label in interval_map:
+                    interval_map[label] += 1
+            except Exception:
+                continue
+
+    # Lav liste med counts i rækkefølge
+    counts = [interval_map[label] for label in intervals]
+
+    def rolling_avg(counts, window):
+        result = []
+        for i in range(len(counts)):
+            left = max(0, i - window // 2)
+            right = min(len(counts), i + window // 2)
+            vals = counts[left:right]
+            avg = sum(vals) / len(vals) if vals else 0
+            result.append(round(avg, 2))
+        return result
+
+    rolling_30min = rolling_avg(counts, 6)
+    rolling_1h = rolling_avg(counts, 12)
+    rolling_2h = rolling_avg(counts, 24)
+
+    return {
+        "intervals": intervals,
+        "counts": counts,
+        "rolling_30min": rolling_30min,
+        "rolling_1h": rolling_1h,
+        "rolling_2h": rolling_2h
     }
 
 @app.post("/api/admin/traffic-graphs")

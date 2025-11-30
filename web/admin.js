@@ -1,4 +1,4 @@
-// Version: 4.9.51 - 2025-11-30 00.27.28
+// Version: 4.9.57 - 2025-11-30 15.57.17
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -454,6 +454,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="card" style="margin-bottom:1em;">
             <h4>Traffik det sidste år</h4>
             <canvas id="traffic-graph-52w" height="120"></canvas>
+          </div>
+          <div class="card" style="margin-bottom:1em;">
+            <h4>Sidevisninger i dag</h4>
+            <canvas id="traffic-graph-rolling" height="120"></canvas>
           </div>
           <hr style="margin:1em 0;">
           <div class="card" style="margin-bottom:1em;">
@@ -1476,6 +1480,136 @@ let trafficChart7d = null;
 let trafficChart365 = null;
 let trafficPwaPie = null;
 let trafficPlatformBar = null;
+let trafficRollingTimer = null; // <-- Tilføj denne linje
+
+// Funktion til kun at opdatere rolling-grafen
+async function refreshTrafficRollingGraph() {
+  const user_id = getOrCreateUserId();
+  try {
+    const res = await fetch("/api/admin/pageviews-rolling", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id })
+    });
+    if (res.ok) {
+      const rolling = await res.json();
+      const ctx = document.getElementById("traffic-graph-rolling").getContext("2d");
+
+      // Gem synlighed for datasets
+      let hiddenRolling = {};
+      if (window.trafficRollingChart) {
+        window.trafficRollingChart.data.datasets.forEach((ds, i) => {
+          hiddenRolling[ds.label] = window.trafficRollingChart.isDatasetVisible(i) === false;
+        });
+        window.trafficRollingChart.destroy();
+      }
+
+      window.trafficRollingChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: rolling.intervals,
+          datasets: [
+            {
+              label: "Sidevisninger (5 min)",
+              data: rolling.counts,
+              borderColor: "#888",
+              backgroundColor: "rgba(136,136,136,0.1)",
+              fill: false,
+              pointRadius: 0,
+              hidden: hiddenRolling["Sidevisninger (5 min)"] ?? false
+            },
+            {
+              label: "Glidende snit (30 min)",
+              data: rolling.rolling_30min,
+              borderColor: "#0074D9",
+              backgroundColor: "rgba(0,116,217,0.1)",
+              fill: false,
+              pointRadius: 0,
+              hidden: hiddenRolling["Glidende snit (30 min)"] ?? true
+            },
+            {
+              label: "Glidende snit (1 time)",
+              data: rolling.rolling_1h,
+              borderColor: "#2ECC40",
+              backgroundColor: "rgba(46,204,64,0.1)",
+              fill: false,
+              pointRadius: 0,
+              hidden: hiddenRolling["Glidende snit (1 time)"] ?? true
+            },
+            {
+              label: "Glidende snit (2 timer)",
+              data: rolling.rolling_2h,
+              borderColor: "#FF4136",
+              backgroundColor: "rgba(255,65,54,0.1)",
+              fill: false,
+              pointRadius: 0,
+              hidden: hiddenRolling["Glidende snit (2 timer)"] ?? false // evt. true som default
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: {
+            y: { beginAtZero: true },
+            x: {
+              title: {
+                display: true,
+                text: "Tid på døgnet"
+              },
+              ticks: {
+                autoSkip: false,
+                callback: function(val, idx) {
+                  if (idx % 12 === 0) {
+                    const label = rolling.intervals[idx];
+                    if (label && label.length >= 2) {
+                      return label.slice(0, 2).replace(/^0/, '');
+                    }
+                    return label;
+                  }
+                  return "";
+                },
+                maxRotation: 0,
+                minRotation: 0
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Start/stop rolling-timer sammen med trafik-panelet
+function startTrafficRollingTimer() {
+  if (!trafficRollingTimer) {
+    refreshTrafficRollingGraph(); // Opdater straks
+    trafficRollingTimer = setInterval(refreshTrafficRollingGraph, 60000); // 15 sekunder
+  }
+}
+function stopTrafficRollingTimer() {
+  if (trafficRollingTimer) {
+    clearInterval(trafficRollingTimer);
+    trafficRollingTimer = null;
+  }
+}
+
+// Opdater start/stop logik:
+document.getElementById("traffic-btn").addEventListener("click", function() {
+  setTimeout(() => {
+    if (isTrafficPanelVisible()) {
+      startTrafficGraphsTimer();
+      startTrafficRollingTimer(); // <-- Tilføj denne linje
+      refreshTrafficGraphsData();
+    } else {
+      stopTrafficGraphsTimer();
+      stopTrafficRollingTimer(); // <-- Tilføj denne linje
+    }
+  }, 200);
+});
+
 
 // Funktion til kun at opdatere grafer og udviklingskasser
 async function refreshTrafficGraphsData() {
