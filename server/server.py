@@ -26,6 +26,7 @@ from starlette.requests import Request as StarletteRequest
 import pytz
 import logging
 import subprocess
+import queue
 
 load_dotenv()
 
@@ -121,6 +122,12 @@ def db_init():
                 PRIMARY KEY (day, thread_id, user_id, device_id)
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS stats_notifications (
+                date TEXT PRIMARY KEY,
+                obs_notification INTEGER DEFAULT 0
+            )
+        """)
 db_init()
 
 def cleanup_user_prefs_without_subscriptions():
@@ -162,6 +169,32 @@ def database_maintenance():
         conn.commit()
     # Ryd op i user_prefs uden tilknyttede subscriptions
     cleanup_user_prefs_without_subscriptions()  
+
+obs_notification_queue = queue.Queue()
+
+def obs_notification_worker():
+    import sqlite3
+    while True:
+        today = datetime.now().strftime("%Y-%m-%d")
+        # Saml alle kald i køen (batch)
+        count = 0
+        try:
+            while True:
+                obs_notification_queue.get(timeout=1)
+                count += 1
+        except queue.Empty:
+            pass
+        if count > 0:
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.execute("""
+                    INSERT INTO stats_notifications (date, obs_notification)
+                    VALUES (?, ?)
+                    ON CONFLICT(date) DO UPDATE SET obs_notification = obs_notification + ?
+                """, (today, count, count))
+                conn.commit()
+
+# Start baggrundstråden én gang ved opstart
+threading.Thread(target=obs_notification_worker, daemon=True).start()
 
 def send_push(sub, push_payload, user_id, device_id):
     try:
@@ -221,6 +254,26 @@ def set_prefs(user_id, prefs):
             "INSERT OR REPLACE INTO user_prefs (user_id, prefs, ts) VALUES (?, ?, ?)",
             (user_id, json.dumps(prefs), ts)
         )
+
+@app.post("/api/prefs/quiet-hours")
+async def set_quiet_hours(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    start = data.get("start")
+    end = data.get("end")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    prefs = get_prefs(user_id)
+    if "quiet_hours" not in prefs:
+        prefs["quiet_hours"] = {}
+    # Slet hvis tomme værdier
+    if not start or not end:
+        if device_id in prefs["quiet_hours"]:
+            del prefs["quiet_hours"][device_id]
+    else:
+        prefs["quiet_hours"][device_id] = {"start": start, "end": end}
+    set_prefs(user_id, prefs)
+    return {"ok": True}
 
 @app.get("/share/{day}/{thread_id}", response_class=HTMLResponse)
 async def share_thread(day: str, thread_id: str, user_agent: str = Header(None)):
@@ -1073,50 +1126,41 @@ async def get_subscription_post(day: str, thread_id: str, data: dict = Body(...)
         ).fetchone()
     return {"subscribed": bool(row)}
 
+stats_lock = threading.Lock()
+
 @app.post("/api/update")
 async def update_data(request: Request):
-    import threading
     from datetime import datetime
 
-    stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
-    stats_lock = threading.Lock()
-
-    def increment_obs_notification_jsonl():
-        import json
-        from datetime import datetime
-
-        stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
-        today = datetime.now().strftime("%Y-%m-%d")
-        stats_lock = threading.Lock()
-
-        with stats_lock:
-            # Læs eksisterende linjer
-            lines = []
-            found = False
-            if os.path.isfile(stats_jsonl_path):
-                with open(stats_jsonl_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            obj = json.loads(line)
-                            if obj.get("date") == today:
-                                obj["obs_notification"] = obj.get("obs_notification", 0) + 1
-                                found = True
-                            lines.append(obj)
-                        except Exception:
-                            continue
-            # Hvis ikke fundet, tilføj ny linje for i dag
-            if not found:
-                lines.append({"date": today, "obs_notification": 1})
-            # Skriv alle linjer tilbage (overskriv filen)
-            with open(stats_jsonl_path, "w", encoding="utf-8") as f:
-                for obj in lines:
-                    f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    def increment_obs_notification_db():
+        obs_notification_queue.put(1)
 
     payload = await request.json()
     _save_payload(payload)
     tasks = []
 
     def push_task(sub, push_payload, user_id, device_id, obs_id=None):
+        # Tjek quiet hours for denne bruger/device
+        prefs = get_prefs(user_id)
+        qh = prefs.get("quiet_hours", {}).get(device_id)
+        if qh:
+            now = datetime.now().time()
+            try:
+                start = datetime.strptime(qh["start"], "%H:%M").time()
+                end = datetime.strptime(qh["end"], "%H:%M").time()
+                # Hvis perioden går over midnat
+                if start == end:
+                    pass  # Ingen quiet hours hvis start og slut er ens
+                elif start < end:
+                    if start <= now < end:
+                        return  # spring notifikation over
+                else:
+                    # Over midnat: fx 22:00-07:00
+                    if now >= start or now < end:
+                        return  # spring notifikation over
+            except Exception:
+                pass  # Hvis fejl i format, send alligevel
+
         try:
             webpush(
                 subscription_info=sub,
@@ -1126,7 +1170,7 @@ async def update_data(request: Request):
                 ttl=3600,
                 headers={"Urgency": "high"}
             )
-            increment_obs_notification_jsonl()
+            increment_obs_notification_db()
         except WebPushException as ex:
             should_delete = False
             status = None
@@ -1166,6 +1210,34 @@ async def update_data(request: Request):
                     conn2.commit()
             else:
                 print(f"Push-fejl til {user_id}/{device_id}: {ex}")
+        except Exception as ex:
+            print(f"Uventet push-fejl til {user_id}/{device_id}: {ex}")
+            # Slet abonnement hvis endpoint ikke kan slås op (fx DNS-fejl)
+            if "getaddrinfo failed" in str(ex) or "NameResolutionError" in str(ex) or "Failed to resolve" in str(ex):
+                print(f"Sletter abonnement for {user_id}/{device_id} pga. netværksfejl: {ex}")
+                with sqlite3.connect(DB_PATH) as conn2:
+                    conn2.execute(
+                        "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    )
+                    conn2.execute(
+                        "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    )
+                    conn2.execute(
+                        "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
+                        (user_id, device_id)
+                    )
+                    remaining = conn2.execute(
+                        "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
+                        (user_id,)
+                    ).fetchone()
+                    if not remaining:
+                        conn2.execute(
+                            "DELETE FROM user_prefs WHERE user_id=?",
+                            (user_id,)
+                        )
+                    conn2.commit()
 
     with ThreadPoolExecutor(max_workers=8) as executor, sqlite3.connect(DB_PATH) as conn:
         for obs in payload:
@@ -1865,23 +1937,24 @@ async def traffic_diffs_public():
     comments_today, su_threads_today, sub_threads_today = count_comments_and_threads_for_day(today_date)
     comments_yesterday, su_threads_yesterday, sub_threads_yesterday = count_comments_and_threads_for_day(today_date - datetime.timedelta(days=1))
 
-    # --- Hent obs_notification fra stats.jsonl ---
+    # --- Hent obs_notification fra stats_notifications (database) ---
     obs_notif_today = 0
     obs_notif_yesterday = 0
-    stats_jsonl_path = os.path.join(os.path.dirname(__file__), "stats.jsonl")
     today_str = today
     yesterday_str = (today_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    if os.path.isfile(stats_jsonl_path):
-        with open(stats_jsonl_path, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    obj = json.loads(line)
-                    if obj.get("date") == today_str:
-                        obs_notif_today = obj.get("obs_notification", 0)
-                    elif obj.get("date") == yesterday_str:
-                        obs_notif_yesterday = obj.get("obs_notification", 0)
-                except Exception:
-                    continue
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT obs_notification FROM stats_notifications WHERE date=?",
+            (today_str,)
+        ).fetchone()
+        if row:
+            obs_notif_today = row[0]
+        row = conn.execute(
+            "SELECT obs_notification FROM stats_notifications WHERE date=?",
+            (yesterday_str,)
+        ).fetchone()
+        if row:
+            obs_notif_yesterday = row[0]
 
     # --- Diffs/statistik ---
     # (kopieret fra din eksisterende kode)

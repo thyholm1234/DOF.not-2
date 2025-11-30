@@ -7,6 +7,7 @@ import requests
 
 def wait_until_next_run():
     tz = pytz.timezone("Europe/Copenhagen")
+    import sqlite3
     while True:
         now = datetime.now(tz)
         next_run = (now + timedelta(days=1)).replace(hour=0, minute=0, second=1, microsecond=0)
@@ -27,6 +28,19 @@ def wait_until_next_run():
                 print("server.log findes ikke.")
         except Exception as e:
             print(f"Kunne ikke slette server.log: {e}")
+        # Oprydning i stats_notifications (slet data ældre end 1 år)
+        try:
+            db_path = os.path.join(os.path.dirname(__file__), "dofnot.db")  # Ret evt. filnavn
+            cutoff = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+            with sqlite3.connect(db_path) as conn:
+                conn.execute(
+                    "DELETE FROM stats_notifications WHERE date < ?",
+                    (cutoff,)
+                )
+                conn.commit()
+            print("Oprydning i stats_notifications udført.")
+        except Exception as e:
+            print(f"Fejl ved oprydning i stats_notifications: {e}")
         # Kald endpoints
         try:
             for url in [

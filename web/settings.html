@@ -1,4 +1,4 @@
-<!-- Version: 4.9.59 - 2025-11-30 19.11.34 -->
+<!-- Version: 4.9.63 - 2025-11-30 20.09.01 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -38,7 +38,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.9.59">
+  <link rel="stylesheet" href="/style.css?v=4.9.63">
   <style>
   .card h2,
   .card h3,
@@ -128,6 +128,36 @@
       </p>
       <button id="subscribe-btn">Opret</button>
       <button id="unsubscribe-btn">Afmeld</button>
+
+      <div id="quiet-hours-section" style="display:none; margin-top:1.5em;">
+        <p class="sub" style="margin-bottom:0.7em;">
+          Her kan du vælge et tidsinterval, hvor du ikke vil modtage notifikationer for nye observationer.
+        </p>
+        <div id="quiet-hours-current" style="margin-bottom:1em; color:#444; font-size:0.95em;"></div>
+        <div style="display: flex; flex-direction: column; gap: 0.5em;">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 1em 2em;">
+            <div style="display:flex; align-items:center;">
+              <label for="quiet-start" style="margin-right:0.5em;">Start:</label>
+              <input type="time" id="quiet-start" value="22:00" style="min-width:90px;">
+            </div>
+            <div style="display:flex; align-items:center;">
+              <label for="quiet-end" style="margin-right:0.5em;">Slut:</label>
+              <input type="time" id="quiet-end" value="07:00" style="min-width:90px;">
+            </div>
+          </div>
+          <div class="quiet-hours-btn-row" style="display: flex; align-items: center; gap: 0.5em; margin-top:0.5em">
+            <button id="save-quiet-hours-btn" type="button">Gem</button>
+            <button id="delete-quiet-hours-btn" type="button">Nulstil</button>
+          </div>
+          <style>
+          @media (max-width: 600px) {
+            .quiet-hours-btn-row {
+              justify-content: flex-end !important;
+            }
+          }
+          </style>
+        </div>
+      </div>
     </div>
 
     <h2>Mine oplysninger</h2>
@@ -192,9 +222,9 @@
     
     <div id="prefs-matrix"></div>
   </main>
-  <script src="app.js?v=4.9.59"></script>
-  <script src="validate.js?v=4.9.59"></script>
-  <script src="install.js?v=4.9.59"></script>
+  <script src="app.js?v=4.9.63"></script>
+  <script src="validate.js?v=4.9.63"></script>
+  <script src="install.js?v=4.9.63"></script>
 <footer class="footer">
     <a href="https://dofbasen.dk" target="_blank" rel="noopener" class="footer-link">
       <div class="footer-content">

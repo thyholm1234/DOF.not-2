@@ -1,4 +1,4 @@
-// Version: 4.9.59 - 2025-11-30 19.11.34
+// Version: 4.9.63 - 2025-11-30 20.09.01
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -64,6 +64,18 @@ function cleanUrl(url) {
     return u.origin + u.pathname + (u.search ? u.search : '') + (u.hash ? u.hash : '');
   } catch (e) {
     return url;
+  }
+}
+
+function updateQuietHoursStatus(qh) {
+  const el = document.getElementById("quiet-hours-current");
+  if (!el) return;
+  if (qh && qh.start && qh.end) {
+    el.textContent = `Forstyr ikke: ${qh.start} – ${qh.end}`;
+    el.style.color = "#b91c1c";
+  } else {
+    el.textContent = "Ingen forstyr ikke-tid sat";
+    el.style.color = "#228B22";
   }
 }
 
@@ -375,7 +387,64 @@ document.addEventListener("DOMContentLoaded", async () => {
   setPrefsTableEnabled(localStorage.getItem("isSubscribed") === "1");
   setUserinfoEnabled(localStorage.getItem("isSubscribed") === "1");
 
+  // Quiet hours UI
+  const quietSection = document.getElementById("quiet-hours-section");
+  if (localStorage.getItem("isSubscribed") === "1" && quietSection) {
+    quietSection.style.display = "";
+    // Hent evt. eksisterende quiet hours fra prefs
+    const user_id = getOrCreateUserId();
+    const device_id = localStorage.getItem("deviceid");
+    const qh = (prefs.quiet_hours && prefs.quiet_hours[device_id]) || {};
+    if (qh.start) document.getElementById("quiet-start").value = qh.start;
+    if (qh.end) document.getElementById("quiet-end").value = qh.end;
 
+    updateQuietHoursStatus(qh);
+
+    document.getElementById("save-quiet-hours-btn").onclick = async () => {
+      const start = document.getElementById("quiet-start").value;
+      const end = document.getElementById("quiet-end").value;
+      const res = await fetch("/api/prefs/quiet-hours", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, device_id, start, end })
+      });
+      const status = document.getElementById("quiet-hours-status");
+      if (res.ok) {
+        updateQuietHoursStatus({start, end});
+        status.style.display = "";
+        status.textContent = "Gemt!";
+        setTimeout(() => { status.style.display = "none"; }, 2000);
+      } else {
+        status.style.display = "";
+        status.style.color = "red";
+        status.textContent = "Fejl!";
+        setTimeout(() => { status.style.display = "none"; status.style.color = "green"; }, 2000);
+      }
+    };
+
+    // Slet quiet hours
+    document.getElementById("delete-quiet-hours-btn").onclick = async () => {
+      const res = await fetch("/api/prefs/quiet-hours", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, device_id, start: "", end: "" })
+      });
+      document.getElementById("quiet-start").value = "22:00";
+      document.getElementById("quiet-end").value = "07:00";
+      const status = document.getElementById("quiet-hours-status");
+      if (res.ok) {
+        updateQuietHoursStatus(null);
+        status.style.display = "";
+        status.textContent = "Slettet!";
+        setTimeout(() => { status.style.display = "none"; }, 2000);
+      } else {
+        status.style.display = "";
+        status.style.color = "red";
+        status.textContent = "Fejl!";
+        setTimeout(() => { status.style.display = "none"; status.style.color = "green"; }, 2000);
+      }
+    };
+  }
 
 
   document.getElementById("subscribe-btn").onclick = async () => {
