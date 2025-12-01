@@ -1,4 +1,4 @@
-// Version: 4.9.64 - 2025-12-01 00.26.36
+// Version: 4.9.65 - 2025-12-01 19.38.01
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -472,6 +472,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       panel.innerHTML = html;    
 
+      // Kald rolling-grafen når DOM er opdateret
+      refreshTrafficRollingGraph();
+
       setTimeout(() => {
         const saveBtn = document.getElementById("save-traffic-panel-png");
         if (saveBtn) {
@@ -737,6 +740,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               const n = Math.round(Number(val) || 0); // altid heltal
               return String(n);
             }
+
+
             let cardsHtml = `<div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:0em;">`;
             metrics.forEach(m => {
               const d = diff[m.key] || {};
@@ -1649,6 +1654,11 @@ async function refreshTrafficGraphsData() {
       const n = Math.round(Number(val) || 0);
       return String(n);
     }
+
+    // Fjern gamle udviklingskasser hvis de findes
+    const oldDevCards = document.getElementById("traffic-dev-cards");
+    if (oldDevCards) oldDevCards.remove();
+
     let cardsHtml = `<div id="traffic-dev-cards" style="display:flex;gap:1em;flex-wrap:wrap">`;
     metrics.forEach(m => {
       const d = diff[m.key] || {};
@@ -1676,6 +1686,15 @@ async function refreshTrafficGraphsData() {
       `;
     });
     cardsHtml += `</div>`;
+
+    // Indsæt kasserne før første graf-card
+    const graphPanel = document.getElementById("traffic-panel");
+    const firstGraphCard = document.getElementById("traffic-graph-7d")?.closest(".card");
+    if (firstGraphCard) {
+        firstGraphCard.insertAdjacentHTML("beforebegin", cardsHtml);
+    } else {
+        graphPanel.insertAdjacentHTML("afterbegin", cardsHtml);
+    }
 
     // --- Opdater grafer ---
     // 7 dage
