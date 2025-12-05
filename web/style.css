@@ -1,4 +1,4 @@
-/* Version: 4.10.1 - 2025-12-05 02.59.45 */
+/* Version: 4.10.5 - 2025-12-05 03.16.22 */
 /* © Christian Vemmelund Helligsø */
 :root,
 :root[data-theme="light"] {
@@ -1966,4 +1966,11 @@ header.wrap .brand {
   color: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.su-marker .leaflet-marker-icon {
+  filter: hue-rotate(90deg) brightness(1.2) saturate(2);
+}
+.sub-marker .leaflet-marker-icon {
+  filter: hue-rotate(160deg) brightness(1.2) saturate(2);
 }

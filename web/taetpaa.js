@@ -249,13 +249,6 @@ function setupFrontControls() {
     localStorage.setItem('radius_km', val);
   });
 
-  $radiusInput.addEventListener('focus', function(e) {
-    const input = e.target;
-    const length = input.value.length;
-    setTimeout(() => {
-      input.setSelectionRange(length, length);
-    }, 0);
-  });
 }
 
 async function renderNearbyObservations() {
@@ -384,36 +377,59 @@ async function renderNearbyObservations() {
       lokationer[key].obs.push(obs);
     }
 
+    // Sortér lokationer: SU først, SUB bagefter, resten til sidst
+    const sortedLokationer = Object.values(lokationer).sort((a, b) => {
+    const katA = a.obs[0]?.kategori?.toLowerCase() || '';
+    const katB = b.obs[0]?.kategori?.toLowerCase() || '';
+    if (katA === 'su' && katB !== 'su') return -1;
+    if (katA !== 'su' && katB === 'su') return 1;
+    if (katA === 'sub' && katB !== 'sub') return -1;
+    if (katA !== 'sub' && katB === 'sub') return 1;
+    // Hvis A er SU eller SUB og B er Bemærk, skal SU/SUB først
+    if ((katA === 'su' || katA === 'sub') && katB !== 'su' && katB !== 'sub') return -1;
+    if ((katB === 'su' || katB === 'sub') && katA !== 'su' && katA !== 'sub') return 1;
+    return 0;
+  });
+
     // Tilføj markører for hver lokation
-    Object.values(lokationer).forEach(lok => {
-      const popupHtml = lok.obs.map(o => {
-        // Lav link som på kortet
-        let url = '';
-        if (o.kategori && ['su', 'sub'].includes(o.kategori.toLowerCase())) {
-          // SU/SUB link
-          function slugify(txt) {
-            return txt
-              .toString()
-              .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-              .replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa')
-              .replace(/Æ/g, 'ae').replace(/Ø/g, 'oe').replace(/Å/g, 'aa')
-              .replace(/[^a-zA-Z0-9]+/g, '-')
-              .replace(/^-+|-+$/g, '')
-              .toLowerCase();
-          }
-          const dateStr = o.Dato ? o.Dato.split('-').reverse().join('-') : '';
-          const idStr = slugify(`${o.Artnavn}-${o.Loknr}`);
-          url = `https://notifikation.dofbasen.dk/traad.html?date=${dateStr}&id=${idStr}`;
-        } else {
-          // Bemaerk/andre
-          url = o.Obsid ? `https://notifikation.dofbasen.dk/obsid.html?obsid=${o.Obsid}` : '#';
-        }
-        return `<a href="${url}" style="font-weight:bold;text-decoration:none;color:inherit;" target="_self">${o.Antal} ${o.Artnavn}</a><br>${o.Loknavn || ''}`;
-      }).join('<hr style="margin:6px 0;">');
-      const marker = L.marker([lok.lat, lok.lng]).addTo(window.map)
-        .bindPopup(popupHtml);
-      window.obsMarkers.push(marker);
+    const suLok = [];
+const subLok = [];
+const otherLok = [];
+
+sortedLokationer.forEach(lok => {
+  const hasSU = lok.obs.some(o => o.kategori && o.kategori.toLowerCase() === 'su');
+  const hasSUB = lok.obs.some(o => o.kategori && o.kategori.toLowerCase() === 'sub');
+  let markerIcon = undefined;
+  let markerOptions = {};
+
+  if (hasSU) {
+    markerIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
     });
+    markerOptions = { icon: markerIcon, zIndexOffset: 1000 };
+  } else if (hasSUB) {
+    markerIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
+    });
+    markerOptions = { icon: markerIcon, zIndexOffset: 1000 };
+  }
+
+  const marker = L.marker([lok.lat, lok.lng], markerIcon ? markerOptions : undefined).addTo(window.map)
+    .bindPopup(
+      lok.obs.map(o =>
+        `<a href="${o.Obsid ? `https://notifikation.dofbasen.dk/obsid.html?obsid=${o.Obsid}` : '#'}" style="font-weight:bold;text-decoration:none;color:inherit;" target="_self">${o.Antal} ${o.Artnavn}</a><br>${o.Loknavn || ''}`
+      ).join('<hr style="margin:6px 0;">')
+    );
+  window.obsMarkers.push(marker);
+});
 
     // Zoom til markører hvis der er nogen
     const allCoords = Object.values(lokationer).map(l => [l.lat, l.lng]);
