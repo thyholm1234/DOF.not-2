@@ -420,14 +420,14 @@ async function renderNearbyObservations() {
     const userLat = parseFloat(localStorage.getItem('lat'));
     const userLng = parseFloat(localStorage.getItem('lng'));
 
-    if (!isNaN(userLat) && !isNaN(userLng) && allCoords.length) {
-      // Beregn bounds for alle markører + brugerens position
-      const bounds = L.latLngBounds([...allCoords, [userLat, userLng]]);
+    let boundsCoords = allCoords.slice();
+    if (!isNaN(userLat) && !isNaN(userLng)) {
+      boundsCoords.push([userLat, userLng]);
+    }
+
+    if (boundsCoords.length) {
+      const bounds = L.latLngBounds(boundsCoords);
       window.map.fitBounds(bounds, {padding: [30,30]});
-      // Sæt center til brugerens position (efter fitBounds)
-      window.map.panTo([userLat, userLng]);
-    } else if (allCoords.length) {
-      window.map.fitBounds(allCoords, {padding: [30,30]});
     }
 
     // Vis brugerens position (hvis du har lat/lng fra bruger)
