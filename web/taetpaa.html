@@ -1,4 +1,4 @@
-<!-- Version: 4.10.0 - 2025-12-05 02.56.06 -->
+<!-- Version: 4.9.70 - 2025-12-04 23.03.01 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -31,9 +31,15 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.10.0">
+  <link rel="stylesheet" href="/style.css?v=4.9.70">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@1.6.0/Control.FullScreen.css" />
+  <script src="https://unpkg.com/leaflet.fullscreen@1.6.0/Control.FullScreen.js"></script>
 </head>
-  <header class="wrap">
+
+  <body>
+    <header class="wrap">
       <h1 style="text-align:left;">
         <a class="brand" href="/index.html" aria-label="Gå til forsiden">DOFbasen Notifikationer</a>
       </h1>
@@ -41,10 +47,6 @@
         <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
                 onclick="window.location.reload()">
           <span id="refresh-icon">🔄</span>
-        </button>
-        <button id="taetpaa-btn" aria-label="Observationer i nærheden" title="Observationer i nærheden" type="button"
-                onclick="window.location.href='./taetpaa.html'">
-          <span id="taetpaa-icon">📍</span>
         </button>
         <button id="info-btn" aria-label="Info" title="Info" type="button"
                 onclick="window.location.href='./info.html'">
@@ -59,54 +61,19 @@
         </button>
       </div>
     </header>
-  <body>
-    <main class="wrap main-content">
-      <h1 style="margin-top: 0px; text-align: center;">Avanceret artsfiltrering</h1>
-      <!-- NYT: Guide-kort -->
-      <div class="card info-card" style="margin-bottom: 16px; margin-top: 20px;">
-        <h3 style="margin-top: 0px;">Hvordan virker det?</h3>
-        <div>
-          Avanceret filter lægger sig oven på dine valgte kategorier for lokalafdelingerne. Her kan du stille ekstra krav til antal og fjerne arter, som du - uanset lokalafdeling og kategori - ikke ønsker at få notifikationer om.<br><br>
-          For at ekskludere en art skal knappen lyse rød og vise "Eksl." Det er ikke muligt at filtrere på lokalafdelingsniveau i det avancerede filter.
-        </div>
-        <div style="margin-top: 1em;">
-          <b>Sådan bruger du værktøjslinjen:</b><br>
-          <ul>
-            <li><b>Søg</b>: Find en art ved at skrive i søgefeltet.</li>
-            <li><b>Vis filter</b>: Vis kun de arter, du har filtreret på.</li>
-            <li><b>Nulstil</b>: Fjern alle dine nuværende filtre.</li>
-            <li><b>Eksportér</b>: Gem dine filtre som en fil.</li>
-            <li><b>Importér</b>: Indlæs filtre fra en fil.</li>
-            <li><b>Gem</b>: Husk at trykke "Gem" for at gemme dine ændringer.</li>
-          </ul>
-        </div>
+  
+    <div class="wrap main-content">
+      <h1 class="page-title">Observationer i nærheden</h1>
+      <div id="front-controls"></div>
+      <div id="map-container">
+        <div class="card" id="map" style="width:100%;height:320px;margin-bottom:1em;display:none;"></div>
       </div>
-      <div class="card info-card advanced-filter-card">
-        <div class="advanced-filter-content">
-          <div>
-            Ved at aktivere knappen herunder vil filtreringen også påvirke hvilke observationer, der vises på forsiden i dit feed.
-          </div>
-          <button id="toggle-advanced-filter" type="button" class="twostate">Avanceret filtrering: Fra</button>
-        </div>
-      </div>
-      <div class="filter-bar card" style="margin-bottom: 16px; margin-top: 15px;">
-        <div class="filter-row">
-          <input id="arts-search" placeholder="Søg art..." type="text">
-          <button id="show-only-filtered" type="button">Vis filter</button>
-          <button id="reset-filters">Nulstil</button>
-          <button id="export-filters">Eksportér</button>
-          <input type="file" id="import-filters" style="display:none;">
-          <button onclick="document.getElementById('import-filters').click()">Importér</button>
-          <button id="save-filters">Gem</button>
-        </div>
-      </div>
-      <div id="arts-cards-viewport">
-        <div id="arts-cards"></div>
-      </div>
-      
-    </main>
-    <script src="advanced.js?v=4.10.0"></script>
-    <script src="app.js?v=4.10.0"></script>
+      <div id="threads-status"></div>
+      <div id="threads-cards"></div>
+    </div>
+    
+    <script src="taetpaa.js?v=4.9.70"></script> 
+    <script src="app.js?v=4.9.70"></script>
     <footer class="footer">
       <a href="https://dofbasen.dk" target="_blank" rel="noopener" class="footer-link">
         <div class="footer-content">

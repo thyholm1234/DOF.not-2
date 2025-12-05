@@ -1,4 +1,4 @@
-// Version: 4.9.65 - 2025-12-01 19.38.01
+// Version: 4.10.0 - 2025-12-05 02.56.06
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -82,8 +82,14 @@ function updateQuietHoursStatus(qh) {
 function logPageView(userId) {
   const params = new URLSearchParams(window.location.search);
   const fromShare = params.get("from_share") === "1";
-  let url = window.location.href;
-  if (fromShare) url = cleanUrl(url);
+  const fromNotification = params.get("from_notification") === "1";
+
+  // Fjern fbclid og from_notification fra URL'en
+  const urlObj = new URL(window.location.href);
+  urlObj.searchParams.delete("fbclid");
+  urlObj.searchParams.delete("from_notification");
+  let url = urlObj.origin + urlObj.pathname + urlObj.search;
+
   fetch("/api/log-pageview", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -94,7 +100,8 @@ function logPageView(userId) {
       os: getOSInfo(),
       browser: getBrowserInfo(),
       is_pwa: isPWA(),
-      from_sharelink: fromShare
+      from_sharelink: fromShare,
+      from_notification: fromNotification
     })
   });
 }

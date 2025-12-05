@@ -4,6 +4,37 @@ import pytz
 import server
 import os
 import requests
+import json
+
+def cleanup_old_obsid_birthtimes(log_path, birthtimes_path, days=3):
+    # Indlæs log
+    with open(log_path, "r", encoding="utf-8") as f:
+        log = json.load(f)
+    # Indlæs birthtimes
+    with open(birthtimes_path, "r", encoding="utf-8") as f:
+        birthtimes = json.load(f)
+
+    cutoff = datetime.now() - timedelta(days=days)
+    to_delete = []
+    for obsid, entry in log.items():
+        dato_str = entry.get("dato", "")
+        try:
+            dato = datetime.strptime(dato_str, "%Y-%m-%d")
+        except Exception:
+            continue
+        if dato < cutoff:
+            to_delete.append(obsid)
+
+    # Slet obsid fra begge filer
+    for obsid in to_delete:
+        log.pop(obsid, None)
+        birthtimes.pop(obsid, None)
+
+    # Gem tilbage
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=2)
+    with open(birthtimes_path, "w", encoding="utf-8") as f:
+        json.dump(birthtimes, f, ensure_ascii=False, indent=2)
 
 def wait_until_next_run():
     tz = pytz.timezone("Europe/Copenhagen")
@@ -41,6 +72,18 @@ def wait_until_next_run():
             print("Oprydning i stats_notifications udført.")
         except Exception as e:
             print(f"Fejl ved oprydning i stats_notifications: {e}")
+
+        # Oprydning i obsid_birthtimes og log
+        try:
+            cleanup_old_obsid_birthtimes(
+                log_path=os.path.join("web", "obsid_birthtimes_log.json"),
+                birthtimes_path=os.path.join("web", "obsid_birthtimes.json"),
+                days=3
+            )
+            print("Oprydning i obsid_birthtimes udført.")
+        except Exception as e:
+            print(f"Fejl ved oprydning i obsid_birthtimes: {e}")
+
         # Kald endpoints
         try:
             for url in [

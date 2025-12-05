@@ -24,6 +24,7 @@ BASE_URL = (
 SERVER_URL = "http://localhost:8000/api/update"
 STATE_FILE = "/state/state.json"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")  # NYT
+DOWNLOADS_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 WATCH_STATE_FILE = os.path.join(os.path.dirname(__file__), "state", "watch_state.json")  # NYT: separat state til watcher
 
 # De 38 faste kolonner som skal
@@ -85,6 +86,46 @@ def load_klassifikation_map() -> Dict[str, str]:
     except Exception as e:
         print(f"[watcher] Kunne ikke læse klassifikationsfil: {e}")
     return mapping
+
+def save_json_to_downloads(rows: List[Dict[str, str]], obsid_birthtimes: dict):
+    today = datetime.now().date()
+    def is_today(datestr):
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(datestr, fmt).date() == today
+            except Exception:
+                continue
+        return False
+
+    # Tilføj obsidbirthtime til hver observation
+    for r in rows:
+        oid = r.get("Obsid", "").strip()
+        r["obsidbirthtime"] = obsid_birthtimes.get(oid, "")
+
+    # Filtrer på kategori
+    allowed = {"bemaerk", "faenologi", "su", "sub"}
+    filtered = [
+        row for row in rows
+        if (row.get("kategori") or "").strip().lower() in allowed
+    ]
+
+    if not any(is_today(row.get("Dato", "")) for row in filtered):
+        return
+
+    os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    filename = f"observationer_{ts}.json"
+    path = os.path.join(DOWNLOADS_DIR, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(filtered, f, ensure_ascii=False, indent=2)
+    files = sorted(
+        glob.glob(os.path.join(DOWNLOADS_DIR, "observationer_*.json")),
+        key=os.path.getmtime
+    )
+    while len(files) > 2:
+        os.remove(files[0])
+        files.pop(0)
+
 
 def build_bemaerk_maps() -> Dict[str, Dict[str, int]]:
     """Læs alle *_bemaerk_parsed.csv -> {region_slug: {artsnavn: min_antal}}."""
@@ -223,9 +264,9 @@ def enrich_with_kategori(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             obsdate_fmt = f"{d}-{m}-{y}"
         else:
             obsdate_fmt = obsdate
-        dofnot_url = f"https://notifikation.dofbasen.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}"
+        dofnot_url = f"https://notifikation.dofbasen.dk/traad.html?date={obsdate_fmt}&id={slugify(art)}-{loknr}&from_notification=1"
         dofbasen_url = f"https://dofbasen.dk/popobs.php?obsid={obsid}&summering=tur&obs=obs" if obsid else ""
-        obsid_url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}"
+        obsid_url = f"https://notifikation.dofbasen.dk/obsid.html?obsid={obsid}&from_notification=1"
         if kat in ("SU", "SUB"):
             r["url"] = dofnot_url
             r["url2"] = dofbasen_url
@@ -445,16 +486,35 @@ def today_date_str() -> str:
     return datetime.now().strftime("%d-%m-%Y")
 
 def build_obsid_birthtimes(rows: List[Dict[str, str]], prev_birthtimes: dict) -> Dict[str, str]:
-    """Returnér obsid -> første systemtid (HH:MM) for SU/SUB."""
-    birthtimes = dict(prev_birthtimes)  # behold eksisterende
-    now = datetime.now().strftime("%H:%M")
+    """Returnér obsid -> første systemtid (HH:MM) for SU/SUB/bemaerk/faenologi.
+       Gem også log over oprettelser til intern brug med YYYYMMDD-HHMMSS."""
+    birthtimes = dict(prev_birthtimes)
+    log_path = os.path.join("web", "obsid_birthtimes_log.json")
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            birthtime_log = json.load(f)
+    except Exception:
+        birthtime_log = {}
+
+    now_hm = datetime.now().strftime("%H:%M")
+    now_full = datetime.now().strftime("%Y%m%d-%H%M%S")
     for row in rows:
-        if row.get("kategori") not in ("SU", "SUB"):
+        if row.get("kategori") not in ("SU", "SUB", "bemaerk", "faenologi"):
             continue
         obsid = (row.get("Obsid") or "").strip()
         if not obsid or obsid in birthtimes:
             continue
-        birthtimes[obsid] = now
+        birthtimes[obsid] = now_hm
+        birthtime_log[obsid] = {
+            "created": now_full,
+            "art": row.get("Artnavn", ""),
+            "kategori": row.get("kategori", ""),
+            "loknr": row.get("Loknr", ""),
+            "dato": row.get("Dato", "")
+        }
+    # Gem log til fil
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(birthtime_log, f, ensure_ascii=False, indent=2)
     return birthtimes
 
 
@@ -724,7 +784,6 @@ def run_once(date_str=None, send_notifications=True):
     text = fetch_excel_text(date_str)
     parsed_rows = parse_rows_from_text(text)
     normalized_rows = normalize_rows(parsed_rows)
-    # berig med kategori for SU/SUB/bemaerk/alm
     enriched_all = enrich_with_kategori(normalized_rows)
 
     birthtimes_path = os.path.join("web", "obsid_birthtimes.json")
@@ -743,6 +802,13 @@ def run_once(date_str=None, send_notifications=True):
 
     today = date_str or today_date_str()
     save_threads_and_index(enriched_all, today)
+
+    # Tilføj obsidbirthtime til hver observation før gem
+    for r in enriched_all:
+        oid = r.get("Obsid", "").strip()
+        r["obsidbirthtime"] = obsid_birthtimes.get(oid, "")
+
+    save_json_to_downloads(enriched_all, obsid_birthtimes)
 
     # Hvis vi kører i date-mode (dvs. date_str er angivet), skal vi ikke sende notifikationer
     if date_str and not send_notifications:

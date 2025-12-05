@@ -1,4 +1,4 @@
-// Version: 4.9.65 - 2025-12-01 19.38.01
+// Version: 4.10.0 - 2025-12-05 02.56.06
 // © Christian Vemmelund Helligsø
 
 
@@ -351,6 +351,43 @@ async function fetchAndRenderObs(obsid) {
         }
       };
       titleRow.insertBefore(shareBtn, null);
+
+      // --- Abonner-knap til obsid ---
+      const subBtn = document.createElement('button');
+      subBtn.id = "obsid-sub-btn";
+      subBtn.textContent = "🔔 Abonner";
+      subBtn.className = "twostate";
+      // Tjek om brugeren er abonneret (hent evt. status fra API)
+      let isSubscribed = false;
+      try {
+        const userid = getOrCreateUserId();
+        const deviceid = localStorage.getItem("deviceid");
+        const res = await fetch(`/api/obsid/${id}/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userid, device_id: deviceid, obsid: id })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          isSubscribed = !!json.subscribed;
+        }
+      } catch {}
+      if (isSubscribed) subBtn.classList.add("is-on");
+      // Indsæt lige efter del-knappen
+      shareBtn.insertAdjacentElement("afterend", subBtn);
+
+      subBtn.onclick = async () => {
+        const userid = getOrCreateUserId();
+        const deviceid = localStorage.getItem("deviceid");
+        const subscribe = subBtn.classList.contains("is-on") ? 0 : 1;
+        // Skift knap med det samme
+        subBtn.classList.toggle("is-on", !!subscribe);
+        await fetch(`/api/obsid/${id}/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userid, device_id: deviceid, obsid: id, subscribe })
+        });
+      };
     }
 
     const obsRow = document.querySelector('.obs-row');

@@ -27,6 +27,7 @@ import pytz
 import logging
 import subprocess
 import queue
+from haversine import haversine
 
 load_dotenv()
 
@@ -120,6 +121,16 @@ def db_init():
                 user_id TEXT,
                 device_id TEXT,
                 PRIMARY KEY (day, thread_id, user_id, device_id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS obsid_subs (
+                user_id TEXT,
+                device_id TEXT,
+                date TEXT,
+                obsid TEXT,
+                sub INTEGER,
+                PRIMARY KEY (user_id, device_id, obsid)
             )
         """)
         conn.execute("""
@@ -264,6 +275,7 @@ async def set_quiet_hours(data: dict = Body(...)):
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
     prefs = get_prefs(user_id)
+    print(prefs.get("quiet_hours", {}))
     if "quiet_hours" not in prefs:
         prefs["quiet_hours"] = {}
     # Slet hvis tomme værdier
@@ -360,10 +372,11 @@ async def log_pageview(data: dict, request: Request):
     browser = data.get("browser", "Unknown")
     is_pwa = data.get("is_pwa", False)
     from_sharelink = data.get("from_sharelink", False)
+    from_notification = data.get("from_notification", False)
     ip = request.client.host
     dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
     with open("pageviews.log", "a", encoding="utf-8") as f:
-        f.write(f"{dk_time} {ip} {user_id} {url} OS: {os_info}  BROWSER: {browser}  PWA: {is_pwa}{'  SHARELINK: True' if from_sharelink else ''}\n")
+        f.write(f"{dk_time} {ip} {user_id} {url} OS: {os_info}  BROWSER: {browser}  PWA: {is_pwa}{'  SHARELINK: True' if from_sharelink else ''}{'  NOTIFICATION: True' if from_notification else ''}\n")
     return {"ok": True}
 
 @app.post("/api/admin/superadmin")
@@ -1083,6 +1096,110 @@ async def api_obs_full(obsid: str = Query(..., min_length=3, description="DOFbas
         "sound_urls": sound_urls
     }
 
+def haversine(lat1, lon1, lat2, lon2):
+    from math import radians, sin, cos, sqrt, atan2
+    R = 6371.0  # km
+    lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return R * c
+
+def extract_timestamp(filename):
+    m = re.search(r'observationer_(\d+)\.json', filename)
+    return int(m.group(1)) if m else 0
+
+@app.post("/api/nearby-observations")
+async def nearby_observations(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    lat = data.get("lat")
+    lng = data.get("lng")
+    radius_km = float(data.get("radius_km", 5))
+    if not user_id or not device_id or lat is None or lng is None:
+        raise HTTPException(status_code=400, detail="user_id, device_id, lat og lng kræves")
+
+    downloads_dir = os.path.join(os.path.dirname(__file__), "..", "downloads")
+    files = glob.glob(os.path.join(downloads_dir, "observationer_*.json"))
+    if not files:
+        raise HTTPException(status_code=404, detail="Ingen observationer fundet")
+    files.sort(key=extract_timestamp, reverse=True)
+    latest_file = files[0]
+
+    try:
+        with open(latest_file, "r", encoding="utf-8") as f:
+            items = json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fejl ved indlæsning af observationer: {e}")
+
+    allowed_categories = {"bemaerk", "faenologi", "sub", "su"}
+    grouped = {}
+    for obs in items:
+        kategori = (obs.get("kategori") or "").strip().lower()
+        if kategori not in allowed_categories:
+            continue
+        lat_obs = obs.get("obs_breddegrad") or obs.get("lok_breddegrad")
+        lng_obs = obs.get("obs_laengdegrad") or obs.get("lok_laengdegrad")
+        if not lat_obs or not lng_obs:
+            continue
+        try:
+            lat_obs = float(str(lat_obs).replace(",", "."))
+            lng_obs = float(str(lng_obs).replace(",", "."))
+        except Exception:
+            continue
+        dist = haversine(lat, lng, lat_obs, lng_obs)
+        if dist > radius_km:
+            continue
+
+        artnr = obs.get("Artnr")
+        turid = obs.get("Turid")
+        loknr = obs.get("Loknr")
+        key = (artnr, turid, loknr)
+        antal = int(obs.get("Antal") or 0)
+        dato = obs.get("Dato") or ""
+        birthtime = obs.get("obsidbirthtime") or ""
+        # Summer antal og gem seneste obs
+        if key not in grouped:
+            grouped[key] = {"sum_antal": 0, "latest_obs": obs, "latest_dato": dato, "latest_birthtime": birthtime}
+        grouped[key]["sum_antal"] += antal
+        # Hvis denne obs er nyere, opdater latest_obs
+        if dato > grouped[key]["latest_dato"]:
+            grouped[key]["latest_obs"] = obs
+            grouped[key]["latest_dato"] = dato
+            grouped[key]["latest_birthtime"] = birthtime
+        elif dato == grouped[key]["latest_dato"]:
+            # Hvis dato er ens, brug seneste obsidbirthtime
+            if birthtime > grouped[key]["latest_birthtime"]:
+                grouped[key]["latest_obs"] = obs
+                grouped[key]["latest_birthtime"] = birthtime
+
+    # Step 2: For hver Loknr og Artnr, vælg obs med størst sum_antal (eller seneste hvis ens)
+    lok_art_best = {}
+    for (artnr, turid, loknr), data in grouped.items():
+        best_key = (loknr, artnr)
+        sum_antal = data["sum_antal"]
+        latest_obs = data["latest_obs"]
+        latest_birthtime = data["latest_birthtime"]
+        if best_key not in lok_art_best:
+            lok_art_best[best_key] = {"sum_antal": sum_antal, "obs": latest_obs, "birthtime": latest_birthtime}
+        else:
+            prev = lok_art_best[best_key]
+            if sum_antal > prev["sum_antal"]:
+                lok_art_best[best_key] = {"sum_antal": sum_antal, "obs": latest_obs, "birthtime": latest_birthtime}
+            elif sum_antal == prev["sum_antal"]:
+                # Hvis antal er ens, vælg den med seneste obsidbirthtime
+                if latest_birthtime > prev["birthtime"]:
+                    lok_art_best[best_key] = {"sum_antal": sum_antal, "obs": latest_obs, "birthtime": latest_birthtime}
+
+    result = []
+    for v in lok_art_best.values():
+        obs = v["obs"].copy()
+        obs["Antal"] = str(v["sum_antal"])
+        result.append(obs)
+
+    return {"observations": result}
+
 @app.post("/api/thread/{day}/{thread_id}/subscribe")
 async def subscribe_thread(day: str, thread_id: str, request: Request):
     data = await request.json()
@@ -1128,6 +1245,46 @@ async def get_subscription_post(day: str, thread_id: str, data: dict = Body(...)
 
 stats_lock = threading.Lock()
 
+@app.post("/api/obsid/{obsid}/subscribe")
+async def obsid_subscribe(obsid: str, request: Request):
+    """
+    POST: Tilmeld/frameld abonnement på obsid.
+    Body: {user_id, device_id, obsid, subscribe}
+    Hvis subscribe mangler, returner status.
+    """
+    data = await request.json()
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    subscribe = data.get("subscribe")
+    today = datetime.now().strftime("%Y-%m-%d")
+    if not user_id or not device_id or not obsid:
+        raise HTTPException(status_code=400, detail="user_id, device_id og obsid kræves")
+    with sqlite3.connect(DB_PATH) as conn:
+        if subscribe is None:
+            # Returner status: True hvis ingen row eller sub=1, False kun hvis sub=0
+            row = conn.execute(
+                "SELECT sub FROM obsid_subs WHERE user_id=? AND device_id=? AND obsid=?",
+                (user_id, device_id, obsid)
+            ).fetchone()
+            return {"subscribed": not row or row[0] == 1}
+        else:
+            # Sæt abonnement (1=tilmeld, 0=frameld)
+            conn.execute(
+                "INSERT OR REPLACE INTO obsid_subs (user_id, device_id, date, obsid, sub) VALUES (?, ?, ?, ?, ?)",
+                (user_id, device_id, today, obsid, int(subscribe))
+            )
+            conn.commit()
+            return {"ok": True, "subscribed": bool(int(subscribe))}
+
+def is_obsid_unsubscribed(user_id: str, device_id: str, obsid: str) -> bool:
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT sub FROM obsid_subs WHERE user_id=? AND device_id=? AND obsid=?",
+            (user_id, device_id, obsid)
+        ).fetchone()
+        # Returner True kun hvis sub=0 (frameldt), ellers False (også hvis ingen row)
+        return bool(row and row[0] == 0)
+
 @app.post("/api/update")
 async def update_data(request: Request):
     from datetime import datetime
@@ -1148,19 +1305,23 @@ async def update_data(request: Request):
             try:
                 start = datetime.strptime(qh["start"], "%H:%M").time()
                 end = datetime.strptime(qh["end"], "%H:%M").time()
-                # Hvis perioden går over midnat
                 if start == end:
-                    pass  # Ingen quiet hours hvis start og slut er ens
+                    pass
                 elif start < end:
                     if start <= now < end:
-                        return  # spring notifikation over
+                        return
                 else:
-                    # Over midnat: fx 22:00-07:00
                     if now >= start or now < end:
-                        return  # spring notifikation over
+                        return
             except Exception:
-                pass  # Hvis fejl i format, send alligevel
+                pass
 
+        # --- TJEK OBSID-UNSUB ---
+        if obs_id:
+            unsub = is_obsid_unsubscribed(user_id, device_id, str(obs_id))
+            if unsub:
+                return
+        
         try:
             webpush(
                 subscription_info=sub,
@@ -1212,7 +1373,6 @@ async def update_data(request: Request):
                 print(f"Push-fejl til {user_id}/{device_id}: {ex}")
         except Exception as ex:
             print(f"Uventet push-fejl til {user_id}/{device_id}: {ex}")
-            # Slet abonnement hvis endpoint ikke kan slås op (fx DNS-fejl)
             if "getaddrinfo failed" in str(ex) or "NameResolutionError" in str(ex) or "Failed to resolve" in str(ex):
                 print(f"Sletter abonnement for {user_id}/{device_id} pga. netværksfejl: {ex}")
                 with sqlite3.connect(DB_PATH) as conn2:
@@ -1254,7 +1414,7 @@ async def update_data(request: Request):
                 "url": obs.get("url", "https://dofbasen.dk"),
                 "tag": obs.get("tag") or ""
             }
-            obs_id = obs.get("id") or obs.get("obsid") or None
+            obs_id = obs.get("Obsid") or obs.get("obsid") or obs.get("id") or None
 
             if statechanged == 1:
                 rows = conn.execute(
@@ -2697,11 +2857,13 @@ async def admin_pageview_stats(data: dict = Body(...)):
     today_dk = datetime.now(pytz.timezone("Europe/Copenhagen")).strftime("%Y-%m-%d")
     stats = defaultdict(lambda: {"total": 0, "unique": set()})
     traad_total = {"total": 0, "unique": set()}
-    traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set(), "sharelink": 0})
+    traad_per_thread = defaultdict(lambda: {"total": 0, "unique": set(), "sharelink": 0, "notification": 0})
     all_users = set()
     total_views = 0
     unique_obserkoder = set()
-    traad_sharelink_total = 0  # Samlet antal traad.html via sharelink
+    traad_notification_total = 0
+    traad_sharelink_total = 0
+    obsid_notification_total = 0
 
     log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
     if not os.path.isfile(log_path):
@@ -2729,8 +2891,8 @@ async def admin_pageview_stats(data: dict = Body(...)):
             page = m.group(1) if m else url
 
             is_sharelink = "SHARELINK: True" in line
+            is_notification = "NOTIFICATION: True" in line
 
-            # Både / og /index.html tælles som index.html
             if url in ("https://notifikation.dofbasen.dk/", "https://notifikation.dofbasen.dk/index.html") or page == "index.html":
                 page = "index.html"
 
@@ -2746,20 +2908,27 @@ async def admin_pageview_stats(data: dict = Body(...)):
                     if is_sharelink:
                         traad_per_thread[key]["sharelink"] += 1
                         traad_sharelink_total += 1
+                    if is_notification:
+                        traad_per_thread[key]["notification"] += 1
+                        traad_notification_total += 1
                 elif is_sharelink:
                     traad_sharelink_total += 1
+                elif is_notification:
+                    traad_notification_total += 1
 
-            # --- obsid.html sharelink-tælling ---
             if page.startswith("obsid.html"):
                 stats["obsid.html"]["total"] += 1
                 stats["obsid.html"]["unique"].add(user_id)
-                if "obsid=" in url:
-                    m_obsid = re.search(r"obsid=([0-9]+)", url)
-                    if m_obsid and is_sharelink:
-                        stats.setdefault("obsid.html_sharelink", {"total": 0, "unique": set()})
-                        stats["obsid.html_sharelink"]["total"] += 1
-                        stats["obsid.html_sharelink"]["unique"].add(user_id)
-            # Tæl ALLE andre sider også
+                # Tæl sharelink for obsid.html uanset om obsid= findes
+                if is_sharelink:
+                    stats.setdefault("obsid.html_sharelink", {"total": 0, "unique": set()})
+                    stats["obsid.html_sharelink"]["total"] += 1
+                    stats["obsid.html_sharelink"]["unique"].add(user_id)
+                if is_notification:
+                    stats.setdefault("obsid.html_notification", {"total": 0, "unique": set()})
+                    stats["obsid.html_notification"]["total"] += 1
+                    stats["obsid.html_notification"]["unique"].add(user_id)
+                    obsid_notification_total += 1
             stats[page]["total"] += 1
             stats[page]["unique"].add(user_id)
 
@@ -2769,25 +2938,30 @@ async def admin_pageview_stats(data: dict = Body(...)):
 
     obsid_stats = stats.get("obsid.html", {"total": 0, "unique": set()})
     obsid_sharelink = stats.get("obsid.html_sharelink", {"total": 0, "unique": set()})
+    obsid_notification = stats.get("obsid.html_notification", {"total": 0, "unique": set()})
 
     stats_out = {}
 
-    # Tilføj obsid.html statistik samlet
     stats_out["obsid.html"] = {
         "total": obsid_stats["total"],
         "unique": len(obsid_stats["unique"]),
-        "sharelink": obsid_sharelink["total"]
+        "sharelink": obsid_sharelink["total"],
+        "sharelink_unique": len(obsid_sharelink["unique"]),
+        "notification": obsid_notification["total"],
+        "notification_unique": len(obsid_notification["unique"])
     }
 
     stats_out["traad.html"] = {
         "total": traad_total["total"],
         "unique": len(traad_unique_users),
         "sharelink": traad_sharelink_total,
+        "notification": traad_notification_total,
         "threads": {
             k: {
                 "total": v["total"],
                 "unique": len(v["unique"]),
-                "sharelink": v["sharelink"]
+                "sharelink": v["sharelink"],
+                "notification": v.get("notification", 0)
             }
             for k, v in traad_per_thread.items()
         }
@@ -2795,7 +2969,7 @@ async def admin_pageview_stats(data: dict = Body(...)):
 
     # Tilføj statistik for alle andre sider (index.html, settings.html, info.html osv.)
     for page, d in stats.items():
-        if page in ("obsid.html", "obsid.html_sharelink", "traad.html"):
+        if page in ("obsid.html", "obsid.html_sharelink", "obsid.html_notification", "traad.html"):
             continue
         if page.startswith("info.html") and page != "info.html":
             continue  # spring alle info.html#... og info.html?... over
@@ -3465,6 +3639,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                             ttl=3600,
                             headers={"Urgency": "high"}
                         )
+                        obs_notification_queue.put(1)
                     except Exception as ex:
                         print(f"Push-fejl til {sub_user_id}/{sub_device_id}: {ex}")
 
@@ -3540,6 +3715,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                                                 ttl=3600,
                                                 headers={"Urgency": "high"}
                                             )
+                                            obs_notification_queue.put(1) 
                                         except Exception as ex:
                                             print(f"Push-fejl til {owner_user_id}/{owner_device_id}: {ex}")
                         break

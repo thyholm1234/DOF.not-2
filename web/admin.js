@@ -1,4 +1,4 @@
-// Version: 4.9.65 - 2025-12-01 19.38.01
+// Version: 4.10.0 - 2025-12-05 02.56.06
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -369,28 +369,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         .sort((a, b) => (b[1].unique || 0) - (a[1].unique || 0)); // Sortér efter flest unikke brugere
 
       for (const [page, info] of pageStats) {
-        let link = null;
-        if (page.endsWith(".html")) {
-          link = `/${page}`;
-        }
-        let sharelinkHtml = "";
-        if (page === "obsid.html" && typeof info.sharelink === "number" && info.sharelink > 0) {
-          sharelinkHtml = `<div>Fra sharelink: <b>${info.sharelink}</b></div>`;
-        }
-        const cardHtml = `
-          <div class="card" style="margin-bottom:0.5em;">
-            <div style="font-weight:bold;">${page}</div>
-            <div>Unikke brugere: <b>${info.unique}</b></div>
-            <div>Visninger: <b>${info.total}</b></div>
-            ${sharelinkHtml}
-          </div>
-        `;
-        if (link) {
-          html += `<a href="${link}" style="text-decoration:none;color:inherit;">${cardHtml}</a>`;
-        } else {
-          html += cardHtml;
-        }
+      let link = null;
+      if (page.endsWith(".html")) {
+        link = `/${page}`;
       }
+      let sharelinkHtml = "";
+      let notificationHtml = "";
+      if (page === "obsid.html" && typeof info.sharelink === "number" && info.sharelink > 0) {
+        sharelinkHtml = `<div>Fra sharelink: <b>${info.sharelink}</b></div>`;
+      }
+      if (page === "obsid.html" && typeof info.notification === "number" && info.notification > 0) {
+        notificationHtml = `<div>Fra notifikation: <b>${info.notification}</b></div>`;
+      }
+      if (page === "traad.html" && typeof info.sharelink === "number" && info.sharelink > 0) {
+        sharelinkHtml = `<div>Fra sharelink: <b>${info.sharelink}</b></div>`;
+      }
+      if (page === "traad.html" && typeof info.notification === "number" && info.notification > 0) {
+        notificationHtml = `<div>Fra notifikation: <b>${info.notification}</b></div>`;
+      }
+      const cardHtml = `
+        <div class="card" style="margin-bottom:0.5em;">
+          <div style="font-weight:bold;">${page}</div>
+          <div>Unikke brugere: <b>${info.unique}</b></div>
+          <div>Visninger: <b>${info.total}</b></div>
+          ${sharelinkHtml}
+          ${notificationHtml}
+        </div>
+      `;
+      if (link) {
+        html += `<a href="${link}" style="text-decoration:none;color:inherit;">${cardHtml}</a>`;
+      } else {
+        html += cardHtml;
+      }
+    }
 
       // traad.html total som card
       if (stats["traad.html"]) {
@@ -400,6 +411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div>Unikke brugere: <b>${stats["traad.html"].unique}</b></div>
           <div>Visninger: <b>${stats["traad.html"].total}</b></div>
           ${stats["traad.html"].sharelink > 0 ? `<div>Fra sharelink: <b>${stats["traad.html"].sharelink}</b></div>` : ""}
+          ${stats["traad.html"].notification > 0 ? `<div>Fra notifikation: <b>${stats["traad.html"].notification}</b></div>` : ""}
           <button id="toggle-threads-btn" style="position:absolute;top:10px;right:10px;">Vis tråde ▼</button>
           <div id="threads-list" style="display:none;margin-top:1em;"></div>
         </div><hr style="margin:1em 0;">`;
@@ -422,6 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div>Unikke brugere: <b>${tinfo.unique}</b></div>
               <div>Visninger: <b>${tinfo.total}</b></div>
               ${tinfo.sharelink > 0 ? `<div>Fra sharelink: <b>${tinfo.sharelink}</b></div>` : ""}
+              ${tinfo.notification > 0 ? `<div>Fra notifikation: <b>${tinfo.notification}</b></div>` : ""}
             </div>
           </a>`;
         }
