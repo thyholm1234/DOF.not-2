@@ -123,7 +123,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     box.innerHTML = `
       <div style="background:#fff; color:#222; padding:2em 1.5em; border-radius:10px; max-width:90vw; box-shadow:0 4px 24px #0002;">
-        <h2 style="margin-top:0;">Velkommen til DOF.not!</h2>
+        <h2 style="margin-top:0;">Velkommen til!</h2>
         <p>Vil du sætte app'en op til brug nu?</p>
         <div style="display:flex; gap:1em; justify-content:center; margin-top:1.5em;">
           <button id="firstvisit-yes" style="padding:0.5em 2em;">Ja</button>

@@ -565,7 +565,7 @@ def _fetch_html(url: str, timeout: float = 10.0) -> str:
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (DOF.not server) AppleWebKit/537.36 Chrome/119 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server) AppleWebKit/537.36 Chrome/119 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
     )
@@ -717,7 +717,7 @@ async def fetch_faenologi_csv(request: Request):
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "Mozilla/5.0 (DOF.not server)",
+                "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             },
         )
@@ -858,7 +858,7 @@ async def fetch_all_bemaerk_csv(request: Request):
             req = urllib.request.Request(
                 url,
                 headers={
-                    "User-Agent": "Mozilla/5.0 (DOF.not server; fetch-bemaerk-csv)",
+                    "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server; fetch-bemaerk-csv)",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 },
             )
@@ -961,7 +961,7 @@ async def lok_koordinater(loknr: str):
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "Mozilla/5.0 (DOF.not server)",
+                "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             },
         )
@@ -989,7 +989,7 @@ async def fetch_arter_csv(request: Request):
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (DOF.not server)",
+            "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
     )
@@ -1764,7 +1764,7 @@ async def dofbasen_tur(obsid: str = Query(...)):
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (DOF.not server)",
+            "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
     )

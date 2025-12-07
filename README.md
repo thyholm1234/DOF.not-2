@@ -1,6 +1,6 @@
-# DOF.not
+# DOFbasen Notifikationer
 
-**DOF.not** er en webapp til visning, filtrering og notifikationer om fugleobservationer fra DOFbasen. Brugere kan tilpasse præferencer pr. lokalafdeling, opsætte avancerede artsfiltre og modtage push-notifikationer om relevante observationer.
+**DOFbasen Notifikationer** er en webapp til visning, filtrering og notifikationer om fugleobservationer fra DOFbasen. Brugere kan tilpasse præferencer pr. lokalafdeling, opsætte avancerede artsfiltre og modtage push-notifikationer om relevante observationer.
 
 ---
 
