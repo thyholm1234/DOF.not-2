@@ -17,4 +17,5 @@ server/stats.jsonl
 list_users.csv
 list_users.json
 web/obsid_birthtimes.json
+web/obsid_birthtimes_log.json
 downloads/
