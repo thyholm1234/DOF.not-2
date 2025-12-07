@@ -1,4 +1,4 @@
-<!-- Version: 4.10.6 - 2025-12-07 20.03.36 -->
+<!-- Version: 4.10.17 - 2025-12-08 00.46.39 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -16,11 +16,12 @@
       navigator.serviceWorker.register('/sw.js');
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.10.6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js?v=4.10.6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js?v=4.10.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js?v=4.10.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js?v=4.10.17"></script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.10.6">
+  <link rel="stylesheet" href="/style.css?v=4.10.17">
 </head>
 <body>
   <header class="wrap">
@@ -46,6 +47,7 @@
       <button id="traffic-btn" style="margin: 0;" aria-label="Traffik">Trafik</button> <!-- NY KNAP -->
       <button id="show-serverlog-btn" type="button" style="margin: 0;">Vis serverlog</button>
       <button id="sync-threads-btn" style="margin: 0;">Sync</button>
+      <button id="show-news-btn" style="margin: 0;" aria-label="Nyheder" title="Nyheder" type="button">Nyheder</button>
     </div>
 
     <!-- Indhold under admin-action-card -->
@@ -103,6 +105,9 @@
       </div>
     </div>
 
+    <!-- Nyheder -->
+    <div id="news-panel" style="display:none;"></div>
+
     <!-- Adminpanel indhold -->
     <div id="admin-content" style="display:none;">
       <h2>Adminpanel</h2>
@@ -119,8 +124,8 @@
 
     
   </main>
-  <script src="admin.js?v=4.10.6"></script>
-  <script src="app.js?v=4.10.6"></script>
+  <script src="admin.js?v=4.10.17"></script>
+  <script src="app.js?v=4.10.17"></script>
   <div id="blacklist-modal" class="modal" style="display:none;">
     <div class="modal-content card" style="max-width:400px; margin:auto;">
       <h3>Blacklist observation</h3>

@@ -20,6 +20,7 @@ FILES = [
     "web/install.js",
     "web/obsid.js",
     "web/obsid.html",
+    "web/nyhed.html",
     "web/admin.js"
 ]
 

@@ -11,6 +11,7 @@ server/admin.json
 server/comments.log
 server/superadmin.json
 server/server.log
+server/nyheder.json
 server/__init__.py
 server/stats.jsonl
 .env

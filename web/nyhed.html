@@ -1,0 +1,118 @@
+<!-- Version: 4.10.17 - 2025-12-08 00.46.39 -->
+<!-- © Christian Vemmelund Helligsø -->
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nyhed – DOFbasen Notifikationer</title>
+  <meta name="description" content="Læs den udvalgte nyhed fra DOFbasen Notifikationer." />
+  <meta property="og:title" content="Nyhed – DOFbasen Notifikationer">
+  <meta property="og:description" content="Læs den udvalgte nyhed fra DOFbasen Notifikationer.">
+  <meta property="og:image" content="https://notifikation.dofbasen.dk/icons/icon-2048.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="DOFbasen Notifikationer">
+  <meta property="og:locale" content="da_DK">
+  <meta name="theme-color" content="#0b3d91" />
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/style.css?v=4.10.17">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js?v=4.10.17"></script>
+  <style>
+    .nyhed-meta {
+      font-size: 0.95em;
+      color: var(--text-muted);
+      margin-top: 0.2em;
+    }
+    @media (max-width: 600px) {
+      .nyhed-meta .meta-sep {
+        display: none;
+      }
+      .nyhed-meta .meta-author {
+        display: block;
+        margin-top: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <h1 style="text-align:left;">
+      <a class="brand" href="/index.html" aria-label="Gå til forsiden">DOFbasen Notifikationer</a>
+    </h1>
+    <div class="toolbar">
+      <button id="refresh-btn" aria-label="Opdater" title="Opdater siden" type="button"
+              onclick="window.location.reload()">
+        <span id="refresh-icon">🔄</span>
+      </button>
+      <button id="taetpaa-btn" aria-label="Observationer i nærheden" title="Observationer i nærheden" type="button"
+              onclick="window.location.href='./taetpaa.html'">
+        <span id="taetpaa-icon">📍</span>
+      </button>
+      <button id="info-btn" aria-label="Info" title="Info" type="button"
+              onclick="window.location.href='./info.html'">
+        <span id="info-icon">ℹ️</span>
+      </button>
+      <button id="settings-btn" aria-label="Indstillinger" title="Indstillinger" type="button"
+              onclick="window.location.href='./settings.html'">
+        <span id="settings-icon">⚙️</span>
+      </button>
+      <button id="theme-toggle" aria-label="Skift tema" onclick="this.blur()">
+        <span id="theme-icon">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="wrap main-content">
+    <div id="nyhed-card"></div>
+  </div>
+
+  <script>
+    function getParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+    async function visNyhed() {
+      const id = getParam("id");
+      const container = document.getElementById('nyhed-card');
+      if (!id) {
+        container.innerHTML = "<div class='card'>Ingen nyhed valgt.</div>";
+        return;
+      }
+      container.innerHTML = "Indlæser nyhed...";
+      try {
+        const res = await fetch('/api/nyheder');
+        const nyheder = await res.json();
+        const n = nyheder.find(nyhed => nyhed.id === id);
+        if (!n) {
+          container.innerHTML = "<div class='card'>Nyheden blev ikke fundet.</div>";
+          return;
+        }
+        container.innerHTML = `
+          <div class="card">
+            <h2>${n.titel}</h2>
+            <div class="nyhed-meta">
+              <span class="meta-date">${n.oprettet_tidspunkt}</span>
+              <span class="meta-sep"> – </span>
+              <span class="meta-author">${n.forfatter}</span>
+            </div>
+            <div style="margin-top:1em;">${marked.parse(n.body || "")}</div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = "<div class='card'>Kunne ikke hente nyheden.</div>";
+      }
+    }
+    visNyhed();
+  </script>
+  <script src="app.js?v=4.10.17"></script>
+
+  <footer class="footer">
+    <a href="https://dofbasen.dk" target="_blank" rel="noopener" class="footer-link">
+      <div class="footer-content">
+        DOFbasen &copy; 2025 <br> Dansk Ornitologisk Forening<br>
+      </div>
+    </a>
+  </footer>
+</body>
+</html>

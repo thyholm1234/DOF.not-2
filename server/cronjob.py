@@ -61,7 +61,7 @@ def wait_until_next_run():
             print(f"Kunne ikke slette server.log: {e}")
         # Oprydning i stats_notifications (slet data ældre end 1 år)
         try:
-            db_path = os.path.join(os.path.dirname(__file__), "dofnot.db")  # Ret evt. filnavn
+            db_path = os.path.join(os.path.dirname(__file__), "users.db")  # Ret evt. filnavn
             cutoff = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
             with sqlite3.connect(db_path) as conn:
                 conn.execute(

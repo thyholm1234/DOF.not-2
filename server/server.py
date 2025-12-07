@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from fastapi.staticfiles import StaticFiles
 from pywebpush import webpush, WebPushException
 import unicodedata
+import uuid
 import re
 import html
 import urllib.request
@@ -36,6 +37,7 @@ VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
 BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.json")
+NYHEDER_PATH = os.path.join(os.path.dirname(__file__), "nyheder.json")
 MAX_BODY_SIZE = 2 * 1024 * 1024  # 2 MB
 SYNC_PATH = os.path.join(os.path.dirname(__file__), "request_sync.json")
 
@@ -151,6 +153,23 @@ def cleanup_user_prefs_without_subscriptions():
             WHERE user_id NOT IN (SELECT DISTINCT user_id FROM subscriptions)
         """)
         conn.commit()
+
+def slugify(text):
+    # Tag de første 5 ord, lav til lowercase, fjern ikke-bogstaver/tal, bindestreg mellem ord
+    words = re.findall(r'\w+', text.lower())[:5]
+    return '-'.join(words)
+
+def get_navn_from_userid(user_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.execute("SELECT prefs FROM user_prefs WHERE user_id=?", (user_id,))
+        row = cur.fetchone()
+        if row:
+            try:
+                prefs = json.loads(row[0])
+                return prefs.get("navn") or prefs.get("obserkode") or user_id
+            except Exception:
+                return user_id
+    return user_id
 
 def cleanup_dirs(base_dir, days=3):
     now = datetime.now()
@@ -428,7 +447,211 @@ async def api_prefs(request: Request):
     # Hvis ingen prefs i body, returner prefs for user
     prefs = get_prefs(user_id)
     return JSONResponse(prefs)
-    
+
+@app.get("/api/nyheder")
+async def list_nyheder():
+    if os.path.isfile(NYHEDER_PATH):
+        with open(NYHEDER_PATH, "r", encoding="utf-8") as f:
+            nyheder = json.load(f)
+        def format_ts(ts):
+            try:
+                dt = datetime.fromisoformat(ts.replace("T", " "))
+                return dt.strftime("%Y-%m-%d")  # Kun dato, ingen tid
+            except Exception:
+                return ts[:10]  # fallback: første 10 tegn
+        nu = datetime.now()
+        aktuelle_nyheder = []
+        ændret = False
+        for n in nyheder:
+            slet_ts = n.get("slet_tidspunkt")
+            try:
+                if slet_ts and datetime.fromisoformat(slet_ts.replace("T", " ")) < nu:
+                    ændret = True
+                    continue  # Slet denne nyhed
+            except Exception:
+                pass  # Hvis slet_tidspunkt er ugyldig, behold nyheden
+            aktuelle_nyheder.append(n)
+        # Slet overskredne nyheder fra filen
+        if ændret:
+            with open(NYHEDER_PATH, "w", encoding="utf-8") as f:
+                json.dump(aktuelle_nyheder, f, ensure_ascii=False, indent=2)
+        return [
+            {
+                "id": n["id"],
+                "titel": n["titel"],
+                "forfatter": n["forfatter"],
+                "oprettet_tidspunkt": format_ts(n.get("oprettet_tidspunkt", "")),
+                "body": n["body"]
+            }
+            for n in aktuelle_nyheder
+        ]
+    return []
+
+def strip_markdown(md):
+    # Fjern billeder og links
+    md = re.sub(r'!\[.*?\]\(.*?\)', '', md)
+    md = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', md)
+    # Fjern kodeblokke og inline-kode
+    md = re.sub(r'`{3}.*?`{3}', '', md, flags=re.DOTALL)
+    md = re.sub(r'`[^`]+`', '', md)
+    # Fjern overskrifter, lister, stjerner, underscores, >, #
+    md = re.sub(r'^[#>\-\*\+ ]+', '', md, flags=re.MULTILINE)
+    md = re.sub(r'[*_~`]', '', md)
+    # Fjern HTML-tags
+    md = re.sub(r'<[^>]+>', '', md)
+    # Sammenkæd whitespace
+    md = re.sub(r'\s+', ' ', md)
+    return md.strip()
+
+@app.api_route("/api/admin/nyhed", methods=["POST", "GET", "PUT", "DELETE"])
+async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query(None)):
+    # --- GET: Hent én nyhed ---
+    if request.method == "GET":
+        if not id:
+            raise HTTPException(status_code=400, detail="id kræves")
+        if os.path.isfile(NYHEDER_PATH):
+            with open(NYHEDER_PATH, "r", encoding="utf-8") as f:
+                nyheder = json.load(f)
+            for nyhed in nyheder:
+                if nyhed["id"] == id:
+                    return nyhed
+        raise HTTPException(status_code=404, detail="Nyhed ikke fundet")
+
+    # --- DELETE: Slet nyhed ---
+    if request.method == "DELETE":
+        nyhed_id = id or (data or {}).get("id")
+        user_id = (data or {}).get("user_id")
+        device_id = (data or {}).get("device_id")
+        if not user_id or not device_id:
+            raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+        obserkode = get_obserkode_from_userprefs(user_id)
+        superadmins = load_superadmins()
+        if obserkode not in superadmins:
+            raise HTTPException(status_code=403, detail="Kun superadmin")
+        if not nyhed_id:
+            raise HTTPException(status_code=400, detail="id kræves for sletning")
+        if os.path.isfile(NYHEDER_PATH):
+            with open(NYHEDER_PATH, "r", encoding="utf-8") as f:
+                nyheder = json.load(f)
+        else:
+            raise HTTPException(status_code=404, detail="Nyhed ikke fundet")
+        nyheder2 = [n for n in nyheder if n.get("id") != nyhed_id]
+        if len(nyheder2) == len(nyheder):
+            raise HTTPException(status_code=404, detail="Nyhed ikke fundet")
+        with open(NYHEDER_PATH, "w", encoding="utf-8") as f:
+            json.dump(nyheder2, f, ensure_ascii=False, indent=2)
+        return {"ok": True, "id": nyhed_id}
+
+    # --- POST/PUT kræver adgangskontrol ---
+    data = data or {}
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun superadmin")
+
+    # --- PUT eller POST med id: Rediger eksisterende nyhed ---
+    if request.method == "PUT" or (request.method == "POST" and data.get("id")):
+        nyhed_id = data.get("id")
+        if not nyhed_id:
+            raise HTTPException(status_code=400, detail="id kræves for redigering")
+        if os.path.isfile(NYHEDER_PATH):
+            with open(NYHEDER_PATH, "r", encoding="utf-8") as f:
+                nyheder = json.load(f)
+        else:
+            raise HTTPException(status_code=404, detail="Nyhed ikke fundet")
+        found = False
+        for i, nyhed in enumerate(nyheder):
+            if nyhed["id"] == nyhed_id:
+                for felt in ["titel", "body", "slet_tidspunkt", "send_notifikation"]:
+                    if felt in data:
+                        nyhed[felt] = data[felt]
+                nyheder[i] = nyhed
+                found = True
+                break
+        if not found:
+            raise HTTPException(status_code=404, detail="Nyhed ikke fundet")
+        with open(NYHEDER_PATH, "w", encoding="utf-8") as f:
+            json.dump(nyheder, f, ensure_ascii=False, indent=2)
+        # Send notifikation hvis ønsket
+        if int(data.get("send_notifikation") or 0):
+            titel = nyhed.get("titel", "")
+            body = nyhed.get("body", "")
+            push_payload = {
+                "title": f"Nyhed: {titel}",
+                "body": strip_markdown(body)[:100] + ("..." if len(strip_markdown(body)) > 100 else ""),
+                "url": f"https://notifikation.dofbasen.dk/nyhed.html?id={nyhed_id}&from_notification=1"
+            }
+            with sqlite3.connect(DB_PATH) as conn:
+                rows = conn.execute("SELECT user_id, device_id, subscription FROM subscriptions").fetchall()
+            for user_id_row, device_id_row, sub_json in rows:
+                try:
+                    sub = json.loads(sub_json)
+                    send_push(sub, push_payload, user_id_row, device_id_row)
+                    obs_notification_queue.put(1)
+                except Exception as e:
+                    print(f"Push-fejl til {user_id_row}/{device_id_row}: {e}")
+        return {"ok": True, "id": nyhed_id}
+
+    # --- POST: Opret nyhed ---
+    titel = (data.get("titel") or "").strip()
+    body = (data.get("body") or "").strip()
+    slet_tidspunkt = data.get("slet_tidspunkt")
+    send_notifikation = int(data.get("send_notifikation") or 0)
+    if not titel or not body:
+        raise HTTPException(status_code=400, detail="Titel og brødtekst kræves")
+    try:
+        datetime.fromisoformat(slet_tidspunkt)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Ugyldigt slet_tidspunkt (skal være ISO8601)")
+    navn = get_navn_from_userid(user_id)
+    unikt_id_base = slugify(titel)
+    now = datetime.now()
+    tidstempel = now.strftime("%Y%m%d%H%M%S")
+    unikt_id = f"{unikt_id_base}-{tidstempel}"
+    oprettet_tidspunkt = now.strftime("%Y-%m-%dT%H:%M:%S")
+    nyhed = {
+        "id": unikt_id,
+        "forfatter": navn,
+        "titel": titel,
+        "body": body,
+        "oprettet_tidspunkt": oprettet_tidspunkt,
+        "slet_tidspunkt": slet_tidspunkt,
+        "send_notifikation": send_notifikation
+    }
+    try:
+        if os.path.isfile(NYHEDER_PATH):
+            with open(NYHEDER_PATH, "r", encoding="utf-8") as f:
+                nyheder = json.load(f)
+        else:
+            nyheder = []
+    except Exception:
+        nyheder = []
+    nyheder.append(nyhed)
+    with open(NYHEDER_PATH, "w", encoding="utf-8") as f:
+        json.dump(nyheder, f, ensure_ascii=False, indent=2)
+
+    # --- Send notifikation hvis ønsket ---
+    if send_notifikation:
+        push_payload = {
+            "title": f"Nyhed: {titel}",
+            "body": strip_markdown(body)[:100] + ("..." if len(strip_markdown(body)) > 100 else ""),
+            "url": f"https://notifikation.dofbasen.dk/nyhed.html?id={unikt_id}&from_notification=1"
+        }
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT user_id, device_id, subscription FROM subscriptions").fetchall()
+        for user_id_row, device_id_row, sub_json in rows:
+            try:
+                sub = json.loads(sub_json)
+                send_push(sub, push_payload, user_id_row, device_id_row)
+                obs_notification_queue.put(1)
+            except Exception as e:
+                print(f"Push-fejl til {user_id_row}/{device_id_row}: {e}")
+
+    return {"ok": True, "id": unikt_id}
 
 @app.post("/api/subscribe")
 async def api_subscribe(request: Request):

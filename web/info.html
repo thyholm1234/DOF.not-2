@@ -1,4 +1,4 @@
-<!-- Version: 4.10.6 - 2025-12-07 20.03.36 -->
+<!-- Version: 4.10.17 - 2025-12-08 00.46.39 -->
 <!-- © Christian Vemmelund Helligsø -->
 <!DOCTYPE html>
 <html lang="da">
@@ -31,7 +31,7 @@
   </script>
   <link rel="icon" href="/icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/style.css?v=4.10.6">
+  <link rel="stylesheet" href="/style.css?v=4.10.17">
   <style>
   .card h2 {
     margin-top: 0;
@@ -47,6 +47,25 @@
   .card ul li:last-child {
     margin-bottom: 0;
   }
+.nyhed-meta {
+  font-size: 0.95em;
+  color: var(--text-muted);
+  margin-top: 0.2em;
+}
+@media (max-width: 600px) {
+  .nyhed-meta {
+    display: block;
+    margin-top: 0.2em;
+    white-space: normal;
+  }
+  .nyhed-meta .meta-sep {
+    display: none;
+  }
+  .nyhed-meta .meta-author {
+    display: block;
+    margin-top: 2px;
+  }
+}
 </style>
 </head>
 
@@ -79,6 +98,52 @@
     </header>
 
   <main class="wrap">
+    <h1 class="page-title">Nyheder</h1>
+    <div id="nyheder-list"></div>
+    <script>
+    async function visNyheder() {
+      const container = document.getElementById('nyheder-list');
+      container.innerHTML = "Indlæser nyheder...";
+      try {
+        const res = await fetch('/api/nyheder');
+        let nyheder = await res.json();
+        nyheder.sort((a, b) => b.oprettet_tidspunkt.localeCompare(a.oprettet_tidspunkt));
+        nyheder = nyheder.slice(0, 5); // max 5 nyheder
+        if (!nyheder.length) {
+          container.innerHTML = "<div class='card'>Ingen nyheder.</div>";
+          return;
+        }
+        container.innerHTML = "";
+        nyheder.forEach(n => {
+          const card = document.createElement('a');
+          card.className = "card";
+          card.href = `https://notifikation.dofbasen.dk/nyhed.html?id=${encodeURIComponent(n.id)}`;
+          card.style.textDecoration = "none";
+          card.style.display = "block";
+          card.style.color = "inherit";
+          card.innerHTML = `
+            <h2 style="margin-bottom:0.3em;">${n.titel}</h2>
+            <div class="nyhed-meta">
+              <span class="meta-date">${n.oprettet_tidspunkt}</span>
+              <span class="meta-sep"> – </span>
+              <span class="meta-author">${n.forfatter}</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        // Skjul bindestreg på mobil
+        if (window.innerWidth <= 600) {
+          document.querySelectorAll('.meta-sep').forEach(el => el.style.display = 'none');
+          document.querySelectorAll('.nyhed-meta').forEach(el => el.innerHTML = el.innerHTML.replace(' – ', '<br>'));
+        }
+      } catch (e) {
+        container.innerHTML = "<div class='card'>Kunne ikke hente nyheder.</div>";
+      }
+    }
+    visNyheder();
+    </script>
+    <h1 class="page-title">Information</h1>
     <div class="card">
       <h2>DOFbasen</h2>
       <p>
@@ -137,7 +202,7 @@
         <strong>Appen</strong> er udviklet af Christian Vemmelund Helligsø i samarbejde med DOF ud fra ønsket om en app, der kan give notifikationer fra DOFbasen og samtidig tilbyde kommentarspor på observationer. Appen er skabt for at gøre det nemmere og mere engagerende for fugleinteresserede at følge med i nye observationer – et behov, som flere danske fuglekiggere har givet udtryk for.
       </p>
     </div>
-    <div class="card">
+    <div class="card" id="feedback">
       <h2>Feedback og idéer</h2>
       <p>
         Har du forslag, idéer eller ønsker til forbedringer af appen, så vil jeg meget gerne høre fra dig!<br><br>
@@ -155,7 +220,7 @@
     </div>
   </main>
 
-  <script src="app.js?v=4.10.6"></script>
+  <script src="app.js?v=4.10.17"></script>
   <footer class="footer">
     <a href="https://dofbasen.dk" target="_blank" rel="noopener" class="footer-link">
       <div class="footer-content">

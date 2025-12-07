@@ -1,4 +1,4 @@
-// Version: 4.10.6 - 2025-12-07 20.03.36
+// Version: 4.10.17 - 2025-12-08 00.46.39
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -790,7 +790,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (firstGraphCard) {
                 firstGraphCard.insertAdjacentHTML("beforebegin", cardsHtml);
             } else {
-                // fallback: øverst i panelet
                 graphPanel.insertAdjacentHTML("afterbegin", cardsHtml);
             }
 
@@ -1316,6 +1315,228 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   };
+
+  // --- Nyhedspanel ---
+  function renderNewsPanel() {
+  const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
+  const html = `
+    <div class="card" style="margin-bottom:1em;">
+      <h2 style="margin-top:0;">Opret/redigér nyhed</h2>
+      <form id="nyhedForm">
+        <input type="hidden" name="id">
+        <div class="card" style="margin-bottom:1em;">
+          <label>Titel: <input name="titel" required style="width:100%;"></label>
+        </div>
+        <div class="card" id="body-preview-card" style="margin-bottom:1em;background:#f8f8f8;"></div>
+        <div class="card" style="margin-bottom:1em;">
+          <label>Brødtekst (markdown): <textarea name="body" required style="width:100%;height:100px;"></textarea></label>
+        </div>
+        <div style="display:flex;gap:1em;align-items:center;margin-bottom:1em;">
+          <button type="submit" style="margin:0;">Gem nyhed</button>
+          <button type="button" id="resetBtn" style="margin:0;">Ny tom</button>
+          <button type="button" id="deleteBtn" style="margin:0;background:#c00;color:#fff;">Slet nyhed</button>
+        </div>
+        <label>Slettes: <input name="slet_tidspunkt" type="datetime-local" required></label>
+        <label>Send notifikation til alle?
+          <select name="send_notifikation">
+            <option value="0" selected>Nej</option>
+            <option value="1">Ja</option>
+          </select>
+        </label>
+      </form>
+      <div class="result" id="result"></div>
+    </div>
+    <h3>Aktuelle nyheder</h3>
+    <div class="nyheder-list" id="nyhederList">Indlæser...</div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  `;
+  const panel = document.getElementById('news-panel');
+  panel.innerHTML = html;
+  panel.style.display = "block";
+
+  // Live markdown preview
+  const bodyInput = panel.querySelector('textarea[name="body"]');
+  const titleInput = panel.querySelector('input[name="titel"]');
+  const previewCard = panel.querySelector('#body-preview-card');
+
+  function updatePreview() {
+    const title = titleInput.value.trim();
+    const body = bodyInput.value || "";
+    previewCard.innerHTML =
+      (title ? `<h2>${title}</h2>` : "") +
+      marked.parse(body);
+  }
+  bodyInput.addEventListener("input", updatePreview);
+  titleInput.addEventListener("input", updatePreview);
+  updatePreview();
+
+  // --- Nyhed JS ---
+  function isoToLocal(iso) {
+    if (!iso) return '';
+    return iso.replace(' ', 'T').slice(0,16);
+  }
+
+  async function loadNyheder() {
+    const list = document.getElementById('nyhederList');
+    list.textContent = "Indlæser...";
+    try {
+      const res = await fetch('/api/nyheder');
+      const nyheder = await res.json();
+      if (!nyheder.length) {
+        list.textContent = "Ingen nyheder.";
+        return;
+      }
+      list.innerHTML = '';
+      nyheder.forEach(n => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.marginBottom = "1em";
+        div.innerHTML = `
+          <h2 style="margin-bottom:0.3em;">${n.titel}</h2>
+          <div style="font-size:0.92em;color:#888;margin-top:-0.5em;margin-bottom:0.5em;">
+            ${n.forfatter} - ${n.oprettet_tidspunkt}
+          </div>
+          <div style="display:flex;gap:0.5em;margin-bottom:1em;">
+            <button type="button" class="show-news-btn">Vis nyhed</button>
+            <button type="button" class="edit-news-btn">Redigér</button>
+            <button type="button" class="delete-news-btn" style="background:#c00;color:#fff;">Slet nyhed</button>
+          </div>
+        `;
+        // Vis nyhed-knap
+        div.querySelector('.show-news-btn').onclick = () => {
+          window.open(`https://notifikation.dofbasen.dk/nyhed.html?id=${encodeURIComponent(n.id)}`, "_blank");
+        };
+        // Redigér-knap
+        div.querySelector('.edit-news-btn').onclick = () => loadNyhedTilForm(n.id);
+        // Slet-knap event
+        div.querySelector('.delete-news-btn').onclick = async () => {
+          if (!confirm('Er du sikker på at du vil slette denne nyhed?')) return;
+          const user_id = getOrCreateUserId();
+          const device_id = getOrCreateDeviceId();
+          const res = await fetch('/api/admin/nyhed?id=' + encodeURIComponent(n.id), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id, device_id })
+          });
+          const json = await res.json();
+          if (res.ok && json.ok) {
+            div.remove();
+          } else {
+            alert("Fejl: " + (json.detail || JSON.stringify(json)));
+          }
+        };
+        list.appendChild(div);
+      });
+    } catch (e) {
+      list.textContent = "Kunne ikke hente nyheder.";
+    }
+  }
+
+  async function loadNyhedTilForm(id) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.textContent = '';
+    try {
+      const res = await fetch('/api/admin/nyhed?id=' + encodeURIComponent(id));
+      if (!res.ok) throw new Error("Nyhed ikke fundet");
+      const n = await res.json();
+      const f = document.getElementById('nyhedForm');
+      f.id.value = n.id;
+      f.titel.value = n.titel;
+      f.body.value = n.body;
+      f.slet_tidspunkt.value = isoToLocal(n.slet_tidspunkt || '');
+      f.send_notifikation.value = "0"; // Altid default til Nej
+    } catch (e) {
+      resultDiv.textContent = "Kunne ikke hente nyheden.";
+    }
+  }
+
+  document.getElementById('resetBtn').onclick = function() {
+    const f = document.getElementById('nyhedForm');
+    f.id.value = '';
+    f.titel.value = '';
+    f.body.value = '';
+    f.slet_tidspunkt.value = '';
+    f.send_notifikation.value = "0";
+    document.getElementById('result').textContent = '';
+  };
+
+  document.getElementById('deleteBtn').onclick = async function() {
+    const f = document.getElementById('nyhedForm');
+    if (!f.id.value) return;
+    if (!confirm('Er du sikker på at du vil slette denne nyhed?')) return;
+    const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
+    const resultDiv = document.getElementById('result');
+    resultDiv.textContent = "Sletter...";
+    try {
+      const res = await fetch('/api/admin/nyhed?id=' + encodeURIComponent(f.id.value), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id, device_id })
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        resultDiv.textContent = "Nyhed slettet!";
+        f.id.value = '';
+        f.titel.value = '';
+        f.body.value = '';
+        f.slet_tidspunkt.value = '';
+        f.send_notifikation.value = "0";
+        loadNyheder();
+      } else {
+        resultDiv.textContent = "Fejl: " + (json.detail || JSON.stringify(json));
+      }
+    } catch (err) {
+      resultDiv.textContent = "Netværksfejl: " + err;
+    }
+  };
+
+  document.getElementById('nyhedForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      user_id: getOrCreateUserId(),
+      device_id: getOrCreateDeviceId(),
+      titel: form.titel.value,
+      body: form.body.value,
+      slet_tidspunkt: form.slet_tidspunkt.value,
+      send_notifikation: form.send_notifikation.value
+    };
+    if (form.id.value) data.id = form.id.value;
+    const resultDiv = document.getElementById('result');
+    resultDiv.textContent = "Sender...";
+    try {
+      const res = await fetch('/api/admin/nyhed', {
+        method: form.id.value ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        resultDiv.textContent = "Nyhed gemt! ID: " + json.id;
+        loadNyheder();
+      } else {
+        resultDiv.textContent = "Fejl: " + (json.detail || JSON.stringify(json));
+      }
+    } catch (err) {
+      resultDiv.textContent = "Netværksfejl: " + err;
+    }
+  };
+
+  loadNyheder();
+}
+
+  // Fold ud med toolbar-knap
+  document.getElementById('show-news-btn').onclick = function() {
+    const panel = document.getElementById('news-panel');
+    if (panel.style.display === "block") {
+      panel.style.display = "none";
+      panel.innerHTML = "";
+    } else {
+      renderNewsPanel();
+    }
+  }
 });
 
 // Tilføj knap i din HTML, fx: <button id="show-database-btn">Database</button>
@@ -1495,7 +1716,7 @@ function escapeHTML(str) {
 
 let trafficGraphsTimer = null;
 let trafficChart7d = null;
-let trafficChart365 = null;
+let traffic365Chart = null;
 let trafficPwaPie = null;
 let trafficPlatformBar = null;
 let trafficRollingTimer = null; // <-- Tilføj denne linje
@@ -1793,13 +2014,13 @@ async function refreshTrafficGraphsData() {
 
     // Gem synlighed for datasets i 365d-grafen
     let hidden365 = {};
-    if (trafficChart365) {
-      trafficChart365.data.datasets.forEach((ds, i) => {
-        hidden365[ds.label] = trafficChart365.isDatasetVisible(i) === false;
+    if (traffic365Chart) {
+      traffic365Chart.data.datasets.forEach((ds, i) => {
+        hidden365[ds.label] = traffic365Chart.isDatasetVisible(i) === false;
       });
-      trafficChart365.destroy();
+      traffic365Chart.destroy();
     }
-    trafficChart365 = new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
+    traffic365Chart = new Chart(document.getElementById("traffic-graph-52w").getContext("2d"), {
       type: "line",
       data: {
         labels: labels365,
