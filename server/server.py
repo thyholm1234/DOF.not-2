@@ -585,15 +585,18 @@ async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query
                 "body": strip_markdown(body)[:100] + ("..." if len(strip_markdown(body)) > 100 else ""),
                 "url": f"https://notifikation.dofbasen.dk/nyhed.html?id={nyhed_id}&from_notification=1"
             }
-            with sqlite3.connect(DB_PATH) as conn:
+            with sqlite3.connect(DB_PATH) as conn, ThreadPoolExecutor(max_workers=8) as executor:
                 rows = conn.execute("SELECT user_id, device_id, subscription FROM subscriptions").fetchall()
-            for user_id_row, device_id_row, sub_json in rows:
-                try:
-                    sub = json.loads(sub_json)
-                    send_push(sub, push_payload, user_id_row, device_id_row)
-                    obs_notification_queue.put(1)
-                except Exception as e:
-                    print(f"Push-fejl til {user_id_row}/{device_id_row}: {e}")
+                tasks = []
+                for user_id_row, device_id_row, sub_json in rows:
+                    try:
+                        sub = json.loads(sub_json)
+                        tasks.append(executor.submit(send_push, sub, push_payload, user_id_row, device_id_row))
+                        obs_notification_queue.put(1)
+                    except Exception as e:
+                        print(f"Push-fejl til {user_id_row}/{device_id_row}: {e}")
+                for t in tasks:
+                    t.result()
         return {"ok": True, "id": nyhed_id}
 
     # --- POST: Opret nyhed ---
@@ -641,15 +644,18 @@ async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query
             "body": strip_markdown(body)[:100] + ("..." if len(strip_markdown(body)) > 100 else ""),
             "url": f"https://notifikation.dofbasen.dk/nyhed.html?id={unikt_id}&from_notification=1"
         }
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(DB_PATH) as conn, ThreadPoolExecutor(max_workers=8) as executor:
             rows = conn.execute("SELECT user_id, device_id, subscription FROM subscriptions").fetchall()
-        for user_id_row, device_id_row, sub_json in rows:
-            try:
-                sub = json.loads(sub_json)
-                send_push(sub, push_payload, user_id_row, device_id_row)
-                obs_notification_queue.put(1)
-            except Exception as e:
-                print(f"Push-fejl til {user_id_row}/{device_id_row}: {e}")
+            tasks = []
+            for user_id_row, device_id_row, sub_json in rows:
+                try:
+                    sub = json.loads(sub_json)
+                    tasks.append(executor.submit(send_push, sub, push_payload, user_id_row, device_id_row))
+                    obs_notification_queue.put(1)
+                except Exception as e:
+                    print(f"Push-fejl til {user_id_row}/{device_id_row}: {e}")
+            for t in tasks:
+                t.result()
 
     return {"ok": True, "id": unikt_id}
 
