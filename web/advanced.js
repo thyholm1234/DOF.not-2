@@ -1,4 +1,4 @@
-// Version: 4.10.17 - 2025-12-08 00.46.39
+// Version: 4.10.26 - 2025-12-08 09.57.01
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -163,6 +163,33 @@ document.getElementById('reset-filters').addEventListener('click', () => {
   userFilters = { include: [], exclude: [], counts: {} };
   renderArtsTable();
   saveUserFilters();
+});
+
+document.getElementById('sync-advanced-filter').addEventListener('click', async () => {
+  if (!confirm("Er du sikker på, at du vil synkronisere dit filter til alle brugere med samme obserkode?")) return;
+  const user_id = localStorage.getItem('userid');
+  const device_id = localStorage.getItem('deviceid');
+  if (!user_id || !device_id) {
+    alert("Bruger-id og device-id mangler.");
+    return;
+  }
+  const btn = document.getElementById('sync-advanced-filter');
+  btn.disabled = true;
+  btn.textContent = "Synkroniserer...";
+  const res = await fetch('/api/copy-species-filter-to-obserkode-users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id, device_id })
+  });
+  const result = await res.json();
+  btn.disabled = false;
+  btn.textContent = "Synkronisér";
+  const info = document.getElementById('sync-result');
+  if (result.ok) {
+    info.textContent = `Synkroniseret til ${result.updated_users.length} brugere.`;
+  } else {
+    info.textContent = `Fejl: ${result.error || "Ukendt fejl"}`;
+  }
 });
 
 document.getElementById('export-filters').addEventListener('click', () => {

@@ -2129,6 +2129,36 @@ async def dofbasen_tur(obsid: str = Query(...)):
 # In-memory rate limiting: user_id -> [timestamps]
 login_attempts = defaultdict(list)
 
+@app.post("/api/copy-species-filter-to-obserkode-users")
+async def copy_species_filter_to_obserkode_users(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    # Find obserkode for bruger
+    prefs = get_prefs(user_id)
+    obserkode = (prefs.get("obserkode") or "").strip().upper()
+    if not obserkode:
+        raise HTTPException(status_code=400, detail="Obserkode mangler for bruger")
+    # Find avanceret filter for bruger
+    species_filters = prefs.get("species_filters")
+    if not species_filters:
+        return {"ok": False, "error": "Ingen avanceret filter fundet for bruger"}
+    updated_users = []
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("SELECT user_id, prefs FROM user_prefs").fetchall()
+        for uid, prefs_json in rows:
+            try:
+                uprefs = json.loads(prefs_json)
+                kode = (uprefs.get("obserkode") or "").strip().upper()
+                if kode == obserkode and uid != user_id:
+                    uprefs["species_filters"] = species_filters
+                    set_prefs(uid, uprefs)
+                    updated_users.append(uid)
+            except Exception:
+                continue
+    return {"ok": True, "updated_users": updated_users}
+
 @app.post("/api/validate-login")
 async def validate_login(data: dict = Body(...)):
     import requests
