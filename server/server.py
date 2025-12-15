@@ -171,6 +171,15 @@ def get_navn_from_userid(user_id):
                 return user_id
     return user_id
 
+def get_device_id_for_user(user_id):
+    """Returner device_id for user_id fra subscriptions-tabellen (første fundne)."""
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT device_id FROM subscriptions WHERE user_id=? LIMIT 1",
+            (user_id,)
+        ).fetchone()
+    return row[0] if row else None
+
 def cleanup_dirs(base_dir, days=3):
     now = datetime.now()
     for name in os.listdir(base_dir):
@@ -293,8 +302,11 @@ async def set_quiet_hours(data: dict = Body(...)):
     end = data.get("end")
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     prefs = get_prefs(user_id)
-    print(prefs.get("quiet_hours", {}))
     if "quiet_hours" not in prefs:
         prefs["quiet_hours"] = {}
     # Slet hvis tomme værdier
@@ -312,7 +324,18 @@ async def share_thread(day: str, thread_id: str, user_agent: str = Header(None))
     import pytz
     from datetime import datetime
 
-    thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+    # 1. Valider input (kun tilladte tegn)
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        return HTMLResponse("<h1>Ugyldig dag</h1>", status_code=400)
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", thread_id):
+        return HTMLResponse("<h1>Ugyldigt thread_id</h1>", status_code=400)
+
+    # 2. Byg sti og check at den er under web_dir
+    thread_path = os.path.abspath(os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json"))
+    allowed_dir = os.path.abspath(os.path.join(web_dir, "obs"))
+    if not thread_path.startswith(allowed_dir):
+        return HTMLResponse("<h1>Ikke fundet</h1>", status_code=404)
+
     if not os.path.isfile(thread_path):
         return HTMLResponse("<h1>Ikke fundet</h1>", status_code=404)
     with open(thread_path, "r", encoding="utf-8") as f:
@@ -402,16 +425,23 @@ async def log_pageview(data: dict, request: Request):
 async def superadmins(data: dict = Body(None)):
     action = (data or {}).get("action", "get")
     user_id = (data or {}).get("user_id", "")
+    device_id = (data or {}).get("device_id", "")
     obserkode = ((data or {}).get("obserkode") or "").strip().upper()
     try:
+        # Tjek device_id matcher det i databasen FØR filbehandling
+        correct_device_id = get_device_id_for_user(user_id)
+        if correct_device_id and device_id and device_id != correct_device_id:
+            raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
+        requester_obserkode = get_obserkode_from_userprefs(user_id)
         superadmins = load_superadmins()
-        # Hent protected-listen direkte fra filen (hvis du bruger den)
+        if requester_obserkode not in superadmins:
+            raise HTTPException(status_code=403, detail="Kun hovedadmin")
+
+        # Nu er adgang tjekket, så læs filen
         with open("./superadmin.json", "r", encoding="utf-8") as f:
             file_data = json.load(f)
         protected = set(file_data.get("protected", []))
-        requester_obserkode = get_obserkode_from_userprefs(user_id)
-        if requester_obserkode not in superadmins:
-            raise HTTPException(status_code=403, detail="Kun hovedadmin")
+
         if action == "get":
             return {"superadmins": sorted(superadmins)}
         elif action == "toggle":
@@ -436,7 +466,14 @@ async def superadmins(data: dict = Body(None)):
 async def api_prefs(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
     new_prefs = data.get("prefs")
+    if not user_id or not device_id:
+        raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     if new_prefs is not None:
         # Opdater kun afdelingsnøgler
         old_prefs = get_prefs(user_id)
@@ -504,8 +541,20 @@ def strip_markdown(md):
     return md.strip()
 
 @app.api_route("/api/admin/nyhed", methods=["POST", "GET", "PUT", "DELETE"])
-async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query(None)):
-    # --- GET: Hent én nyhed ---
+async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query(None), user_id: str = Query(None)):
+    # --- Adgangskontrol: Kun superadmin for alle metoder undtagen GET ---
+    if request.method != "GET":
+        # Prøv at finde user_id fra body eller query
+        _data = data or {}
+        _user_id = _data.get("user_id") or user_id
+        if not _user_id:
+            raise HTTPException(status_code=400, detail="user_id kræves")
+        obserkode = get_obserkode_from_userprefs(_user_id)
+        superadmins = load_superadmins()
+        if obserkode not in superadmins:
+            raise HTTPException(status_code=403, detail="Kun superadmin")
+
+    # --- GET: Hent én nyhed (kræver ikke superadmin) ---
     if request.method == "GET":
         if not id:
             raise HTTPException(status_code=400, detail="id kræves")
@@ -520,14 +569,12 @@ async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query
     # --- DELETE: Slet nyhed ---
     if request.method == "DELETE":
         nyhed_id = id or (data or {}).get("id")
-        user_id = (data or {}).get("user_id")
-        device_id = (data or {}).get("device_id")
-        if not user_id or not device_id:
+        _data = data or {}
+        _user_id = _data.get("user_id") or user_id
+        device_id = _data.get("device_id")
+        if not _user_id or not device_id:
             raise HTTPException(status_code=400, detail="user_id og device_id kræves")
-        obserkode = get_obserkode_from_userprefs(user_id)
-        superadmins = load_superadmins()
-        if obserkode not in superadmins:
-            raise HTTPException(status_code=403, detail="Kun superadmin")
+        # adgangskontrol allerede tjekket ovenfor
         if not nyhed_id:
             raise HTTPException(status_code=400, detail="id kræves for sletning")
         if os.path.isfile(NYHEDER_PATH):
@@ -542,16 +589,12 @@ async def admin_nyhed(request: Request, data: dict = Body(None), id: str = Query
             json.dump(nyheder2, f, ensure_ascii=False, indent=2)
         return {"ok": True, "id": nyhed_id}
 
-    # --- POST/PUT kræver adgangskontrol ---
+    # --- POST/PUT kræver adgangskontrol (tjekket ovenfor) ---
     data = data or {}
-    user_id = data.get("user_id")
+    user_id = data.get("user_id") or user_id
     device_id = data.get("device_id")
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
-    obserkode = get_obserkode_from_userprefs(user_id)
-    superadmins = load_superadmins()
-    if obserkode not in superadmins:
-        raise HTTPException(status_code=403, detail="Kun superadmin")
 
     # --- PUT eller POST med id: Rediger eksisterende nyhed ---
     if request.method == "PUT" or (request.method == "POST" and data.get("id")):
@@ -665,6 +708,12 @@ async def api_subscribe(request: Request):
     user_id = data.get("user_id") or data.get("userid")
     device_id = data.get("device_id") or data.get("deviceid")
     subscription = data.get("subscription")
+    if not user_id or not device_id or not subscription:
+        raise HTTPException(status_code=400, detail="user_id, device_id og subscription kræves")
+    # Hvis der allerede findes en anden device_id for user_id, kræv at det er samme device_id
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO subscriptions (user_id, device_id, subscription) VALUES (?, ?, ?)",
@@ -677,6 +726,10 @@ async def api_unsubscribe(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
@@ -888,6 +941,10 @@ async def admin_csv(request: Request):
     action = data.get("action", "read")  # "read" eller "write"
     if file not in ALLOWED_CSV_FILES:
         raise HTTPException(status_code=403, detail="Ugyldig filsti")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -1431,11 +1488,20 @@ async def nearby_observations(data: dict = Body(...)):
 
 @app.post("/api/thread/{day}/{thread_id}/subscribe")
 async def subscribe_thread(day: str, thread_id: str, request: Request):
+    # Beskyt mod directory traversal
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        raise HTTPException(status_code=400, detail="Ugyldig dag")
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", thread_id):
+        raise HTTPException(status_code=400, detail="Ugyldigt thread_id")
     data = await request.json()
     user_id = data.get("user_id")
     device_id = data.get("device_id")
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO thread_subs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
@@ -1445,32 +1511,30 @@ async def subscribe_thread(day: str, thread_id: str, request: Request):
 
 @app.post("/api/thread/{day}/{thread_id}/unsubscribe")
 async def unsubscribe_thread(day: str, thread_id: str, request: Request):
+    # Beskyt mod directory traversal
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        raise HTTPException(status_code=400, detail="Ugyldig dag")
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", thread_id):
+        raise HTTPException(status_code=400, detail="Ugyldigt thread_id")
     data = await request.json()
     user_id = data.get("user_id")
     device_id = data.get("device_id")
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
-                "DELETE FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
-                (day, thread_id, user_id, device_id)
+            "DELETE FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+            (day, thread_id, user_id, device_id)
         )
         conn.execute(
             "INSERT OR IGNORE INTO thread_unsubs (day, thread_id, user_id, device_id) VALUES (?, ?, ?, ?)",
             (day, thread_id, user_id, device_id)
         )
     return {"ok": True}
-
-@app.post("/api/thread/{day}/{thread_id}/subscription")
-async def get_subscription_post(day: str, thread_id: str, data: dict = Body(...)):
-    user_id = data.get("user_id")
-    device_id = data.get("device_id")
-    with sqlite3.connect(DB_PATH) as conn:
-        row = conn.execute(
-            "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
-            (day, thread_id, user_id, device_id)
-        ).fetchone()
-    return {"subscribed": bool(row)}
 
 stats_lock = threading.Lock()
 
@@ -1488,6 +1552,10 @@ async def obsid_subscribe(obsid: str, request: Request):
     today = datetime.now().strftime("%Y-%m-%d")
     if not user_id or not device_id or not obsid:
         raise HTTPException(status_code=400, detail="user_id, device_id og obsid kræves")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     with sqlite3.connect(DB_PATH) as conn:
         if subscribe is None:
             # Returner status: True hvis ingen row eller sub=1, False kun hvis sub=0
@@ -1524,6 +1592,10 @@ async def update_data(request: Request):
     payload = await request.json()
     _save_payload(payload)
     tasks = []
+
+    api_token = request.headers.get("X-API-Token")
+    if api_token != os.environ.get("UPDATE_API_TOKEN"):
+        raise HTTPException(status_code=403, detail="Ikke tilladt")
 
     def push_task(sub, push_payload, user_id, device_id, obs_id=None):
         # Tjek quiet hours for denne bruger/device
@@ -1714,6 +1786,10 @@ async def update_data(request: Request):
 async def users_overview(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     # Tjek superadmin
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
@@ -1767,10 +1843,16 @@ async def users_overview(data: dict = Body(...)):
 async def admin_blacklist(data: dict = Body(...)):
     obsid = data.get("obsid")
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
     reason = data.get("reason", "").strip()
     navn = data.get("navn", "").strip()
     body = data.get("body", "").strip()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        return JSONResponse({"ok": False, "error": "Forkert device_id for bruger"}, status_code=403)
 
     prefs = get_prefs(user_id)
     admins = load_admins()
@@ -1814,8 +1896,13 @@ async def admin_blacklist(data: dict = Body(...)):
 async def admin_unblacklist(data: dict = Body(...)):
     obsid = data.get("obsid")
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
     if not obsid or not user_id:
         return {"ok": False, "error": "Missing obsid or user_id"}
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        return {"ok": False, "error": "Forkert device_id for bruger"}
     # Tjek admin-status
     prefs = get_prefs(user_id)
     admins = load_admins()
@@ -1843,6 +1930,10 @@ async def admin_remove_comment(data: dict = Body(...)):
     day = data.get("day")
     if not user_id or not device_id or not ts or not admin_user_id or not thread_id or not day:
         return {"ok": False, "error": "Missing data"}
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        return {"ok": False, "error": "Forkert device_id for bruger"}
     prefs = get_prefs(admin_user_id)
     admins = load_admins()
     if prefs.get("obserkode") not in admins:
@@ -1875,8 +1966,14 @@ async def api_threads_index(day: str):
     Returner index.json for en given dag, inkl. comment_count for hver tråd.
     Understøtter både array og objekt med "threads".
     """
+    # Sikring mod directory traversal
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        return JSONResponse({"detail": "Ugyldig dag"}, status_code=400)
     index_path = os.path.join(web_dir, "obs", day, "index.json")
     threads_dir = os.path.join(web_dir, "obs", day, "threads")
+    allowed_dir = os.path.abspath(os.path.join(web_dir, "obs"))
+    if not os.path.abspath(index_path).startswith(allowed_dir):
+        return JSONResponse({"detail": "Ikke fundet"}, status_code=404)
     if not os.path.isfile(index_path):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     with open(index_path, "r", encoding="utf-8") as f:
@@ -1917,6 +2014,10 @@ async def api_threads_index(day: str):
 async def share_obsid(obsid: str, user_agent: str = Header(None)):
     import html
     from fastapi.testclient import TestClient
+
+    # Sikring mod directory traversal: obsid må kun være tal
+    if not re.match(r"^\d+$", obsid):
+        return HTMLResponse("<h1>Ugyldigt obsid</h1>", status_code=400)
 
     # Brug TestClient til at kalde /api/dofbasen internt
     client = TestClient(app)
@@ -2141,6 +2242,10 @@ async def copy_species_filter_to_obserkode_users(data: dict = Body(...)):
     device_id = data.get("device_id")
     if not user_id or not device_id:
         raise HTTPException(status_code=400, detail="user_id og device_id kræves")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     # Find obserkode for bruger
     prefs = get_prefs(user_id)
     obserkode = (prefs.get("obserkode") or "").strip().upper()
@@ -2173,6 +2278,11 @@ async def validate_login(data: dict = Body(...)):
     device_id = data.get("device_id")
     obserkode = data.get("obserkode")
     adgangskode = data.get("adgangskode")
+
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
 
     # --- RATE LIMITING: max 5 forsøg pr. 10 min pr. user_id ---
     now = time.time()
@@ -2224,6 +2334,11 @@ async def validate_login(data: dict = Body(...)):
 @app.post("/api/remove-connection")
 async def remove_connection(data: dict = Body(...)):
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     if not user_id:
         return {"ok": False, "error": "user_id mangler"}
     prefs = get_prefs(user_id)
@@ -2256,9 +2371,13 @@ def get_obserkode_from_userprefs(user_id):
 async def api_request_sync(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id mangler")
-
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -2268,23 +2387,6 @@ async def api_request_sync(request: Request):
     with open(SYNC_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return {"status": "ok", "written": data}
-
-@app.post("/api/is-app-user")
-async def api_is_app_user(data: dict = Body(...)):
-    obserkode = (data.get("obserkode") or "").strip().upper()
-    if not obserkode:
-        return {"is_app_user": False}
-    with sqlite3.connect(DB_PATH) as conn:
-        rows = conn.execute("SELECT prefs FROM user_prefs").fetchall()
-    for (prefs_json,) in rows:
-        try:
-            prefs = json.loads(prefs_json)
-            kode = (prefs.get("obserkode") or "").strip().upper()
-            if kode == obserkode:
-                return {"is_app_user": True}
-        except Exception:
-            continue
-    return {"is_app_user": False}
 
 @app.get("/api/admin/traffic-diffs")
 async def traffic_diffs_public():
@@ -2504,9 +2606,14 @@ async def traffic_diffs_public():
 async def pageviews_rolling(data: dict = Body(...)):
     import pytz
     import datetime
-    import math
 
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
+
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -2579,6 +2686,11 @@ async def pageviews_rolling(data: dict = Body(...)):
 async def admin_traffic_graphs(data: dict = Body(None)):
     data = data or {}
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     # Kun superadmins må tilgå dette endpoint
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
@@ -2885,8 +2997,14 @@ async def api_is_app_user_bulk(data: dict = Body(...)):
             result[k] = True
     return result
 
-@app.get("/api/admin/all-users")
-async def admin_all_users(user_id: str = Query(...)):
+@app.post("/api/admin/all-users")
+async def admin_all_users(data: dict = Body(None)):
+    user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -2913,6 +3031,12 @@ async def admin_all_users(user_id: str = Query(...)):
 
 @app.post("/api/admin/delete-user")
 async def admin_delete_user(data: dict = Body(...)):
+    user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     requester_id = data.get("user_id")
     obserkode = (data.get("obserkode") or "").strip().upper()
     target_user_id = data.get("target_user_id") or data.get("delete_user_id") or data.get("delete_userid") or None
@@ -2957,6 +3081,10 @@ async def admin_delete_user(data: dict = Body(...)):
 async def is_admin(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     admins = load_admins()
     obserkode = get_obserkode_from_userprefs(user_id)
     return {"admin": obserkode in admins, "obserkode": obserkode}
@@ -2973,6 +3101,10 @@ def load_superadmins():
 async def is_subscribed(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     # Tjek om user_id findes i subscriptions (tilpas evt. logik)
     import sqlite3
     with sqlite3.connect(DB_PATH) as conn:
@@ -2987,6 +3119,10 @@ async def is_subscribed(data: dict = Body(...)):
 async def is_superadmin(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     return {
@@ -3108,6 +3244,10 @@ def archive_and_reset_pageview_log(for_date=None, reset_log=True):
 async def admin_pageview_stats(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -3244,6 +3384,11 @@ async def admin_pageview_stats(data: dict = Body(...)):
 @app.post("/api/admin/archive-pageview-log")
 async def archive_pageview_log(data: dict = Body(...)):
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -3256,6 +3401,11 @@ async def archive_pageview_log(data: dict = Body(...)):
 @app.post("/api/admin/list-admins")
 async def list_admins(data: dict = Body(...)):
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -3290,6 +3440,11 @@ async def list_admins(data: dict = Body(...)):
 @app.post("/api/admin/add-admin")
 async def add_admin(data: dict = Body(...)):
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     new_obserkode = (data.get("obserkode") or "").strip().upper()
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
@@ -3312,6 +3467,11 @@ async def add_admin(data: dict = Body(...)):
 @app.post("/api/admin/remove-admin")
 async def remove_admin(data: dict = Body(...)):
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     remove_obserkode = (data.get("obserkode") or "").strip().upper()
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
@@ -3349,8 +3509,19 @@ def safe_comment(comment):
         "device_id": comment.get("device_id", "")
     }
 
-@app.get("/api/admin/comments")
-async def admin_comments():
+@app.post("/api/admin/comments")
+async def admin_comments(data: dict = Body(...)):
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
+    # Tjek superadmin
+    obserkode = get_obserkode_from_userprefs(user_id)
+    superadmins = load_superadmins()
+    if obserkode not in superadmins:
+        raise HTTPException(status_code=403, detail="Kun hovedadmin")
     today = datetime.now()
     days = [(today - timedelta(days=i)).strftime("%d-%m-%Y") for i in range(2)]
     threads = []
@@ -3380,7 +3551,15 @@ async def admin_comments():
 @app.get("/api/thread/{day}/{thread_id}")
 async def api_thread(day: str, thread_id: str, request: Request):
     """Returner thread.json for en given dag og tråd-id."""
-    thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+    # Beskyt mod directory traversal
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        return JSONResponse({"detail": "Ugyldig dag"}, status_code=400)
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", thread_id):
+        return JSONResponse({"detail": "Ugyldigt thread_id"}, status_code=400)
+    thread_path = os.path.abspath(os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json"))
+    allowed_dir = os.path.abspath(os.path.join(web_dir, "obs"))
+    if not thread_path.startswith(allowed_dir):
+        return JSONResponse({"detail": "Ikke fundet"}, status_code=404)
     if not os.path.isfile(thread_path):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     with open(thread_path, "r", encoding="utf-8") as f:
@@ -3390,18 +3569,24 @@ async def api_thread(day: str, thread_id: str, request: Request):
 @app.post("/api/admin/download/{filename}")
 async def download_admin_file(filename: str, data: dict = Body(...)):
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     # Tjek superadmin
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
-    # Brug absolut sti
+    # Beskyt mod directory traversal: kun whitelistede filnavne tilladt
     base_dir = os.path.dirname(__file__)
     allowed = {
         "pageview_masterlog.jsonl": os.path.join(base_dir, "pageview_masterlog.jsonl"),
         "pageviews.log": os.path.join(base_dir, "pageviews.log")
     }
-    if filename not in allowed:
+    # Ekstra check: ingen ../ eller / i filename
+    if filename not in allowed or "/" in filename or "\\" in filename or ".." in filename:
         raise HTTPException(status_code=404, detail="Ikke tilladt")
     if not os.path.isfile(allowed[filename]):
         raise HTTPException(status_code=404, detail="Filen findes ikke")
@@ -3417,6 +3602,11 @@ async def log_all_requests(request: Request, call_next):
 @app.post("/api/admin/serverlog")
 async def get_server_log(data: dict = Body(...)):
     user_id = data.get("user_id", "")
+    device_id = data.get("device_id", "")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     obserkode = get_obserkode_from_userprefs(user_id)
     superadmins = load_superadmins()
     if obserkode not in superadmins:
@@ -3432,6 +3622,10 @@ async def get_server_log(data: dict = Body(...)):
 async def get_or_save_userinfo(data: dict = Body(...)):
     user_id = data.get("user_id")
     device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     # Hvis der er obserkode/navn, så gem, ellers hent
     obserkode = data.get("obserkode")
     navn = data.get("navn")
@@ -3450,93 +3644,15 @@ async def get_or_save_userinfo(data: dict = Body(...)):
         "navn": prefs.get("navn", "")
     }
 
-@app.post("/api/thread/{day}/{thread_id}/comments/thumbsup")
-async def thumbs_up_comment(day: str, thread_id: str, request: Request):
-    data = await request.json()
-    ts = data.get("ts")
-    user_id = data.get("user_id")
-    if not ts or not user_id:
-        raise HTTPException(status_code=400, detail="Kommentar-tidspunkt eller bruger-id mangler")
-    thread_dir = os.path.join(web_dir, "obs", day, "threads", thread_id)
-    comments_path = os.path.join(thread_dir, "kommentar.json")
-    if not os.path.isfile(comments_path):
-        raise HTTPException(status_code=404, detail="Ingen kommentarer fundet")
-    with open(comments_path, "r", encoding="utf-8") as f:
-        comments = json.load(f)
-    found = False
-    for c in comments:
-        if c.get("ts") == ts:
-            thumbs_users = set(c.get("thumbs_users", []))
-            already_thumbed = user_id in thumbs_users
-            if already_thumbed:
-                thumbs_users.remove(user_id)  # Fjern thumbs up
-            else:
-                thumbs_users.add(user_id)     # Tilføj thumbs up
-            c["thumbs_users"] = list(thumbs_users)
-            c["thumbs"] = len(thumbs_users)
-            found = True
-
-            # SEND PUSH HVIS NY THUMBS UP OG IKKE FRA EJEREN SELV
-            if not already_thumbed and user_id != c.get("user_id"):
-                owner_user_id = c.get("user_id")
-                owner_device_id = c.get("device_id")
-                if owner_user_id and owner_device_id:
-                    # TJEK OM EJEREN ABONNERER PÅ TRÅDEN
-                    with sqlite3.connect(DB_PATH) as conn:
-                        sub_row = conn.execute(
-                            "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
-                            (day, thread_id, owner_user_id, owner_device_id)
-                        ).fetchone()
-                    if sub_row:
-                        # Find subscription-info
-                        with sqlite3.connect(DB_PATH) as conn:
-                            row = conn.execute(
-                                "SELECT subscription FROM subscriptions WHERE user_id=? AND device_id=?",
-                                (owner_user_id, owner_device_id)
-                            ).fetchone()
-                        if row:
-                            sub = json.loads(row[0])
-                            # Find artnavn/loknavn til notifikation
-                            thread_path = os.path.join(thread_dir, "thread.json")
-                            artnavn = ""
-                            loknavn = ""
-                            if os.path.isfile(thread_path):
-                                try:
-                                    with open(thread_path, "r", encoding="utf-8") as f:
-                                        thread_data = json.load(f)
-                                    thread_info = thread_data.get("thread", {})
-                                    artnavn = thread_info.get("art", "")
-                                    loknavn = thread_info.get("lok", "")
-                                except Exception:
-                                    pass
-                            payload = {
-                                "title": f"👍 på dit indlæg: {artnavn} - {loknavn}",
-                                "body": f"Dit indlæg har fået en thumbs up!",
-                                "url": f"/traad.html?date={day}&id={thread_id}",
-                                "tag": f"{thread_id}-thumbsup-{ts.replace(' ', '_').replace(':', '-')}"
-                            }
-                            try:
-                                webpush(
-                                    subscription_info=sub,
-                                    data=json.dumps(payload, ensure_ascii=False),
-                                    vapid_private_key=VAPID_PRIVATE_KEY,
-                                    vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
-                                    ttl=3600,
-                                    headers={"Urgency": "high"}  # <-- Tilføj urgency high
-                                )
-                            except Exception as ex:
-                                print(f"Push-fejl til {owner_user_id}/{owner_device_id}: {ex}")
-            break
-    if not found:
-        raise HTTPException(status_code=404, detail="Kommentar ikke fundet")
-    with open(comments_path, "w", encoding="utf-8") as f:
-        json.dump(comments, f, ensure_ascii=False, indent=2)
-    return {"ok": True, "thumbs": c["thumbs"]} 
-
 @app.post("/api/prefs/user/species")
 async def species_filters(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
     filters = data.get("filters")
     prefs = get_prefs(user_id)
     if filters is not None:
@@ -3562,7 +3678,15 @@ async def api_latest():
 
 @app.get("/obs/{day}/threads/{thread_id}")
 async def get_thread_short(day: str, thread_id: str):
-    thread_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json")
+    # Beskyt mod directory traversal
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        return JSONResponse({"detail": "Ugyldig dag"}, status_code=400)
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", thread_id):
+        return JSONResponse({"detail": "Ugyldigt thread_id"}, status_code=400)
+    thread_path = os.path.abspath(os.path.join(web_dir, "obs", day, "threads", thread_id, "thread.json"))
+    allowed_dir = os.path.abspath(os.path.join(web_dir, "obs"))
+    if not thread_path.startswith(allowed_dir):
+        return JSONResponse({"detail": "Ikke fundet"}, status_code=404)
     if not os.path.isfile(thread_path):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     return FileResponse(thread_path, media_type="application/json")
@@ -3572,6 +3696,10 @@ async def debug_push(request: Request):
     data = await request.json()
     user_id = data.get("user_id") or data.get("userid")
     device_id = data.get("device_id") or data.get("deviceid")
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
 
     # Indlæs latest.json og tag første observation
     try:
@@ -3689,28 +3817,7 @@ def get_comments_for_user(thread_comments, current_user_id):
             filtered.append(c)
     return filtered
 
-@app.post("/api/admin/blacklist")
-async def admin_blacklist(data: dict = Body(...)):
-    obsid = data.get("obsid")
-    user_id = data.get("user_id")
-    if not obsid or not user_id:
-        return {"ok": False, "error": "Missing obsid or user_id"}
-    # Tjek admin-status
-    prefs = get_prefs(user_id)
-    admins = load_admins()
-    if prefs.get("obserkode") not in admins:
-        return {"ok": False, "error": "Not admin"}
-    try:
-        with open("./blacklist.json", "r", encoding="utf-8") as f:
-            bl = json.load(f)
-        if obsid not in bl["blacklisted_obsids"]:
-            bl["blacklisted_obsids"].append(obsid)
-            with open("./blacklist.json", "w", encoding="utf-8") as f:
-                json.dump(bl, f, ensure_ascii=False, indent=2)
-        return {"ok": True}
-    except Exception as e:
-        print("Blacklist error:", e)
-        return {"ok": False, "error": "Server error"}
+
     
 def is_blacklisted_obserkode(obserkode):
     return obserkode in load_blacklisted_obsids()
@@ -3763,10 +3870,14 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
 
             # Ny kommentar
             if msg_type == "new_comment":
+                # Tjek device_id matcher det i databasen
+                correct_device_id = get_device_id_for_user(user_id)
+                if correct_device_id and device_id != correct_device_id:
+                    await websocket.send_json({"type": "error", "message": "Forkert device_id for bruger."})
+                    continue
+
                 navn = msg.get("navn", "Ukendt")
                 body = (msg.get("body") or "").strip()
-                user_id = msg.get("user_id")
-                device_id = msg.get("device_id")
                 obserkode = msg.get("obserkode", "")
                 blacklisted = load_blacklisted_obsids()
                 if obserkode in blacklisted:
@@ -3775,6 +3886,7 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                 if not body or not user_id or not device_id:
                     continue
                 ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # Gem IKKE device_id i kommentar.json
                 comment = {
                     "navn": navn,
                     "obserkode": obserkode,
@@ -3782,18 +3894,17 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
                     "ts": ts,
                     "thumbs": 0,
                     "thumbs_users": [],
-                    "user_id": user_id,
-                    "device_id": device_id
+                    "user_id": user_id
                 }
                 comments = get_comments_for_thread(day, thread_id)
                 comments.append(comment)
                 save_comments_for_thread(day, thread_id, comments)
 
-                # Log kommentaren til comments.log
+                # Log kommentaren til comments.log (her kan device_id stadig logges hvis ønsket)
                 comment_log_entry = {
                     "day": day,
                     "thread_id": thread_id,
-                    **comment
+                    **comment,
                 }
                 with open("comments.log", "a", encoding="utf-8") as logf:
                     logf.write(json.dumps(comment_log_entry, ensure_ascii=False) + "\n")
@@ -3913,6 +4024,12 @@ async def ws_thread(websocket: WebSocket, day: str, thread_id: str):
             elif msg.get("type") == "thumbsup":
                 ts = msg.get("ts")
                 user_id = msg.get("user_id")
+                # Tjek device_id matcher det i databasen
+                correct_device_id = get_device_id_for_user(user_id)
+                if correct_device_id and device_id != correct_device_id:
+                    await websocket.send_json({"type": "error", "message": "Forkert device_id for bruger."})
+                    continue
+
                 if not ts or not user_id:
                     continue
                 comments = get_comments_for_thread(day, thread_id)

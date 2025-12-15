@@ -1,4 +1,4 @@
-// Version: 4.10.27 - 2025-12-08 10.10.36
+// Version: 4.11.0 - 2025-12-15 23.41.17
 // © Christian Vemmelund Helligsø
 async function validateLogin(user_id, device_id, obserkode, adgangskode) {
   const res = await fetch('/api/validate-login', {
@@ -140,10 +140,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   removeBtn.addEventListener('click', async () => {
     const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
     const res = await fetch('/api/remove-connection', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id })
+      body: JSON.stringify({ user_id, device_id })
     });
     if (res.ok) {
       showLogin();

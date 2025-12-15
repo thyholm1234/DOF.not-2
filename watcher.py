@@ -13,6 +13,9 @@ from collections import defaultdict
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import shutil
+from dotenv import load_dotenv  # <-- Tilføj dette
+
+load_dotenv() 
 
 # DOF "excel"-endpoint. Dato indsættes dynamisk i DD-MM-YYYY
 BASE_URL = (
@@ -581,7 +584,8 @@ def parse_rows_from_text(text: str) -> List[Dict[str, str]]:
 def send_update(rows: List[Dict[str, str]]) -> None:
     """Send en batch som JSON-array til serveren."""
     try:
-        resp = requests.post(SERVER_URL, json=rows, timeout=50)
+        headers = {"X-API-Token": os.environ.get("UPDATE_API_TOKEN", "")}
+        resp = requests.post(SERVER_URL, json=rows, timeout=50, headers=headers)
         resp.raise_for_status()
     except Exception as e:
         print(f"[watcher] Fejl ved POST: {e}")

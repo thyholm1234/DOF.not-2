@@ -1,4 +1,4 @@
-// Version: 4.10.27 - 2025-12-08 10.10.36
+// Version: 4.11.0 - 2025-12-15 23.41.17
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -13,7 +13,7 @@ function downloadAdminFile(filename, user_id) {
   fetch(`/api/admin/download/${filename}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id })
+    body: JSON.stringify({ user_id, device_id: getOrCreateDeviceId()})
   })
     .then(res => {
       if (!res.ok) throw new Error("Download fejlede");
@@ -54,10 +54,11 @@ async function removeComment(user_id, device_id, ts, thread_id, day) {
 async function unblacklistObsid(obsid) {
   if (!confirm("Vil du fjerne denne obserkode fra blacklist?")) return;
   const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
   await fetch("/api/admin/unblacklist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ obsid, user_id })
+    body: JSON.stringify({ obsid, user_id, device_id })
   });
   await loadBlacklist();
   await loadCommentThreads();
@@ -65,20 +66,25 @@ async function unblacklistObsid(obsid) {
 
 async function loadCommentThreads() {
   const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
   let blacklisted = [];
   try {
     const blRes = await fetch("/api/admin/blacklist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id })
+      body: JSON.stringify({ user_id, device_id })
     });
     if (blRes.ok) {
       const blList = await blRes.json();
       blacklisted = blList.map(entry => (entry.obserkode || "").trim().toLowerCase());
     }
   } catch {}
-  
-  const res = await fetch("/api/admin/comments");
+
+  const res = await fetch("/api/admin/comments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id, device_id })
+  });
   if (res.ok) {
     const threads = await res.json();
     const container = document.getElementById("comment-threads");
@@ -172,10 +178,11 @@ async function loadCommentThreads() {
 
 async function loadBlacklist() {
   const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
   const res = await fetch("/api/admin/blacklist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id })
+    body: JSON.stringify({ user_id, device_id })
   });
   if (res.ok) {
     const list = await res.json();
@@ -287,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch("/api/admin/serverlog", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id })
+          body: JSON.stringify({ user_id, device_id: getOrCreateDeviceId() })
         });
         if (res.ok) {
           const data = await res.json();
@@ -513,6 +520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Tilføj event handler til "Gem masterlog nu"-knap
       if (window.isSuperadmin) {
         const user_id = getOrCreateUserId();
+        const device_id = getOrCreateDeviceId();
         const masterlogBtn = document.getElementById("download-masterlog-btn");
         const pageviewsBtn = document.getElementById("download-pageviews-btn");
         const archiveBtn = document.getElementById("archive-traffic-log-btn");
@@ -531,7 +539,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               const res = await fetch("/api/admin/archive-pageview-log", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id })
+                body: JSON.stringify({ user_id, device_id })
               });
               if (res.ok) {
                 archiveBtn.textContent = "Masterlog gemt!";
@@ -562,10 +570,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Hent og vis grafer hvis superadmin
       if (window.isSuperadmin) {
         try {
+          const user_id = getOrCreateUserId();
+          const device_id = getOrCreateDeviceId();
           const res = await fetch("/api/admin/traffic-graphs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id })
+            body: JSON.stringify({ user_id, device_id })
           });
           if (res.ok) {
             const data = await res.json();
@@ -828,7 +838,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch("/api/admin/list-admins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id })
+      body: JSON.stringify({ user_id, device_id })
     });
     const data = await res.json();
     // Forvent: [{obserkode: "...", navn: "..."}]
@@ -837,7 +847,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const superRes = await fetch("/api/admin/superadmin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "get", user_id })
+      body: JSON.stringify({ action: "get", user_id, device_id })
     });
     const superData = await superRes.json();
     const superadmins = superData.superadmins || [];
@@ -895,7 +905,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fetch("/api/admin/superadmin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "toggle", user_id, obserkode })
+          body: JSON.stringify({ action: "toggle", user_id, obserkode, device_id })
         });
         await loadAdminsList();
       };
@@ -930,10 +940,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
         if (!confirm("Er du sikker på, at du vil fjerne admin: " + kode + "?")) return;
+        const user_id = getOrCreateUserId();
+        const device_id = getOrCreateDeviceId();
         await fetch("/api/admin/remove-admin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id, obserkode: kode })
+          body: JSON.stringify({ user_id, device_id, obserkode: kode })
         });
         await loadAdminsList();
       };
@@ -956,10 +968,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (!confirm("Er du sikker på, at du vil tilføje admin: " + kode + "?")) return;
+    const user_id = getOrCreateUserId();
+    const device_id = getOrCreateDeviceId();
     await fetch("/api/admin/add-admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id, obserkode: kode })
+      body: JSON.stringify({ user_id, device_id, obserkode: kode })
     });
     document.getElementById("add-admin-modal").style.display = "none";
     await loadAdminsList();
@@ -999,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetch("/api/admin/blacklist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ obsid: blacklistObserkode, user_id, reason, navn: blacklistNavn, body: blacklistBody })
+      body: JSON.stringify({ obsid: blacklistObserkode, user_id, device_id, reason, navn: blacklistNavn, body: blacklistBody })
     });
     hideBlacklistModal();
     await loadCommentThreads();
@@ -1227,7 +1241,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Ellers hent og vis listen
     const user_id = getOrCreateUserId();
-    const res = await fetch(`/api/admin/all-users?user_id=${encodeURIComponent(user_id)}`);
+    const device_id = getOrCreateDeviceId();
+    const res = await fetch("/api/admin/all-users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id, device_id })
+    });
     if (!res.ok) {
       alert("Kunne ikke hente brugere.");
       return;
@@ -1300,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch("/api/admin/delete-user", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ obserkode: u.obserkode, user_id })
+              body: JSON.stringify({ obserkode: u.obserkode, user_id, device_id })
             });
             const result = await res.json();
             if (result.ok) {
@@ -1330,7 +1349,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="card" id="body-preview-card" style="margin-bottom:1em;background:#f8f8f8;"></div>
         <div class="card" style="margin-bottom:1em;">
-          <label>Brødtekst (markdown): <textarea name="body" required style="width:100%;height:100px;"></textarea></label>
+          <label>Brødtekst (markdown): 
+            <textarea name="body" required style="width:100%;height:100px;resize:none;"></textarea>
+          </label>
         </div>
         <div style="display:flex;gap:1em;align-items:center;margin-bottom:1em;">
           <button type="submit" style="margin:0;">Gem nyhed</button>
@@ -1355,21 +1376,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   panel.innerHTML = html;
   panel.style.display = "block";
 
-  // Live markdown preview
+  // Live markdown preview hvert 5. sekund hvis der har været anslag
   const bodyInput = panel.querySelector('textarea[name="body"]');
-  const titleInput = panel.querySelector('input[name="titel"]');
+  const titelInput = panel.querySelector('input[name="titel"]');
   const previewCard = panel.querySelector('#body-preview-card');
-
+  let bodyDirty = false;
   function updatePreview() {
-    const title = titleInput.value.trim();
-    const body = bodyInput.value || "";
-    previewCard.innerHTML =
-      (title ? `<h2>${title}</h2>` : "") +
-      marked.parse(body);
+    let titel = titelInput.value || "";
+    let body = bodyInput.value || "";
+    let md = `# ${titel}\n\n${body}`;
+    if (window.marked) {
+      previewCard.innerHTML = marked.parse(md);
+    } else {
+      previewCard.textContent = md;
+    }
+    bodyDirty = false;
   }
-  bodyInput.addEventListener("input", updatePreview);
-  titleInput.addEventListener("input", updatePreview);
+  bodyInput.addEventListener("input", function() {
+    this.style.height = "auto";
+    this.style.height = (this.scrollHeight) + "px";
+    bodyDirty = true;
+  });
+  titelInput.addEventListener("input", function() {
+    bodyDirty = true;
+  });
+  // Sæt fast bredde og initial højde
+  bodyInput.style.width = "100%";
+  bodyInput.style.minHeight = "100px";
+  bodyInput.style.resize = "none";
   updatePreview();
+
+  // Opdater preview hvert 5. sekund hvis der har været anslag
+  let previewTimer = setInterval(() => {
+    if (bodyDirty) updatePreview();
+  }, 5000);
+
+  // Ryd timer når panelet lukkes
+  panel.addEventListener("DOMNodeRemoved", function(e) {
+    if (e.target === panel) clearInterval(previewTimer);
+  });
 
   // --- Nyhed JS ---
   function isoToLocal(iso) {
@@ -1444,6 +1489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       f.id.value = n.id;
       f.titel.value = n.titel;
       f.body.value = n.body;
+      updatePreview();
       f.slet_tidspunkt.value = isoToLocal(n.slet_tidspunkt || '');
       f.send_notifikation.value = "0"; // Altid default til Nej
     } catch (e) {
@@ -1459,6 +1505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     f.slet_tidspunkt.value = '';
     f.send_notifikation.value = "0";
     document.getElementById('result').textContent = '';
+    updatePreview(); // <-- Tilføj denne linje
   };
 
   document.getElementById('deleteBtn').onclick = async function() {
@@ -1652,8 +1699,9 @@ document.getElementById("show-database-btn").onclick = async function() {
 window.deleteUser = async function(target_user_id, obserkode) {
   if (!confirm("Er du sikker på at du vil slette denne bruger og alle data?")) return;
   const requester_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
   // Byg body: brug obserkode hvis den findes, ellers target_user_id
-  let body = { user_id: requester_id };
+  let body = { user_id: requester_id, device_id };
   if (obserkode && obserkode.trim()) {
     body.obserkode = obserkode;
   } else if (target_user_id) {
@@ -1669,7 +1717,7 @@ window.deleteUser = async function(target_user_id, obserkode) {
   });
   const result = await res.json();
   if (result.ok) {
-  alert("Bruger og alle data er slettet.");
+    alert("Bruger og alle data er slettet.");
     // Fjern rækken fra tabellen uden reload
     const row = document.querySelector(`button[onclick*="'${target_user_id}'"]`)?.closest("tr");
     if (row) row.remove();
@@ -1688,10 +1736,11 @@ document.getElementById("sync-cancel-btn").onclick = function() {
 
 async function sendSyncRequest(syncType) {
   const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
   const res = await fetch("/api/request_sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sync: syncType, user_id })
+    body: JSON.stringify({ sync: syncType, user_id, device_id })
   });
   if (res.ok) {
     alert("Sync-anmodning sendt: " + syncType);
@@ -1724,11 +1773,12 @@ let trafficRollingTimer = null; // <-- Tilføj denne linje
 // Funktion til kun at opdatere rolling-grafen
 async function refreshTrafficRollingGraph() {
   const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
   try {
     const res = await fetch("/api/admin/pageviews-rolling", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id })
+      body: JSON.stringify({ user_id, device_id })
     });
     if (res.ok) {
       const rolling = await res.json();
@@ -1855,12 +1905,13 @@ async function refreshTrafficGraphsData() {
   const panel = document.getElementById("traffic-panel");
   if (!panel || panel.style.display === "none") return;
   const user_id = getOrCreateUserId();
+  const device_id = getOrCreateDeviceId();
 
   try {
     const res = await fetch("/api/admin/traffic-graphs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id })
+      body: JSON.stringify({ user_id, device_id })
     });
     if (!res.ok) return;
     const data = await res.json();

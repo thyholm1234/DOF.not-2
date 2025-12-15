@@ -1,4 +1,4 @@
-// Version: 4.10.27 - 2025-12-08 10.10.36
+// Version: 4.11.0 - 2025-12-15 23.41.17
 // © Christian Vemmelund Helligsø
 const afdelinger = [
   "DOF København",
@@ -182,7 +182,7 @@ function renderPrefsMatrix(prefs) {
       await fetch("/api/prefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: getOrCreateUserId(), prefs: newPrefs })
+        body: JSON.stringify({ user_id: localStorage.getItem("userid"), device_id: localStorage.getItem("deviceid"), prefs: newPrefs })
       });
     });
   });
@@ -239,11 +239,12 @@ function getOrCreateUserId() {
 }
 
 async function loadPrefs() {
-  const user_id = getOrCreateUserId();
+  const user_id = localStorage.getItem("userid");
+  const device_id = localStorage.getItem("deviceid");
   const res = await fetch("/api/prefs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id })
+    body: JSON.stringify({ user_id, device_id })
   });
   if (!res.ok) return {};
   const data = await res.json();

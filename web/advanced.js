@@ -1,4 +1,4 @@
-// Version: 4.10.27 - 2025-12-08 10.10.36
+// Version: 4.11.0 - 2025-12-15 23.41.17
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
@@ -33,11 +33,12 @@ document.getElementById('toggle-advanced-filter').addEventListener('click', () =
 });
 
 async function fetchUserFilters() {
-  const user_id = localStorage.getItem('userid') || prompt("Indtast bruger-id:");
+  const user_id = localStorage.getItem('userid');
+  const device_id = localStorage.getItem('deviceid');
   const res = await fetch('/api/prefs/user/species', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id })
+    body: JSON.stringify({ user_id, device_id })
   });
   if (res.ok) {
     userFilters = await res.json();
@@ -50,11 +51,12 @@ async function fetchUserFilters() {
 }
 
 async function saveUserFilters() {
-  const user_id = localStorage.getItem('userid') || prompt("Indtast bruger-id:");
+  const user_id = localStorage.getItem('userid');
+  const device_id = localStorage.getItem('deviceid');
   await fetch('/api/prefs/user/species', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id, filters: userFilters })
+    body: JSON.stringify({ user_id, device_id, filters: userFilters })
   });
 }
 

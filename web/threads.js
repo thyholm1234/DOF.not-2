@@ -1,4 +1,4 @@
-// Version: 4.10.27 - 2025-12-08 10.10.36
+// Version: 4.11.0 - 2025-12-15 23.41.17
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -82,7 +82,7 @@
     const res = await fetch("/api/prefs/user/species", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId })
+      body: JSON.stringify({ user_id: userId, device_id: localStorage.getItem('deviceid') })
     });
     if (res.ok) {
       return await res.json();
@@ -365,7 +365,7 @@ let useAdvancedFilter = localStorage.getItem('useAdvancedFilter') === 'true';
       const res = await fetch('/api/prefs', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: localStorage.getItem('userid') })
+        body: JSON.stringify({ user_id: localStorage.getItem('userid') , device_id: localStorage.getItem('deviceid') })
       });
       if (res.ok) userPrefs = await res.json();
     } catch (e) {}

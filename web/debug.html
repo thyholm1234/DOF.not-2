@@ -42,13 +42,14 @@
       return "Ukendt";
     }
 
-    async function getPrefsBackend(userId) {
-      if (!userId || userId === "(ingen)") return "(intet user-id)";
+    async function getPrefsBackend() {
+      const user_id = localStorage.getItem("userid");
+      const device_id = localStorage.getItem("deviceid");
       try {
         const res = await fetch("/api/prefs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId })
+          body: JSON.stringify({ user_id, device_id })
         });
         if (!res.ok) return "(kunne ikke hente fra backend)";
         const data = await res.json();

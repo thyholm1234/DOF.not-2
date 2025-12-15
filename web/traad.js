@@ -1,4 +1,4 @@
-// Version: 4.10.27 - 2025-12-08 10.10.36
+// Version: 4.11.0 - 2025-12-15 23.41.17
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -68,21 +68,6 @@
     );
   }
 
-  async function isAppUser(obserkode) {
-      if (!obserkode) return false;
-      try {
-        const res = await fetch("/api/is-app-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ obserkode })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          return !!data.is_app_user;
-        }
-      } catch {}
-      return false;
-  }
 
   async function isAppUserBulk(obserkoder) {
     // Bulk endpoint: POST {obserkoder: [kode1, kode2, ...]} => {kode1: true, kode2: false, ...}
