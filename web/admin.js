@@ -1,4 +1,4 @@
-// Version: 4.11.0 - 2025-12-15 23.41.17
+// Version: 4.11.3 - 2025-12-21 00.39.24
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -107,7 +107,7 @@ async function loadCommentThreads() {
         commentCard.style.position = "relative";
         commentCard.innerHTML = `
           <strong>${escapeHTML(comment.navn)}${comment.obserkode ? " (" + escapeHTML(comment.obserkode) + ")" : ""}</strong><br>
-          ${escapeHTML(comment.body)}
+          ${escapeHTML(comment.body).replace(/\n/g, "<br>")}
         `;
         if (comment.obserkode) {
           // Wrapper til knapper

@@ -1,4 +1,4 @@
-// Version: 4.11.0 - 2025-12-15 23.41.17
+// Version: 4.11.3 - 2025-12-21 00.39.24
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -904,7 +904,7 @@ function startLiveGeolocation(targetLat, targetLng) {
           }
           row.innerHTML = `
             <div class="comment-title"><b>${escapeHTML(c.navn)}</b>, <span class="comment-time">${escapeHTML(c.ts.split(' ')[1])}</span></div>
-            <div class="comment-body">${linkify(escapeHTML(c.body))}</div>
+            <div class="comment-body">${linkify(escapeHTML(c.body).replace(/\n/g, '<br>'))}</div>
             <div class="comment-thumbs" style="cursor:pointer;">👍 <span>${c.thumbs || 0}</span></div>
           `;
           row.querySelector('.comment-thumbs').onclick = () => {

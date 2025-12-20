@@ -655,8 +655,8 @@ def load_state() -> Dict[str, Dict[str, object]]:
                 data = json.load(f)
                 if isinstance(data, dict):
                     return data
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[watcher] Kunne ikke læse state-fil: {e}")
     return {}
 
 

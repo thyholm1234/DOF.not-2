@@ -1536,6 +1536,29 @@ async def unsubscribe_thread(day: str, thread_id: str, request: Request):
         )
     return {"ok": True}
 
+@app.post("/api/thread/{day}/{thread_id}/subscription")
+async def thread_subscription_status(day: str, thread_id: str, request: Request):
+    # Beskyt mod directory traversal
+    if not re.match(r"^\d{2}-\d{2}-\d{4}$", day):
+        return JSONResponse({"detail": "Ugyldig dag"}, status_code=400)
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", thread_id):
+        return JSONResponse({"detail": "Ugyldigt thread_id"}, status_code=400)
+    data = await request.json()
+    user_id = data.get("user_id")
+    device_id = data.get("device_id")
+    if not user_id or not device_id:
+        return JSONResponse({"subscribed": False})
+    # Tjek at device_id matcher det i databasen
+    correct_device_id = get_device_id_for_user(user_id)
+    if correct_device_id and device_id != correct_device_id:
+        raise HTTPException(status_code=403, detail="Forkert device_id for bruger")
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM thread_subs WHERE day=? AND thread_id=? AND user_id=? AND device_id=?",
+            (day, thread_id, user_id, device_id)
+        ).fetchone()
+    return {"subscribed": bool(row)}
+
 stats_lock = threading.Lock()
 
 @app.post("/api/obsid/{obsid}/subscribe")
@@ -1923,17 +1946,12 @@ async def admin_unblacklist(data: dict = Body(...)):
 @app.post("/api/admin/remove-comment")
 async def admin_remove_comment(data: dict = Body(...)):
     user_id = data.get("user_id")
-    device_id = data.get("device_id")
     ts = data.get("ts")
     admin_user_id = data.get("admin_user_id")
     thread_id = data.get("thread_id")
     day = data.get("day")
-    if not user_id or not device_id or not ts or not admin_user_id or not thread_id or not day:
+    if not user_id or not ts or not admin_user_id or not thread_id or not day:
         return {"ok": False, "error": "Missing data"}
-    # Tjek at device_id matcher det i databasen
-    correct_device_id = get_device_id_for_user(user_id)
-    if correct_device_id and device_id != correct_device_id:
-        return {"ok": False, "error": "Forkert device_id for bruger"}
     prefs = get_prefs(admin_user_id)
     admins = load_admins()
     if prefs.get("obserkode") not in admins:
@@ -1949,7 +1967,6 @@ async def admin_remove_comment(data: dict = Body(...)):
             c for c in comments
             if not (
                 c.get("user_id") == user_id and
-                c.get("device_id") == device_id and
                 c.get("ts") == ts
             )
         ]
@@ -3505,8 +3522,6 @@ def safe_comment(comment):
         "ts": comment.get("ts", ""),
         "thumbs": comment.get("thumbs", 0),
         "thumbs_users": comment.get("thumbs_users", []),
-        "user_id": comment.get("user_id", ""),
-        "device_id": comment.get("device_id", "")
     }
 
 @app.post("/api/admin/comments")
