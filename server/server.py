@@ -154,6 +154,32 @@ def cleanup_user_prefs_without_subscriptions():
         """)
         conn.commit()
 
+def remove_subscription_and_cleanup(user_id, device_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
+            (user_id, device_id)
+        )
+        conn.execute(
+            "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
+            (user_id, device_id)
+        )
+        conn.execute(
+            "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
+            (user_id, device_id)
+        )
+        # Slet user_prefs hvis der ikke er flere subscriptions for user_id
+        remaining = conn.execute(
+            "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
+            (user_id,)
+        ).fetchone()
+        if not remaining:
+            conn.execute(
+                "DELETE FROM user_prefs WHERE user_id=?",
+                (user_id,)
+            )
+        conn.commit()
+
 def slugify(text):
     # Tag de første 5 ord, lav til lowercase, fjern ikke-bogstaver/tal, bindestreg mellem ord
     words = re.findall(r'\w+', text.lower())[:5]
@@ -253,30 +279,7 @@ def send_push(sub, push_payload, user_id, device_id):
             should_delete = True
         if should_delete:
             print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
-            with sqlite3.connect(DB_PATH) as conn:
-                conn.execute(
-                    "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
-                    (user_id, device_id)
-                )
-                conn.execute(
-                    "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
-                    (user_id, device_id)
-                )
-                conn.execute(
-                    "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
-                    (user_id, device_id)
-                )
-                # Slet user_prefs hvis der ikke er flere subscriptions for user_id
-                remaining = conn.execute(
-                    "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
-                    (user_id,)
-                ).fetchone()
-                if not remaining:
-                    conn.execute(
-                        "DELETE FROM user_prefs WHERE user_id=?",
-                        (user_id,)
-                    )
-                conn.commit()
+            remove_subscription_and_cleanup(user_id, device_id)
         else:
             print(f"Push-fejl til {user_id}/{device_id}: {ex}")
 
@@ -1670,59 +1673,15 @@ async def update_data(request: Request):
                 should_delete = True
             if should_delete:
                 print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
-                with sqlite3.connect(DB_PATH) as conn2:
-                    conn2.execute(
-                        "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
-                        (user_id, device_id)
-                    )
-                    conn2.execute(
-                        "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
-                        (user_id, device_id)
-                    )
-                    conn2.execute(
-                        "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
-                        (user_id, device_id)
-                    )
-                    remaining = conn2.execute(
-                        "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
-                        (user_id,)
-                    ).fetchone()
-                    if not remaining:
-                        conn2.execute(
-                            "DELETE FROM user_prefs WHERE user_id=?",
-                            (user_id,)
-                        )
-                    conn2.commit()
+                remove_subscription_and_cleanup(user_id, device_id)
             else:
                 print(f"Push-fejl til {user_id}/{device_id}: {ex}")
         except Exception as ex:
             print(f"Uventet push-fejl til {user_id}/{device_id}: {ex}")
             if "getaddrinfo failed" in str(ex) or "NameResolutionError" in str(ex) or "Failed to resolve" in str(ex):
                 print(f"Sletter abonnement for {user_id}/{device_id} pga. netværksfejl: {ex}")
-                with sqlite3.connect(DB_PATH) as conn2:
-                    conn2.execute(
-                        "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
-                        (user_id, device_id)
-                    )
-                    conn2.execute(
-                        "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
-                        (user_id, device_id)
-                    )
-                    conn2.execute(
-                        "DELETE FROM thread_unsubs WHERE user_id=? AND device_id=?",
-                        (user_id, device_id)
-                    )
-                    remaining = conn2.execute(
-                        "SELECT 1 FROM subscriptions WHERE user_id=? LIMIT 1",
-                        (user_id,)
-                    ).fetchone()
-                    if not remaining:
-                        conn2.execute(
-                            "DELETE FROM user_prefs WHERE user_id=?",
-                            (user_id,)
-                        )
-                    conn2.commit()
-
+                remove_subscription_and_cleanup(user_id, device_id)
+                
     with ThreadPoolExecutor(max_workers=8) as executor, sqlite3.connect(DB_PATH) as conn:
         for obs in payload:
             afd = obs.get("DOF_afdeling")

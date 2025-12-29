@@ -420,6 +420,7 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
         obs_by_observer = defaultdict(float)
         for row in obs_list:
             key = (
+                row.get("Turid", "").strip(),           # <-- tilføj Turid her
                 row.get("Fornavn", "").strip(),
                 row.get("Efternavn", "").strip(),
                 row.get("Artnavn", "").strip(),
