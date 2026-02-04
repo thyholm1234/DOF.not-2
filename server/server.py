@@ -2367,8 +2367,9 @@ async def remove_connection(data: dict = Body(...)):
     return {"ok": True}
 
 def load_admins():
+    path = os.path.join(os.path.dirname(__file__), "admin.json")
     try:
-        with open("./admin.json", "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
             return set(data.get("admins", []))
     except Exception:
@@ -3109,8 +3110,9 @@ async def is_admin(data: dict = Body(...)):
     return {"admin": obserkode in admins, "obserkode": obserkode}
 
 def load_superadmins():
+    path = os.path.join(os.path.dirname(__file__), "superadmin.json")
     try:
-        with open("./superadmin.json", "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
             return set(data.get("superadmins", []))
     except Exception:
