@@ -21,7 +21,7 @@ services:
     depends_on:
       - api
     environment:
-      - SERVER_URL=http://api:8000
+      - SERVER_URL=http://api:8000/api/update
 
   cronjob:
     build: .

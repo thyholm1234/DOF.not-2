@@ -24,7 +24,7 @@ BASE_URL = (
 )
 
 # Server endpoint der modtager JSON-array af ændrede observationer (hver med alle 38 kolonner + 'kategori')
-SERVER_URL = "http://localhost:8000/api/update"
+SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000/api/update")
 STATE_FILE = "/state/state.json"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")  # NYT
 DOWNLOADS_DIR = os.path.join(os.path.dirname(__file__), "downloads")
