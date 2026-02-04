@@ -1,4 +1,4 @@
-// Version: 4.11.6 - 2026-02-04 13.12.41
+// Version: 4.11.7 - 2026-02-04 13.17.07
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -41,7 +41,7 @@ function getOrCreateDeviceId() {
   return deviceid;
 }
 
-async function removeComment(comment_user_id, comment_ts, thread_id, day) {
+async function removeComment(comment, thread_id, day) {
   const admin_user_id = getOrCreateUserId();
   const admin_device_id = getOrCreateDeviceId();
   await fetch("/api/admin/remove-comment", {
@@ -50,10 +50,12 @@ async function removeComment(comment_user_id, comment_ts, thread_id, day) {
     body: JSON.stringify({
       admin_user_id,
       device_id: admin_device_id,
-      user_id: comment_user_id,
-      ts: comment_ts,
       thread_id,
-      day
+      day,
+      ts: comment.ts,
+      navn: comment.navn,
+      obserkode: comment.obserkode || "",
+      body: comment.body
     })
   });
   await loadCommentThreads();
@@ -161,12 +163,7 @@ async function loadCommentThreads() {
           removeBtn.className = "remove-comment-btn";
           removeBtn.onclick = () => {
             if (confirm("Vil du fjerne denne kommentar?")) {
-              removeComment(
-                comment.user_id,
-                comment.ts,
-                thread_id,
-                thread.day
-              );
+              removeComment(comment, thread_id, thread.day);
             }
           };
           // Sæt knappen forrest/til venstre
