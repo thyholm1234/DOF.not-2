@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pywebpush
 requests
 python-multipart
