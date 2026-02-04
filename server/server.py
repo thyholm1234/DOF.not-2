@@ -24,6 +24,7 @@ import time
 import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request as StarletteRequest
+from starlette.requests import ClientDisconnect
 import pytz
 import logging
 import subprocess
@@ -75,12 +76,15 @@ app.add_middleware(
 )
 
 @app.middleware("http")
-async def limit_body_size(request: Request, call_next):
-    body = await request.body()
-    if len(body) > MAX_BODY_SIZE:
-        return JSONResponse({"error": "Request body for stor"}, status_code=413)
-    request._body = body  # så body stadig kan læses senere
-    return await call_next(request)
+async def log_all_requests(request: Request, call_next):
+    try:
+        response = await call_next(request)
+    except ClientDisconnect:
+        logging.info(f'{request.client.host} - "DISCONNECT {request.url.path}" 499')
+        return PlainTextResponse("Client disconnected", status_code=499)
+    log_line = f'{request.client.host} - "{request.method} {request.url.path} HTTP/{request.scope.get("http_version", "1.1")}" {response.status_code}'
+    logging.info(log_line)
+    return response
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
@@ -156,10 +160,12 @@ def cleanup_user_prefs_without_subscriptions():
 
 def remove_subscription_and_cleanup(user_id, device_id):
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
+        cur = conn.execute(
             "DELETE FROM subscriptions WHERE user_id=? AND device_id=?",
             (user_id, device_id)
         )
+        deleted = cur.rowcount
+        print(f"[remove_subscription_and_cleanup] Slettede {deleted} subscription(s) for {user_id}/{device_id}")
         conn.execute(
             "DELETE FROM thread_subs WHERE user_id=? AND device_id=?",
             (user_id, device_id)
@@ -178,6 +184,9 @@ def remove_subscription_and_cleanup(user_id, device_id):
                 "DELETE FROM user_prefs WHERE user_id=?",
                 (user_id,)
             )
+            print(f"[remove_subscription_and_cleanup] Slettede user_prefs for {user_id} (ingen subscriptions tilbage)")
+        else:
+            print(f"[remove_subscription_and_cleanup] Der findes stadig subscriptions for {user_id} efter sletning!")
         conn.commit()
 
 def slugify(text):
@@ -269,19 +278,40 @@ def send_push(sub, push_payload, user_id, device_id):
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims={"sub": "mailto:kontakt@dofnot.dk"},
             ttl=3600,
-            headers={"Urgency": "high"}  # <-- Tilføj urgency high
+            headers={"Urgency": "high"}
         )
     except WebPushException as ex:
         should_delete = False
-        if hasattr(ex, "response") and ex.response and getattr(ex.response, "status_code", None) == 410:
+        status = None
+        if hasattr(ex, "response") and ex.response:
+            status = getattr(ex.response, "status_code", None)
+            if status is None:
+                status = getattr(ex.response, "status", None)
+            msg = f"[WebPushException] status={status}, body={getattr(ex.response, 'content', '')}"
+            print(msg)
+            logging.info(msg)
+        if status == 410:
             should_delete = True
         elif "unsubscribed" in str(ex).lower() or "expired" in str(ex).lower():
             should_delete = True
         if should_delete:
-            print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
+            msg = f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}"
+            print(msg)
+            logging.info(msg)
             remove_subscription_and_cleanup(user_id, device_id)
         else:
-            print(f"Push-fejl til {user_id}/{device_id}: {ex}")
+            msg = f"Push-fejl til {user_id}/{device_id}: {ex}"
+            print(msg)
+            logging.info(msg)
+    except Exception as ex:
+        msg = f"Uventet push-fejl til {user_id}/{device_id}: {ex}"
+        print(msg)
+        logging.info(msg)
+        if "getaddrinfo failed" in str(ex) or "NameResolutionError" in str(ex) or "Failed to resolve" in str(ex):
+            msg = f"Sletter abonnement for {user_id}/{device_id} pga. netværksfejl: {ex}"
+            print(msg)
+            logging.info(msg)
+            remove_subscription_and_cleanup(user_id, device_id)
 
 def get_prefs(user_id):
     with sqlite3.connect(DB_PATH) as conn:
@@ -467,6 +497,10 @@ async def superadmins(data: dict = Body(None)):
 
 @app.post("/api/prefs")
 async def api_prefs(request: Request):
+    try:
+        data = await request.json()
+    except ClientDisconnect:
+        raise HTTPException(status_code=499, detail="Client disconnected")
     data = await request.json()
     user_id = data.get("user_id")
     device_id = data.get("device_id")
@@ -1623,7 +1657,11 @@ async def update_data(request: Request):
     if api_token != os.environ.get("UPDATE_API_TOKEN"):
         raise HTTPException(status_code=403, detail="Ikke tilladt")
 
+    skip_set = set()  # <-- Tilføj denne linje
+
     def push_task(sub, push_payload, user_id, device_id, obs_id=None):
+        if (user_id, device_id) in skip_set:
+            return
         # Tjek quiet hours for denne bruger/device
         prefs = get_prefs(user_id)
         qh = prefs.get("quiet_hours", {}).get(device_id)
@@ -1674,14 +1712,15 @@ async def update_data(request: Request):
             if should_delete:
                 print(f"Sletter abonnement for {user_id}/{device_id} pga. push-fejl: {ex}")
                 remove_subscription_and_cleanup(user_id, device_id)
-            else:
-                print(f"Push-fejl til {user_id}/{device_id}: {ex}")
+                skip_set.add((user_id, device_id))  # <-- Tilføj til skip_set
+                return
         except Exception as ex:
             print(f"Uventet push-fejl til {user_id}/{device_id}: {ex}")
             if "getaddrinfo failed" in str(ex) or "NameResolutionError" in str(ex) or "Failed to resolve" in str(ex):
                 print(f"Sletter abonnement for {user_id}/{device_id} pga. netværksfejl: {ex}")
                 remove_subscription_and_cleanup(user_id, device_id)
-                
+                skip_set.add((user_id, device_id))  # <-- Tilføj til skip_set
+
     with ThreadPoolExecutor(max_workers=8) as executor, sqlite3.connect(DB_PATH) as conn:
         for obs in payload:
             afd = obs.get("DOF_afdeling")
@@ -1705,6 +1744,8 @@ async def update_data(request: Request):
                     "FROM user_prefs JOIN subscriptions ON user_prefs.user_id = subscriptions.user_id"
                 ).fetchall()
                 for user_id, device_id, prefs_json, sub_json in rows:
+                    if (user_id, device_id) in skip_set:
+                        continue
                     prefs = json.loads(prefs_json)
                     sub = json.loads(sub_json)
                     species_filters = prefs.get("species_filters") or {"include": [], "exclude": [], "counts": {}}
@@ -1746,6 +1787,8 @@ async def update_data(request: Request):
                     obs_obserstate = [obs_obserstate]
                 obs_obserstate = [k.strip().upper() for k in obs_obserstate if k]
                 for user_id, device_id in rows:
+                    if (user_id, device_id) in skip_set:
+                        continue
                     prefs = get_prefs(user_id)
                     user_obserkode = (prefs.get("obserkode") or "").strip().upper()
                     if obs_obserstate and user_obserkode and user_obserkode in obs_obserstate:
