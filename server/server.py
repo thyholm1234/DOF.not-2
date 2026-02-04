@@ -1955,12 +1955,12 @@ async def admin_unblacklist(data: dict = Body(...)):
 async def admin_remove_comment(data: dict = Body(...)):
     admin_user_id = data.get("admin_user_id")
     device_id = data.get("device_id")
-    target_user_id = data.get("user_id")
+    target_user_id = data.get("user_id")  # nu påkrævet: brug kommentarfatterens user_id
     ts = data.get("ts")
     thread_id = data.get("thread_id")
     day = data.get("day")
 
-    if not admin_user_id or not device_id or not ts or not thread_id or not day:
+    if not admin_user_id or not device_id or not target_user_id or not ts or not thread_id or not day:
         return {"ok": False, "error": "Missing data"}
 
     correct_device_id = get_device_id_for_user(admin_user_id)
@@ -1986,10 +1986,7 @@ async def admin_remove_comment(data: dict = Body(...)):
             before = len(comments)
             comments = [
                 c for c in comments
-                if not (
-                    c.get("ts") == ts and
-                    (target_user_id is None or c.get("user_id") == target_user_id)
-                )
+                if not (c.get("ts") == ts and c.get("user_id") == target_user_id)
             ]
 
             if len(comments) == before:
