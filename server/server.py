@@ -42,6 +42,12 @@ NYHEDER_PATH = os.path.join(os.path.dirname(__file__), "nyheder.json")
 MAX_BODY_SIZE = 2 * 1024 * 1024  # 2 MB
 SYNC_PATH = os.path.join(os.path.dirname(__file__), "request_sync.json")
 
+SERVER_DIR = os.path.dirname(__file__)
+ADMIN_PATH = os.path.join(SERVER_DIR, "admin.json")
+SUPERADMIN_PATH = os.path.join(SERVER_DIR, "superadmin.json")
+BLACKLIST_PATH = os.path.join(SERVER_DIR, "blacklist.json")
+NYHEDER_PATH = os.path.join(SERVER_DIR, "nyheder.json")
+
 comment_file_locks = defaultdict(threading.Lock)
 dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
 
@@ -471,7 +477,7 @@ async def superadmins(data: dict = Body(None)):
             raise HTTPException(status_code=403, detail="Kun hovedadmin")
 
         # Nu er adgang tjekket, så læs filen
-        with open("./superadmin.json", "r", encoding="utf-8") as f:
+        with open(SUPERADMIN_PATH, "r", encoding="utf-8") as f:
             file_data = json.load(f)
         protected = set(file_data.get("protected", []))
 
@@ -487,7 +493,7 @@ async def superadmins(data: dict = Body(None)):
             else:
                 superadmins.add(obserkode)
             file_data["superadmins"] = sorted(superadmins)
-            with open("./superadmin.json", "w", encoding="utf-8") as f:
+            with open(SUPERADMIN_PATH, "w", encoding="utf-8") as f:
                 json.dump(file_data, f, ensure_ascii=False, indent=2)
             return {"ok": True, "superadmins": file_data["superadmins"]}
         else:
@@ -1887,7 +1893,7 @@ async def admin_blacklist(data: dict = Body(...)):
 
     if not obsid:
         try:
-            with open("./blacklist.json", "r", encoding="utf-8") as f:
+            with open(BLACKLIST_PATH, "r", encoding="utf-8") as f:
                 bl = json.load(f)
             return bl
         except Exception as e:
@@ -1897,7 +1903,7 @@ async def admin_blacklist(data: dict = Body(...)):
         return {"ok": False, "error": "Årsag til blacklistning mangler"}
     try:
         try:
-            with open("./blacklist.json", "r", encoding="utf-8") as f:
+            with open(BLACKLIST_PATH, "r", encoding="utf-8") as f:
                 bl = json.load(f)
         except Exception:
             bl = []
@@ -1910,7 +1916,7 @@ async def admin_blacklist(data: dict = Body(...)):
             "time": now,
             "admin_obserkode": admin_obserkode
         })
-        with open("./blacklist.json", "w", encoding="utf-8") as f:
+        with open(BLACKLIST_PATH, "w", encoding="utf-8") as f:
             json.dump(bl, f, ensure_ascii=False, indent=2)
         return {"ok": True}
     except Exception as e:
@@ -1934,11 +1940,11 @@ async def admin_unblacklist(data: dict = Body(...)):
     if prefs.get("obserkode") not in admins:
         return {"ok": False, "error": "Not admin"}
     try:
-        with open("./blacklist.json", "r", encoding="utf-8") as f:
+        with open(BLACKLIST_PATH, "r", encoding="utf-8") as f:
             bl = json.load(f)
         # Fjern entry med denne obserkode
         bl = [entry for entry in bl if entry.get("obserkode") != obsid]
-        with open("./blacklist.json", "w", encoding="utf-8") as f:
+        with open(BLACKLIST_PATH, "w", encoding="utf-8") as f:
             json.dump(bl, f, ensure_ascii=False, indent=2)
         return {"ok": True}
     except Exception as e:
@@ -2367,9 +2373,8 @@ async def remove_connection(data: dict = Body(...)):
     return {"ok": True}
 
 def load_admins():
-    path = os.path.join(os.path.dirname(__file__), "admin.json")
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(ADMIN_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
             return set(data.get("admins", []))
     except Exception:
@@ -3110,9 +3115,8 @@ async def is_admin(data: dict = Body(...)):
     return {"admin": obserkode in admins, "obserkode": obserkode}
 
 def load_superadmins():
-    path = os.path.join(os.path.dirname(__file__), "superadmin.json")
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(SUPERADMIN_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
             return set(data.get("superadmins", []))
     except Exception:
@@ -3432,7 +3436,7 @@ async def list_admins(data: dict = Body(...)):
     if obserkode not in superadmins:
         raise HTTPException(status_code=403, detail="Kun hovedadmin")
     try:
-        with open("./admin.json", "r", encoding="utf-8") as f:
+        with open(ADMIN_PATH, "r", encoding="utf-8") as f:
             admin_data = json.load(f)
         admin_koder = admin_data.get("admins", [])
         # Hent navn for hver admin fra user_prefs
@@ -3474,12 +3478,12 @@ async def add_admin(data: dict = Body(...)):
     if not new_obserkode or not re.match(r"^[A-Z0-9]+$", new_obserkode):
         raise HTTPException(status_code=400, detail="Ugyldig obserkode")
     try:
-        with open("./admin.json", "r", encoding="utf-8") as f:
+        with open(ADMIN_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
         admins = set(data.get("admins", []))
         admins.add(new_obserkode)
         data["admins"] = sorted(admins)
-        with open("./admin.json", "w", encoding="utf-8") as f:
+        with open(ADMIN_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return {"ok": True}
     except Exception as e:
@@ -3504,7 +3508,7 @@ async def remove_admin(data: dict = Body(...)):
     if remove_obserkode in superadmins:
         raise HTTPException(status_code=400, detail="Kan ikke fjerne hovedadmin")
     try:
-        with open("./admin.json", "r", encoding="utf-8") as f:
+        with open(ADMIN_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
         protected_admins = set(data.get("protected", []))
         if remove_obserkode in protected_admins:
@@ -3512,7 +3516,7 @@ async def remove_admin(data: dict = Body(...)):
         admins = set(data.get("admins", []))
         admins.discard(remove_obserkode)
         data["admins"] = sorted(admins)
-        with open("./admin.json", "w", encoding="utf-8") as f:
+        with open(ADMIN_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return {"ok": True}
     except Exception as e:
