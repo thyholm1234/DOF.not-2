@@ -1953,33 +1953,51 @@ async def admin_unblacklist(data: dict = Body(...)):
     
 @app.post("/api/admin/remove-comment")
 async def admin_remove_comment(data: dict = Body(...)):
-    user_id = data.get("user_id")
-    ts = data.get("ts")
     admin_user_id = data.get("admin_user_id")
+    device_id = data.get("device_id")
+    target_user_id = data.get("user_id")
+    ts = data.get("ts")
     thread_id = data.get("thread_id")
     day = data.get("day")
-    if not user_id or not ts or not admin_user_id or not thread_id or not day:
+
+    if not admin_user_id or not device_id or not ts or not thread_id or not day:
         return {"ok": False, "error": "Missing data"}
+
+    correct_device_id = get_device_id_for_user(admin_user_id)
+    if correct_device_id and device_id != correct_device_id:
+        return {"ok": False, "error": "Forkert device_id for bruger"}
+
     prefs = get_prefs(admin_user_id)
     admins = load_admins()
     if prefs.get("obserkode") not in admins:
         return {"ok": False, "error": "Not admin"}
+
+    kommentar_path = os.path.join(web_dir, "obs", day, "threads", thread_id, "kommentar.json")
+    lock = get_comment_lock(day, thread_id)
+
     try:
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "obs"))
-        kommentar_path = os.path.join(base_dir, day, "threads", thread_id, "kommentar.json")
-        if not os.path.exists(kommentar_path):
-            return {"ok": False, "error": "File not found"}
-        with open(kommentar_path, "r", encoding="utf-8") as f:
-            comments = json.load(f)
-        comments = [
-            c for c in comments
-            if not (
-                c.get("user_id") == user_id and
-                c.get("ts") == ts
-            )
-        ]
-        with open(kommentar_path, "w", encoding="utf-8") as f:
-            json.dump(comments, f, ensure_ascii=False, indent=2)
+        with lock:
+            if not os.path.exists(kommentar_path):
+                return {"ok": False, "error": "File not found"}
+
+            with open(kommentar_path, "r", encoding="utf-8") as f:
+                comments = json.load(f)
+
+            before = len(comments)
+            comments = [
+                c for c in comments
+                if not (
+                    c.get("ts") == ts and
+                    (target_user_id is None or c.get("user_id") == target_user_id)
+                )
+            ]
+
+            if len(comments) == before:
+                return {"ok": False, "error": "Comment not found"}
+
+            with open(kommentar_path, "w", encoding="utf-8") as f:
+                json.dump(comments, f, ensure_ascii=False, indent=2)
+
         return {"ok": True}
     except Exception as e:
         print("Remove comment error:", e)
