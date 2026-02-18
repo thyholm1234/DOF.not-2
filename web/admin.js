@@ -1,4 +1,4 @@
-// Version: 4.11.9 - 2026-02-18 19.52.19
+// Version: 4.11.10 - 2026-02-18 19.55.14
 // © Christian Vemmelund Helligsø
 function getOrCreateUserId() {
   let userid = localStorage.getItem("userid");
@@ -768,8 +768,11 @@ document.addEventListener('DOMContentLoaded', async () => {
               return String(n);
             }
 
+            // Fjern gamle udviklingskasser hvis de findes
+            const oldDevCards = document.getElementById("traffic-dev-cards");
+            if (oldDevCards) oldDevCards.remove();
 
-            let cardsHtml = `<div style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:0em;">`;
+            let cardsHtml = `<div id="traffic-dev-cards" style="display:flex;gap:1em;flex-wrap:wrap;margin-bottom:0em;">`;
             metrics.forEach(m => {
               const d = diff[m.key] || {};
               cardsHtml += `
