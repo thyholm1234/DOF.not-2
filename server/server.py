@@ -456,7 +456,8 @@ async def log_pageview(data: dict, request: Request):
     from_notification = data.get("from_notification", False)
     ip = request.client.host
     dk_time = datetime.now(pytz.timezone("Europe/Copenhagen")).isoformat()
-    with open("pageviews.log", "a", encoding="utf-8") as f:
+    log_path = os.path.join(os.path.dirname(__file__), "pageviews.log")
+    with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"{dk_time} {ip} {user_id} {url} OS: {os_info}  BROWSER: {browser}  PWA: {is_pwa}{'  SHARELINK: True' if from_sharelink else ''}{'  NOTIFICATION: True' if from_notification else ''}\n")
     return {"ok": True}
 
