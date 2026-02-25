@@ -2931,35 +2931,53 @@ async def admin_traffic_graphs(data: dict = Body(None)):
 
     # --- Userplatforms statistik (samme logik som last-user-platforms) ---
     userplatforms = {}
-    last_seen = {}
+    user_states = {}
     if os.path.isfile(log_path):
         with open(log_path, encoding="utf-8") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) < 4:
                     continue
+
                 user_id = parts[2]
-                m = re.search(r'OS:\s*([^\s]+)\s+BROWSER:\s*([^\s]+)\s+PWA:\s*([^\s]+)', line)
-                if m:
-                    os_info = m.group(1)
-                    browser = m.group(2)
-                    is_pwa = m.group(3)
-                    last_seen[user_id] = (os_info, browser, is_pwa)
+                m = re.search(r'OS:\s*(.*?)\s+BROWSER:\s*(.*?)\s+PWA:\s*(True|False|true|false|1|0)\b', line)
+                if not m:
+                    continue
+
+                os_info = m.group(1).strip() or "Unknown"
+                browser = m.group(2).strip() or "Unknown"
+                is_pwa = m.group(3).strip().lower() in ("true", "1")
+
+                prev = user_states.get(user_id)
+                if prev:
+                    user_states[user_id] = {
+                        "os": os_info,
+                        "browser": browser,
+                        "pwa_installed": prev["pwa_installed"] or is_pwa
+                    }
+                else:
+                    user_states[user_id] = {
+                        "os": os_info,
+                        "browser": browser,
+                        "pwa_installed": is_pwa
+                    }
+
         combo_counter = collections.Counter()
         pwa_installed = 0
         pwa_not_installed = 0
-        for os_info, browser, is_pwa in last_seen.values():
-            combo_counter[(os_info, browser)] += 1
-            if is_pwa == "True":
+        for state in user_states.values():
+            combo_counter[(state["os"], state["browser"])] += 1
+            if state["pwa_installed"]:
                 pwa_installed += 1
             else:
                 pwa_not_installed += 1
+
         combos = [
             {"os": os_info, "browser": browser, "count": count}
             for (os_info, browser), count in combo_counter.items()
         ]
         userplatforms = {
-            "unique_users": len(last_seen),
+            "unique_users": len(user_states),
             "platform_combinations": combos,
             "pwa_installed": pwa_installed,
             "pwa_not_installed": pwa_not_installed
