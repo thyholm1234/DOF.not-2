@@ -73,6 +73,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+@app.get("/healthz")
+async def healthz():
+    return {"ok": True}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://notifikation.dofbasen.dk"],  # eller ["*"] for test, men ikke i produktion!

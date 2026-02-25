@@ -2,6 +2,14 @@ services:
   api:
     build: .
     command: ["uvicorn", "server.server:app", "--workers", "4", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info", "--access-log"]
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).getcode()==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     ports:
       - "8027:8000"
     env_file:
@@ -12,6 +20,8 @@ services:
   watcher:
     build: .
     command: ["python", "watcher.py", "--watch", "-i", "60"]
+    stdin_open: true
+    tty: true
     env_file:
       - .env
     volumes:
@@ -24,6 +34,8 @@ services:
   cronjob:
     build: .
     command: ["python", "server/cronjob.py"]
+    stdin_open: true
+    tty: true
     env_file:
       - .env
     volumes:
