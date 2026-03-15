@@ -1444,6 +1444,102 @@ def extract_timestamp(filename):
     m = re.search(r'observationer_(\d+)\.json', filename)
     return int(m.group(1)) if m else 0
 
+
+def _split_departments(value) -> list[str]:
+    return [p.strip() for p in str(value or "").split("|") if p.strip()]
+
+
+def _merge_departments(a, b) -> str:
+    seen = set()
+    out = []
+    for raw in (a, b):
+        for part in _split_departments(raw):
+            k = part.lower()
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(part)
+    return " | ".join(out)
+
+
+def _obs_unique_key(obs: dict) -> tuple:
+    obsid = str(obs.get("Obsid") or obs.get("obsid") or obs.get("id") or "").strip()
+    if obsid:
+        return ("obsid", obsid)
+    return (
+        "fallback",
+        str(obs.get("Dato") or "").strip(),
+        str(obs.get("Turid") or "").strip(),
+        str(obs.get("Loknr") or "").strip(),
+        str(obs.get("Artnr") or "").strip(),
+        str(obs.get("Artnavn") or "").strip(),
+        str(obs.get("Koen") or "").strip(),
+        str(obs.get("Adfkode") or "").strip(),
+        str(obs.get("Alderkode") or "").strip(),
+        str(obs.get("Dragtkode") or "").strip(),
+        str(obs.get("Antal") or "").strip(),
+        str(obs.get("Obserkode") or "").strip(),
+        str(obs.get("Fornavn") or "").strip(),
+        str(obs.get("Efternavn") or "").strip(),
+        str(obs.get("Obstidfra") or "").strip(),
+        str(obs.get("Obstidtil") or "").strip(),
+        str(obs.get("Turtidfra") or "").strip(),
+        str(obs.get("Turtidtil") or "").strip(),
+    )
+
+
+def _dedupe_payload_rows(rows: list[dict]) -> list[dict]:
+    by_key: dict[tuple, dict] = {}
+    for raw in rows:
+        if not isinstance(raw, dict):
+            continue
+        row = dict(raw)
+        key = _obs_unique_key(row)
+        cur = by_key.get(key)
+        if cur is None:
+            by_key[key] = row
+            continue
+
+        # Keep highest priority statechanged and merge departments.
+        cur_state = int(cur.get("statechanged", 0) or 0)
+        row_state = int(row.get("statechanged", 0) or 0)
+        cur["statechanged"] = 1 if (cur_state or row_state) else 0
+        cur["DOF_afdeling"] = _merge_departments(cur.get("DOF_afdeling", ""), row.get("DOF_afdeling", ""))
+
+        # Merge obserstate if present.
+        cur_obs_state = cur.get("obserstate") or []
+        row_obs_state = row.get("obserstate") or []
+        if isinstance(cur_obs_state, str):
+            cur_obs_state = [cur_obs_state]
+        if isinstance(row_obs_state, str):
+            row_obs_state = [row_obs_state]
+        merged_state = []
+        seen_state = set()
+        for code in list(cur_obs_state) + list(row_obs_state):
+            code_s = str(code).strip()
+            if not code_s:
+                continue
+            key_state = code_s.upper()
+            if key_state in seen_state:
+                continue
+            seen_state.add(key_state)
+            merged_state.append(code_s)
+        cur["obserstate"] = merged_state
+
+        # Keep largest antal to avoid inflation from duplicate department rows.
+        try:
+            cur_antal = int(cur.get("Antal") or 0)
+        except Exception:
+            cur_antal = 0
+        try:
+            row_antal = int(row.get("Antal") or 0)
+        except Exception:
+            row_antal = 0
+        if row_antal > cur_antal:
+            cur["Antal"] = str(row_antal)
+
+    return list(by_key.values())
+
 @app.post("/api/nearby-observations")
 async def nearby_observations(data: dict = Body(...)):
     user_id = data.get("user_id")
@@ -1469,7 +1565,13 @@ async def nearby_observations(data: dict = Body(...)):
 
     allowed_categories = {"bemaerk", "faenologi", "sub", "su"}
     grouped = {}
+    seen_obs_keys = set()
     for obs in items:
+        obs_key = _obs_unique_key(obs)
+        if obs_key in seen_obs_keys:
+            continue
+        seen_obs_keys.add(obs_key)
+
         kategori = (obs.get("kategori") or "").strip().lower()
         if kategori not in allowed_categories:
             continue
@@ -1661,6 +1763,9 @@ async def update_data(request: Request):
         obs_notification_queue.put(1)
 
     payload = await request.json()
+    if not isinstance(payload, list):
+        raise HTTPException(status_code=400, detail="Payload skal være en liste")
+    payload = _dedupe_payload_rows(payload)
     _save_payload(payload)
     tasks = []
 
@@ -3821,19 +3926,23 @@ async def debug_push(request: Request):
     return {"ok": True}
 
 def should_notify(prefs, afdeling, kategori):
-    # Normaliser afdeling og kategori
-    afdeling_norm = normalize(afdeling)
+    # Normaliser afdeling og kategori.
+    # En observation kan komme med flere afdelinger i samme felt, adskilt af '|'.
     prefs_norm = {normalize(k): v for k, v in prefs.items()}
-    valg = prefs_norm.get(afdeling_norm, "Ingen")
-    if valg == "Ingen":
-        return False
     kat_norm = normalize(kategori)
-    if valg == "SU":
-        return kat_norm == "su"
-    if valg == "SUB":
-        return kat_norm in ("su", "sub")
-    if valg == "Bemærk":
-        return kat_norm in ("su", "sub", "bemaerk", "bemærk")
+
+    afdelinger = _split_departments(afdeling)
+    if not afdelinger and str(afdeling or "").strip():
+        afdelinger = [str(afdeling).strip()]
+
+    for afd in afdelinger:
+        valg = prefs_norm.get(normalize(afd), "Ingen")
+        if valg == "SU" and kat_norm == "su":
+            return True
+        if valg == "SUB" and kat_norm in ("su", "sub"):
+            return True
+        if valg == "Bemærk" and kat_norm in ("su", "sub", "bemaerk", "bemærk"):
+            return True
     return False
 
 # --- WEBSOCKET CHAT/THUMBSUP ---

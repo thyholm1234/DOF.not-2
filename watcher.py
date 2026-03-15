@@ -224,11 +224,19 @@ def compute_kategori(row: Dict[str, str]) -> str:
         return "bemaerk"
 
     # 3) bemærk-tærskel -> bemaerk
-    region_slug = to_region_slug(row.get("DOF_afdeling") or "")
-    thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
-    thr = thresholds.get(art)
-    if thr is not None and parse_float(row.get("Antal")) >= float(thr):
-        return "bemaerk"
+    # En observation kan være knyttet til flere lokalafdelinger.
+    # I så fald er den bemaerk hvis tærsklen er ramt i mindst én afdeling.
+    afdeling_raw = row.get("DOF_afdeling") or ""
+    afdelinger = [s.strip() for s in str(afdeling_raw).split("|") if s.strip()]
+    if not afdelinger:
+        afdelinger = [str(afdeling_raw).strip()] if str(afdeling_raw).strip() else []
+
+    for afd in afdelinger:
+        region_slug = to_region_slug(afd)
+        thresholds = BEMAERK_BY_REGION.get(region_slug) or {}
+        thr = thresholds.get(art)
+        if thr is not None and parse_float(row.get("Antal")) >= float(thr):
+            return "bemaerk"
 
     # 4) standard
     return "alm"
@@ -314,8 +322,80 @@ def slugify(s):
     s = re.sub(r'[^a-z0-9]+', '-', s)
     return s.strip('-')
 
+
+def _row_identity_key(row: Dict[str, str]) -> tuple:
+    """Stable dedupe key for the same observation across multiple departments."""
+    obsid = (row.get("Obsid") or "").strip()
+    if obsid:
+        return ("obsid", obsid)
+    return (
+        "fallback",
+        (row.get("Dato") or "").strip(),
+        (row.get("Turid") or "").strip(),
+        (row.get("Loknr") or "").strip(),
+        (row.get("Artnr") or "").strip(),
+        (row.get("Artnavn") or "").strip(),
+        (row.get("Koen") or "").strip(),
+        (row.get("Adfkode") or "").strip(),
+        (row.get("Alderkode") or "").strip(),
+        (row.get("Dragtkode") or "").strip(),
+        (row.get("Antal") or "").strip(),
+        (row.get("Obserkode") or "").strip(),
+        (row.get("Fornavn") or "").strip(),
+        (row.get("Efternavn") or "").strip(),
+        (row.get("Obstidfra") or "").strip(),
+        (row.get("Obstidtil") or "").strip(),
+        (row.get("Turtidfra") or "").strip(),
+        (row.get("Turtidtil") or "").strip(),
+    )
+
+
+def _merge_department_values(existing: str, incoming: str) -> str:
+    seen = set()
+    merged = []
+    for raw in (existing, incoming):
+        parts = [p.strip() for p in str(raw or "").split("|") if p.strip()]
+        for part in parts:
+            k = part.lower()
+            if k in seen:
+                continue
+            seen.add(k)
+            merged.append(part)
+    return " | ".join(merged)
+
+
+def dedupe_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Deduplicate rows that represent the same observation in multiple departments."""
+    by_key: Dict[tuple, Dict[str, str]] = {}
+    for row in rows:
+        key = _row_identity_key(row)
+        if key not in by_key:
+            by_key[key] = dict(row)
+            by_key[key]["DOF_afdeling"] = _merge_department_values(by_key[key].get("DOF_afdeling", ""), "")
+            continue
+
+        cur = by_key[key]
+        cur["DOF_afdeling"] = _merge_department_values(cur.get("DOF_afdeling", ""), row.get("DOF_afdeling", ""))
+
+        # Prefer non-empty values if one duplicate has extra metadata.
+        for col in COLUMNS:
+            if not cur.get(col) and row.get(col):
+                cur[col] = row[col]
+
+        # Keep a stable, non-inflated antal for duplicates.
+        cur_antal = parse_float(cur.get("Antal"))
+        row_antal = parse_float(row.get("Antal"))
+        best_antal = max(cur_antal, row_antal)
+        if best_antal.is_integer():
+            cur["Antal"] = str(int(best_antal))
+        else:
+            cur["Antal"] = str(best_antal)
+
+    return list(by_key.values())
+
 def group_and_sum_by_observer(obs_list):
     # key = (Turid, Fornavn, Efternavn, Artnavn, Loknr, Obserkode)
+    obs_list = dedupe_rows(obs_list)
     grouped = defaultdict(lambda: None)
     for row in obs_list:
         key = (
@@ -375,6 +455,7 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
 
     index = []
     for thread_id, obs_list in threads.items():
+        obs_list = dedupe_rows(obs_list)
         # Tilføj obsidbirthtime til hver observation i events (før vi finder latest_obsidbirthtime)
         for obs in obs_list:
             oid = obs.get("Obsid", "").strip()
@@ -789,6 +870,7 @@ def run_once(date_str=None, send_notifications=True):
     text = fetch_excel_text(date_str)
     parsed_rows = parse_rows_from_text(text)
     normalized_rows = normalize_rows(parsed_rows)
+    normalized_rows = dedupe_rows(normalized_rows)
     enriched_all = enrich_with_kategori(normalized_rows)
 
     birthtimes_path = os.path.join("web", "obsid_birthtimes.json")

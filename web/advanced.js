@@ -1,4 +1,4 @@
-// Version: 4.11.13 - 2026-02-18 20.00.08
+// Version: 4.11.14 - 2026-03-15 07.46.37
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
