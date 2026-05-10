@@ -1376,8 +1376,8 @@ async def fetch_arter_csv(request: Request):
             data_rows.append([artsid, artnavn, kategori_out])
 
     fixed_row = ["99999", "Ny fugleart for landet", "SU"]
-    if (fixed_row[0], fixed_row[1]) not in seen_rows:
-        data_rows.append(fixed_row)
+    data_rows = [row for row in data_rows if row[0] != fixed_row[0]]
+    data_rows.append(fixed_row)
 
     # Byg nyt CSV-indhold som tekst
     csv_header = "artsid;artsnavn;klassifikation\n"
@@ -1387,7 +1387,7 @@ async def fetch_arter_csv(request: Request):
     csv_path = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
     old_content = ""
     if os.path.exists(csv_path):
-        with open(csv_path, "r", encoding="utf-8") as f:
+        with open(csv_path, "r", encoding="utf-8-sig") as f:
             old_content = f.read()
     changed = (csv_content != old_content)
 
@@ -1399,7 +1399,7 @@ async def fetch_arter_csv(request: Request):
     if changed:
         for path in csv_paths:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w", encoding="utf-8", newline="") as f:
+            with open(path, "w", encoding="utf-8-sig", newline="") as f:
                 f.write(csv_content)
         # Kør update_version.py small i roden hvis ændret
         try:
