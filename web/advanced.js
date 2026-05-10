@@ -1,12 +1,12 @@
-// Version: 4.11.16 - 2026-05-10 19.10.54
+// Version: 4.11.17 - 2026-05-10 19.17.59
 // © Christian Vemmelund Helligsø
 async function fetchArtsliste() {
   const res = await fetch('data/arter_filter_klassificeret.csv');
   const text = await res.text();
-  const lines = text.split('\n').filter(Boolean);
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
   const header = lines[0].split(';');
   return lines.slice(1).map(line => {
-    const cols = line.split(';');
+    const cols = line.replace(/^\uFEFF/, '').split(';');
     return {
       artsid: cols[0],
       artsnavn: cols[1].replace(/^\[|\]$/g, ''), // fjern evt. [ ]

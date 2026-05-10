@@ -1,4 +1,4 @@
-// Version: 4.11.16 - 2026-05-10 19.10.54
+// Version: 4.11.17 - 2026-05-10 19.17.59
 // © Christian Vemmelund Helligsø
 
 
@@ -142,8 +142,8 @@ async function loadArterKategoriMap() {
   if (Object.keys(arterKategoriMap).length) return;
   const res = await fetch('/data/arter_filter_klassificeret.csv');
   const text = await res.text();
-  text.split('\n').forEach(line => {
-    const [artsid, artsnavn, klassifikation] = line.trim().split(';');
+  text.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(line => {
+    const [artsid, artsnavn, klassifikation] = line.replace(/^\uFEFF/, '').trim().split(';');
     if (!artsnavn || artsnavn === "artsnavn") return;
     let navn = artsnavn.replace(/^\[|\]$/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
     let kat = (klassifikation || '').toLowerCase();
@@ -157,8 +157,8 @@ async function loadArterContentMap() {
   if (Object.keys(arterContentMap).length) return;
   const res = await fetch('/data/arter_dof_content.csv');
   const text = await res.text();
-  text.split('\n').forEach(line => {
-    const [artsid, artsnavn, content] = line.trim().split(';');
+  text.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(line => {
+    const [artsid, artsnavn, content] = line.replace(/^\uFEFF/, '').trim().split(';');
     if (!artsid || !artsnavn || artsnavn === "artsnavn") return;
     let navn = artsnavn.replace(/^\[|\]$/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
     arterContentMap[navn] = { artsid: artsid.padStart(5, '0'), content: content.trim() };

@@ -1336,16 +1336,7 @@ async def fetch_arter_csv(request: Request):
     data_rows = []
     seen_rows = set()
     for url in urls:
-        req = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            charset = resp.headers.get_content_charset() or "utf-8"
-            html_text = resp.read().decode(charset, errors="replace")
+        html_text = _fetch_html(url, timeout=30.0)
 
         rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html_text, re.DOTALL | re.IGNORECASE)
         for row_html in rows:

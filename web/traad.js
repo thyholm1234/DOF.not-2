@@ -1,4 +1,4 @@
-// Version: 4.11.16 - 2026-05-10 19.10.54
+// Version: 4.11.17 - 2026-05-10 19.17.59
 // © Christian Vemmelund Helligsø
 (function () {
   function el(tag, cls, text) {
@@ -823,8 +823,8 @@ function startLiveGeolocation(targetLat, targetLng) {
     if (Object.keys(arterContentMap).length) return; // Allerede loaded
     const res = await fetch('/data/arter_dof_content.csv');
     const text = await res.text();
-    text.split('\n').forEach(line => {
-      const [artsid, , content] = line.trim().split(';');
+    text.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(line => {
+      const [artsid, , content] = line.replace(/^\uFEFF/, '').trim().split(';');
       if (artsid && content !== undefined) {
         arterContentMap[artsid.padStart(5, '0')] = content.trim();
       }
