@@ -1319,47 +1319,65 @@ async def lok_koordinater(loknr: str):
 
 @app.api_route("/api/admin/fetch-arter-csv", methods=["GET", "POST"])
 async def fetch_arter_csv(request: Request):
-    url = "https://statistik.dofbasen.dk/arter?aar=&slutAar=&startAar=&afdeling=&kommune=&lokalitet=&obser=&visArter=ja&_visArter=on&visHybrider=ja&_visHybrider=on&visUbestemte=ja&_visUbestemte=on&_visAndre=on"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        html_text = resp.read().decode("utf-8", errors="replace")
+    urls = [
+        "https://dofbasen.dk/opslag/artdata.php?list=art",
+        "https://dofbasen.dk/opslag/artdata.php?list=hybrid",
+        "https://dofbasen.dk/opslag/artdata.php?list=ub",
+        "https://dofbasen.dk/opslag/artdata.php?list=andre",
+    ]
 
-    # Find tabel med arter (id="table")
-    m_table = re.search(r'<table[^>]*id=["\']table["\'][^>]*>(.*?)</table>', html_text, re.DOTALL | re.IGNORECASE)
-    if not m_table:
-        raise HTTPException(status_code=500, detail="Kunne ikke finde tabel i HTML")
-    table_html = m_table.group(1)
+    def _clean_text(value: str) -> str:
+        text = html.unescape(re.sub(r"<[^>]+>", "", value))
+        text = text.replace("&nbsp;", " ").replace("&nbsp", " ").replace("\xa0", " ")
+        return re.sub(r"\s+", " ", text).strip()
 
-    # Find alle rækker (skip header)
-    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL | re.IGNORECASE)[1:]
+    # artdata.php indeholder flere tabelafsnit. Vi bruger kun rækker, der matcher
+    # den egentlige artsliste: 4 celler, første celle er et artsnummer.
     data_rows = []
-    for row_html in rows:
-        tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
-        if len(tds) < 3:
-            continue
-        artsid = html.unescape(re.sub(r'<[^>]+>', '', tds[0][1])).strip().lstrip("0") or "0"
-        td1_class = tds[1][0]
-        artnavn = html.unescape(re.sub(r'<[^>]+>', '', tds[1][1])).strip()
-        m_class = re.search(r'class=["\']([^"\']+)["\']', td1_class)
-        kategori = ""
-        if m_class:
-            for cls in m_class.group(1).split():
-                if cls in ("su", "subart", "hybrid_sp"):
-                    kategori = cls
-        # Map kategori til ønsket output
-        if kategori == "su":
-            kategori_out = "SU"
-        elif kategori == "subart":
-            kategori_out = "SUB"
-        else:
-            kategori_out = "Alm"
-        data_rows.append([artsid, artnavn, kategori_out])
+    seen_rows = set()
+    for url in urls:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (DOFbasen Notifikation-server)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            charset = resp.headers.get_content_charset() or "utf-8"
+            html_text = resp.read().decode(charset, errors="replace")
+
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html_text, re.DOTALL | re.IGNORECASE)
+        for row_html in rows:
+            tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
+            if len(tds) != 4:
+                continue
+            artsid_raw = _clean_text(tds[0][1])
+            if not re.fullmatch(r"\d+", artsid_raw):
+                continue
+            artsid = artsid_raw.lstrip("0") or "0"
+            artnavn = _clean_text(tds[2][1])
+
+            row_classes = " ".join(
+                cls
+                for cls in re.findall(r'class=["\']([^"\']+)["\']', row_html, re.IGNORECASE)
+            )
+            if re.search(r'\bsu\b', row_classes):
+                kategori_out = "SU"
+            elif re.search(r'\bsubart\b', row_classes):
+                kategori_out = "SUB"
+            else:
+                kategori_out = "Alm"
+
+            row_key = (artsid, artnavn)
+            if row_key in seen_rows:
+                continue
+            seen_rows.add(row_key)
+            data_rows.append([artsid, artnavn, kategori_out])
+
+    fixed_row = ["99999", "Ny fugleart for landet", "SU"]
+    if (fixed_row[0], fixed_row[1]) not in seen_rows:
+        data_rows.append(fixed_row)
 
     # Byg nyt CSV-indhold som tekst
     csv_header = "artsid;artsnavn;klassifikation\n"
