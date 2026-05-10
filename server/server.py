@@ -1,4 +1,5 @@
 import sqlite3
+import csv
 from fastapi import FastAPI, Request, status, HTTPException, WebSocket, WebSocketDisconnect, Body, Header
 from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse, HTMLResponse
 import json
@@ -1764,6 +1765,38 @@ def is_obsid_unsubscribed(user_id: str, device_id: str, obsid: str) -> bool:
         # Returner True kun hvis sub=0 (frameldt), ellers False (også hvis ingen row)
         return bool(row and row[0] == 0)
 
+
+SPECIES_LIST_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "arter_filter_klassificeret.csv")
+
+
+def _normalize_species_name(name: str) -> str:
+    return re.sub(r"\s+", " ", (name or "").replace("[", "").replace("]", "").strip().lower())
+
+
+def _load_known_species_names() -> set[str]:
+    names: set[str] = set()
+    try:
+        with open(SPECIES_LIST_PATH, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            for row in reader:
+                name = _normalize_species_name(row.get("artsnavn") or "")
+                if name:
+                    names.add(name)
+    except Exception as e:
+        print(f"[server] Kunne ikke læse artsliste til sync-check: {e}")
+    return names
+
+
+def _payload_contains_unknown_species(payload: list[dict]) -> bool:
+    known_species = _load_known_species_names()
+    if not known_species:
+        return False
+    for obs in payload:
+        artnavn = _normalize_species_name(str(obs.get("Artnavn") or ""))
+        if artnavn and artnavn not in known_species:
+            return True
+    return False
+
 @app.post("/api/update")
 async def update_data(request: Request):
     from datetime import datetime
@@ -1776,11 +1809,21 @@ async def update_data(request: Request):
         raise HTTPException(status_code=400, detail="Payload skal være en liste")
     payload = _dedupe_payload_rows(payload)
     _save_payload(payload)
+
     tasks = []
 
     api_token = request.headers.get("X-API-Token")
     if api_token != os.environ.get("UPDATE_API_TOKEN"):
         raise HTTPException(status_code=403, detail="Ikke tilladt")
+
+    if _payload_contains_unknown_species(payload):
+        try:
+            await fetch_arter_csv(request)
+            await fetch_faenologi_csv(request)
+            await fetch_all_bemaerk_csv(request)
+            print("[server] Artslister opdateret pga. ukendt art i sync-payload.")
+        except Exception as e:
+            print(f"[server] Kunne ikke opdatere artslister ved sync: {e}")
 
     skip_set = set()  # <-- Tilføj denne linje
 
