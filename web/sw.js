@@ -1,6 +1,6 @@
-// Version: 4.11.23 - 2026-05-18 11.32.48
+// Version: 4.11.24 - 2026-05-18 11.33.51
 // © Christian Vemmelund Helligsø
-const CACHE_NAME = 'dofnot-v4.11.23';
+const CACHE_NAME = 'dofnot-v4.11.24';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -8,7 +8,6 @@ const CORE_ASSETS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/data/arter_dof_content.csv',
-  '/data/arter_filter_klassificeret.csv',
   '/data/faenologi.csv'
 ];
 
@@ -38,6 +37,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
+
+  // Aldrig cache arter_filter_klassificeret.csv - altid fra netværket
+  if (url.pathname === '/data/arter_filter_klassificeret.csv') {
+    event.respondWith(fetch(req));
+    return;
+  }
 
   // Aldrig cache noget under /obs
   if (url.pathname.startsWith('/obs/')) {
