@@ -1332,6 +1332,37 @@ async def fetch_arter_csv(request: Request):
         text = text.replace("&nbsp;", " ").replace("&nbsp", " ").replace("\xa0", " ")
         return re.sub(r"\s+", " ", text).strip()
 
+    # Hent klassificering fra sudata.php og subdata.php
+    # Bygger lookup dicts: artsid -> klassificering
+    su_artsids = set()  # SU arter
+    sub_artsids = set()  # SUB arter (underarter)
+
+    try:
+        su_html = _fetch_html("https://dofbasen.dk/opslag/sudata.php", timeout=30.0)
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', su_html, re.DOTALL | re.IGNORECASE)
+        for row_html in rows:
+            tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
+            if len(tds) >= 1:
+                artsid_raw = _clean_text(tds[0][1])
+                if re.fullmatch(r"\d+", artsid_raw):
+                    artsid = artsid_raw.lstrip("0") or "0"
+                    su_artsids.add(artsid)
+    except Exception as e:
+        logging.warning(f"Kunne ikke hente sudata.php: {e}")
+
+    try:
+        sub_html = _fetch_html("https://dofbasen.dk/opslag/subdata.php", timeout=30.0)
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', sub_html, re.DOTALL | re.IGNORECASE)
+        for row_html in rows:
+            tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
+            if len(tds) >= 1:
+                artsid_raw = _clean_text(tds[0][1])
+                if re.fullmatch(r"\d+", artsid_raw):
+                    artsid = artsid_raw.lstrip("0") or "0"
+                    sub_artsids.add(artsid)
+    except Exception as e:
+        logging.warning(f"Kunne ikke hente subdata.php: {e}")
+
     # artdata.php indeholder flere tabelafsnit. Vi bruger kun rækker, der matcher
     # den egentlige artsliste: 4 celler, første celle er et artsnummer.
     data_rows = []
@@ -1354,9 +1385,14 @@ async def fetch_arter_csv(request: Request):
                 cls
                 for cls in re.findall(r'class=["\']([^"\']+)["\']', row_html, re.IGNORECASE)
             )
+            # Bestem klassificering: først fra CSS-klasser, ellers fra sudata/subdata
             if re.search(r'\bsu\b', row_classes):
                 kategori_out = "SU"
             elif re.search(r'\bsubart\b', row_classes):
+                kategori_out = "SUB"
+            elif artsid in su_artsids:
+                kategori_out = "SU"
+            elif artsid in sub_artsids:
                 kategori_out = "SUB"
             else:
                 kategori_out = "Alm"
