@@ -1333,9 +1333,11 @@ async def fetch_arter_csv(request: Request):
         return re.sub(r"\s+", " ", text).strip()
 
     # Hent klassificering fra sudata.php og subdata.php
-    # Bygger lookup dicts: artsid -> klassificering
+    # Bygger lookup dicts: artsid -> klassificering (og artsnavn -> klassificering som fallback)
     su_artsids = set()  # SU arter
+    su_artnavne = set()  # SU arter ved navn
     sub_artsids = set()  # SUB arter (underarter)
+    sub_artnavne = set()  # SUB arter ved navn
 
     try:
         su_html = _fetch_html("https://dofbasen.dk/opslag/sudata.php", timeout=30.0)
@@ -1343,10 +1345,17 @@ async def fetch_arter_csv(request: Request):
         for row_html in rows:
             tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
             if len(tds) >= 1:
+                # Prøv at læse artsid fra første kolonne
                 artsid_raw = _clean_text(tds[0][1])
                 if re.fullmatch(r"\d+", artsid_raw):
                     artsid = artsid_raw.lstrip("0") or "0"
                     su_artsids.add(artsid)
+                # Hvis der er mere end 1 kolonne, prøv anden kolonne som artnavn
+                if len(tds) >= 2:
+                    artnavn_raw = _clean_text(tds[1][1]) if len(tds) >= 2 else ""
+                    if artnavn_raw:
+                        su_artnavne.add(artnavn_raw)
+        logging.info(f"[fetch_arter_csv] Hentet {len(su_artsids)} SU arter (ID) og {len(su_artnavne)} (navn) fra sudata.php")
     except Exception as e:
         logging.warning(f"Kunne ikke hente sudata.php: {e}")
 
@@ -1356,10 +1365,17 @@ async def fetch_arter_csv(request: Request):
         for row_html in rows:
             tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
             if len(tds) >= 1:
+                # Prøv at læse artsid fra første kolonne
                 artsid_raw = _clean_text(tds[0][1])
                 if re.fullmatch(r"\d+", artsid_raw):
                     artsid = artsid_raw.lstrip("0") or "0"
                     sub_artsids.add(artsid)
+                # Hvis der er mere end 1 kolonne, prøv anden kolonne som artnavn
+                if len(tds) >= 2:
+                    artnavn_raw = _clean_text(tds[1][1]) if len(tds) >= 2 else ""
+                    if artnavn_raw:
+                        sub_artnavne.add(artnavn_raw)
+        logging.info(f"[fetch_arter_csv] Hentet {len(sub_artsids)} SUB arter (ID) og {len(sub_artnavne)} (navn) fra subdata.php")
     except Exception as e:
         logging.warning(f"Kunne ikke hente subdata.php: {e}")
 
@@ -1390,9 +1406,9 @@ async def fetch_arter_csv(request: Request):
                 kategori_out = "SU"
             elif re.search(r'\bsubart\b', row_classes):
                 kategori_out = "SUB"
-            elif artsid in su_artsids:
+            elif artsid in su_artsids or artnavn in su_artnavne:
                 kategori_out = "SU"
-            elif artsid in sub_artsids:
+            elif artsid in sub_artsids or artnavn in sub_artnavne:
                 kategori_out = "SUB"
             else:
                 kategori_out = "Alm"

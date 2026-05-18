@@ -865,6 +865,13 @@ def latest_row_for_key(k: str, rows_by_key: Dict[str, List[Dict[str, str]]]) -> 
 
 
 def run_once(date_str=None, send_notifications=True):
+    global KLASS_MAP, BEMAERK_BY_REGION, FAENOLOGI_PERIODER
+    
+    # Reload klassifikation fra CSV hver gang (så ændringer bliver hentet)
+    KLASS_MAP = load_klassifikation_map()
+    BEMAERK_BY_REGION = build_bemaerk_maps()
+    FAENOLOGI_PERIODER = load_faenologi_perioder()
+    
     old_state = load_state()
 
     text = fetch_excel_text(date_str)
