@@ -1423,6 +1423,9 @@ async def fetch_arter_csv(request: Request):
     data_rows = [row for row in data_rows if row[0] != fixed_row[0]]
     data_rows.append(fixed_row)
 
+    # Sorter efter artsid stigende
+    data_rows.sort(key=lambda row: int(row[0]))
+
     # Byg nyt CSV-indhold som tekst
     csv_header = "artsid;artsnavn;klassifikation\n"
     csv_content = csv_header + "\n".join(";".join(row) for row in data_rows) + "\n"
