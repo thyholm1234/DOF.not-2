@@ -1345,14 +1345,14 @@ async def fetch_arter_csv(request: Request):
         for row_html in rows:
             tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
             if len(tds) >= 1:
-                # Prøv at læse artsid fra første kolonne
+                # TD 0: artsid, TD 1: tom, TD 2: dansk navn, TD 3: videnskabeligt navn
                 artsid_raw = _clean_text(tds[0][1])
                 if re.fullmatch(r"\d+", artsid_raw):
                     artsid = artsid_raw.lstrip("0") or "0"
                     su_artsids.add(artsid)
-                # Hvis der er mere end 1 kolonne, prøv anden kolonne som artnavn
-                if len(tds) >= 2:
-                    artnavn_raw = _clean_text(tds[1][1]) if len(tds) >= 2 else ""
+                # Læs dansk navn fra TD 2 (TD 1 er tom)
+                if len(tds) >= 3:
+                    artnavn_raw = _clean_text(tds[2][1])
                     if artnavn_raw:
                         su_artnavne.add(artnavn_raw)
         logging.info(f"[fetch_arter_csv] Hentet {len(su_artsids)} SU arter (ID) og {len(su_artnavne)} (navn) fra sudata.php")
@@ -1365,14 +1365,14 @@ async def fetch_arter_csv(request: Request):
         for row_html in rows:
             tds = re.findall(r'<td([^>]*)>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
             if len(tds) >= 1:
-                # Prøv at læse artsid fra første kolonne
+                # TD 0: artsid, TD 1: tom, TD 2: dansk navn, TD 3: videnskabeligt navn
                 artsid_raw = _clean_text(tds[0][1])
                 if re.fullmatch(r"\d+", artsid_raw):
                     artsid = artsid_raw.lstrip("0") or "0"
                     sub_artsids.add(artsid)
-                # Hvis der er mere end 1 kolonne, prøv anden kolonne som artnavn
-                if len(tds) >= 2:
-                    artnavn_raw = _clean_text(tds[1][1]) if len(tds) >= 2 else ""
+                # Læs dansk navn fra TD 2 (TD 1 er tom)
+                if len(tds) >= 3:
+                    artnavn_raw = _clean_text(tds[2][1])
                     if artnavn_raw:
                         sub_artnavne.add(artnavn_raw)
         logging.info(f"[fetch_arter_csv] Hentet {len(sub_artsids)} SUB arter (ID) og {len(sub_artnavne)} (navn) fra subdata.php")
