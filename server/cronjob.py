@@ -40,12 +40,12 @@ def wait_until_next_run():
     tz = pytz.timezone("Europe/Copenhagen")
     import sqlite3
     while True:
-        now = datetime.now(tz)
+        now = datetime.now(pytz.UTC).astimezone(tz)
         next_run = (now + timedelta(days=1)).replace(hour=0, minute=0, second=1, microsecond=0)
         seconds = (next_run - now).total_seconds()
         print(f"Venter {int(seconds)} sekunder til næste kørsel ({next_run})")
         time.sleep(seconds)
-        yesterday = (datetime.now(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
+        yesterday = (datetime.now(pytz.UTC).astimezone(tz) - timedelta(days=1)).strftime("%Y-%m-%d")
         print(f"Archiving pageviews for {yesterday} ...")
         server.archive_and_reset_pageview_log(for_date=yesterday, reset_log=True)
         # Slet server.log
@@ -62,7 +62,8 @@ def wait_until_next_run():
         # Oprydning i stats_notifications (slet data ældre end 1 år)
         try:
             db_path = os.path.join(os.path.dirname(__file__), "users.db")  # Ret evt. filnavn
-            cutoff = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+            tz = pytz.timezone("Europe/Copenhagen")
+            cutoff = (datetime.now(pytz.UTC).astimezone(tz) - timedelta(days=365)).strftime("%Y-%m-%d")
             with sqlite3.connect(db_path) as conn:
                 conn.execute(
                     "DELETE FROM stats_notifications WHERE date < ?",

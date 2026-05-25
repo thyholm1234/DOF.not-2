@@ -14,6 +14,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import shutil
 from dotenv import load_dotenv  # <-- Tilføj dette
+import pytz
 
 load_dotenv() 
 
@@ -53,8 +54,10 @@ class SyncHandler(FileSystemEventHandler):
                 print(f"[watcher] (watchdog) Fejl ved læsning af {event.src_path}: {e}")
                 return
             sync = (req.get("sync") or "").lower()
-            today = datetime.now().strftime("%d-%m-%Y")
-            yesterday = (datetime.now() - timedelta(days=1)).strftime("%d-%m-%Y")
+            tz = pytz.timezone("Europe/Copenhagen")
+            now = datetime.now(pytz.UTC).astimezone(tz)
+            today = now.strftime("%d-%m-%Y")
+            yesterday = (now - timedelta(days=1)).strftime("%d-%m-%Y")
             if sync == "today":
                 print("[watcher] (watchdog) Sync-request: i dag")
                 run_once(today, send_notifications=True)
@@ -91,7 +94,8 @@ def load_klassifikation_map() -> Dict[str, str]:
     return mapping
 
 def save_json_to_downloads(rows: List[Dict[str, str]], obsid_birthtimes: dict):
-    today = datetime.now().date()
+    tz = pytz.timezone("Europe/Copenhagen")
+    today = datetime.now(pytz.UTC).astimezone(tz).date()
     def is_today(datestr):
         for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
             try:
@@ -116,7 +120,8 @@ def save_json_to_downloads(rows: List[Dict[str, str]], obsid_birthtimes: dict):
         return
 
     os.makedirs(DOWNLOADS_DIR, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+    tz = pytz.timezone("Europe/Copenhagen")
+    ts = datetime.now(pytz.UTC).astimezone(tz).strftime("%Y%m%d%H%M%S")
     filename = f"observationer_{ts}.json"
     path = os.path.join(DOWNLOADS_DIR, filename)
     with open(path, "w", encoding="utf-8") as f:
@@ -568,7 +573,8 @@ def save_threads_and_index(rows: List[Dict[str, str]], day: str):
 
 def today_date_str() -> str:
     # Lokal tid, format DD-MM-YYYY
-    return datetime.now().strftime("%d-%m-%Y")
+    tz = pytz.timezone("Europe/Copenhagen")
+    return datetime.now(pytz.UTC).astimezone(tz).strftime("%d-%m-%Y")
 
 def build_obsid_birthtimes(rows: List[Dict[str, str]], prev_birthtimes: dict) -> Dict[str, str]:
     """Returnér obsid -> første systemtid (HH:MM) for SU/SUB/bemaerk/faenologi.
@@ -581,8 +587,8 @@ def build_obsid_birthtimes(rows: List[Dict[str, str]], prev_birthtimes: dict) ->
     except Exception:
         birthtime_log = {}
 
-    now_hm = datetime.now().strftime("%H:%M")
-    now_full = datetime.now().strftime("%Y%m%d-%H%M%S")
+    now_hm = datetime.now(pytz.UTC).astimezone(pytz.timezone("Europe/Copenhagen")).strftime("%H:%M")
+    now_full = datetime.now(pytz.UTC).astimezone(pytz.timezone("Europe/Copenhagen")).strftime("%Y%m%d-%H%M%S")
     for row in rows:
         if row.get("kategori") not in ("SU", "SUB", "bemaerk", "faenologi"):
             continue

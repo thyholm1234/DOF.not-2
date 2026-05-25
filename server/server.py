@@ -259,8 +259,9 @@ obs_notification_queue = queue.Queue()
 
 def obs_notification_worker():
     import sqlite3
+    tz = pytz.timezone("Europe/Copenhagen")
     while True:
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.now(pytz.UTC).astimezone(tz).strftime("%Y-%m-%d")
         # Saml alle kald i køen (batch)
         count = 0
         try:
@@ -842,11 +843,13 @@ def _latest_from_data(data):
     return {}
 
 def _ts() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    tz = pytz.timezone("Europe/Copenhagen")
+    return datetime.now(pytz.UTC).astimezone(tz).strftime("%Y%m%d_%H%M%S")
 
 def _save_payload(payload) -> str:
     # Opret dato-mappe i format DD-MM-YYYY
-    today = datetime.now().strftime("%d-%m-%Y")
+    tz = pytz.timezone("Europe/Copenhagen")
+    today = datetime.now(pytz.UTC).astimezone(tz).strftime("%d-%m-%Y")
     datedir = os.path.join(payload_dir, today)
     os.makedirs(datedir, exist_ok=True)
     fname = f"payload_{_ts()}.json"
@@ -1889,7 +1892,8 @@ async def update_data(request: Request):
         prefs = get_prefs(user_id)
         qh = prefs.get("quiet_hours", {}).get(device_id)
         if qh:
-            now = datetime.now().time()
+            tz = pytz.timezone("Europe/Copenhagen")
+            now = datetime.now(pytz.UTC).astimezone(tz).time()
             try:
                 start = datetime.strptime(qh["start"], "%H:%M").time()
                 end = datetime.strptime(qh["end"], "%H:%M").time()
