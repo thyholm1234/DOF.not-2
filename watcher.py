@@ -88,7 +88,9 @@ def load_klassifikation_map() -> Dict[str, str]:
                 name = (row.get("artsnavn") or "").strip()
                 klass = (row.get("klassifikation") or "").strip()
                 if name:
-                    mapping[name] = klass
+                    # Fjern firkantede parenteser hvis de findes
+                    name_normalized = name.strip("[]")
+                    mapping[name_normalized] = klass
     except Exception as e:
         print(f"[watcher] Kunne ikke læse klassifikationsfil: {e}")
     return mapping
@@ -152,7 +154,9 @@ def build_bemaerk_maps() -> Dict[str, Dict[str, int]]:
                     if not an or not t:
                         continue
                     try:
-                        thresholds[an] = int(t)
+                        # Fjern firkantede parenteser ved indlæsning
+                        an_normalized = an.strip("[]")
+                        thresholds[an_normalized] = int(t)
                         # print(f"  - {an}: {t}")  # DEBUG
                     except ValueError:
                         continue
@@ -174,7 +178,9 @@ def load_faenologi_perioder() -> Dict[str, List[Tuple[str, str]]]:
                 til = (row.get("Datotil") or "").strip()
                 if not art or not fra or not til:
                     continue
-                mapping.setdefault(art, []).append((fra, til))
+                # Fjern firkantede parenteser ved indlæsning
+                art_normalized = art.strip("[]")
+                mapping.setdefault(art_normalized, []).append((fra, til))
     except Exception as e:
         print(f"[watcher] Kunne ikke læse faenologi-fil: {e}")
     return mapping
@@ -214,6 +220,8 @@ def to_region_slug(dept: str) -> str:
 
 def compute_kategori(row: Dict[str, str]) -> str:
     art = (row.get("Artnavn") or "").strip()
+    # Fjern firkantede parenteser hvis de findes (normalisering)
+    art = art.strip("[]")
     obsdato = (row.get("Dato") or "").strip()
 
     # 1) SU/SUB fra klassifikationen HAR FORRANG
